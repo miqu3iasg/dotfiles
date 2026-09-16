@@ -115,10 +115,11 @@ chezmoi apply ~/.config/nvim
 
 ## Resources
 
-- [chezmoi — Official documentation](https://www.chezmoi.io/)
-- [chezmoi — Quick start guide](https://www.chezmoi.io/quick-start/)
-- [chezmoi — Command reference](https://www.chezmoi.io/reference/command-overview/)
-- [chezmoi — Templating guide](https://www.chezmoi.io/user-guide/templating/)
-- [chezmoi — GitHub repository](https://github.com/twpayne/chezmoi)
-- [Arch Wiki — Dotfiles](https://wiki.archlinux.org/title/Dotfiles)
-- [GitHub CLI — Documentation](https://cli.github.com/manual/)
+- Chezmoi official documentation: [https://www.chezmoi.io/](https://www.chezmoi.io/) 
+- Chezmoi quick start guide: [https://www.chezmoi.io/quick-start/](https://www.chezmoi.io/quick-start/) 
+- Chezmoi command reference: [https://www.chezmoi.io/reference/command-overview/](https://www.chezmoi.io/reference/command-overview/) 
+- Chezmoi templating guide: [https://www.chezmoi.io/user-guide/templating/](https://www.chezmoi.io/user-guide/templating/) 
+- Chezmoi GitHub repository: [https://github.com/twpayne/chezmoi](https://github.com/twpayne/chezmoi) 
+- Arch Wiki dotfiles: [https://wiki.archlinux.org/title/Dotfiles](https://wiki.archlinux.org/title/Dotfiles) 
+- GitHub CLI documentation: [https://cli.github.com/manual/](https://cli.github.com/manual/)
+- My personal nvim configuration: [https://github.com/miqu3iasg/nvim](https://github.com/miqu3iasg/nvim)
