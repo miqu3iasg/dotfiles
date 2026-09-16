@@ -1,0 +1,435 @@
+# i3 config file (v4)
+#
+# Please see https://i3wm.org/docs/userguide.html for a complete reference!
+
+set $mod Mod1
+set $mod2 Mod4
+
+# Font
+# font pango:JetBrainsMono Nerd Font Bold 9
+font xft:URWGothic-Book 10
+
+# blue litht filter
+# exec --no-startup-id redshift -O 4000
+
+# Start XDG autostart .desktop files using dex.
+exec --no-startup-id dex --autostart --environment i3
+
+# Clipboard manager daemon
+# exec --no-startup-id greenclip daemon
+
+# xss-lock grabs a logind suspend inhibit lock and will use i3lock to lock
+# the screen before suspend.
+exec --no-startup-id xss-lock --transfer-sleep-lock -- i3lock --nofork
+
+# NetworkManager applet.
+exec --no-startup-id nm-applet
+
+# Disable screen blanking and DPMS.
+exec --no-startup-id xset s off -dpms s noblank
+
+# Audio controls
+set $refresh_i3status killall -SIGUSR1 i3status
+
+bindsym XF86AudioRaiseVolume exec --no-startup-id \
+    pactl set-sink-volume @DEFAULT_SINK@ +10% && $refresh_i3status
+
+bindsym XF86AudioLowerVolume exec --no-startup-id \
+    pactl set-sink-volume @DEFAULT_SINK@ -10% && $refresh_i3status
+
+bindsym XF86AudioMute exec --no-startup-id \
+    pactl set-sink-mute @DEFAULT_SINK@ toggle && $refresh_i3status
+
+bindsym XF86AudioMicMute exec --no-startup-id \
+    pactl set-source-mute @DEFAULT_SOURCE@ toggle && $refresh_i3status
+
+# Brightness controls
+bindsym XF86MonBrightnessUp exec --no-startup-id \
+    brightnessctl set +10% && $refresh_i3status
+
+bindsym XF86MonBrightnessDown exec --no-startup-id \
+    brightnessctl set 10%- && $refresh_i3status
+
+# Window behavior
+floating_modifier $mod
+tiling_drag modifier titlebar
+
+focus_follows_mouse no
+focus_on_window_activation urgent
+no_focus [tiling_from=auto]
+
+hide_edge_borders smart
+# hide_edge_borders both
+
+gaps inner 0
+gaps outer 0
+smart_gaps off
+
+# default_border normal 
+# default_floating_border normal 0
+
+default_border pixel 1
+default_floating_border pixel 1
+
+title_align center
+
+# Ao trocar de workspace pela segunda vez, volta pra anterior (toggle)
+workspace_auto_back_and_forth yes
+
+# class                 border      background  text        indicator   child_border
+# client.focused          #101010     #080808     #d8d8d8     #101010     #d8d8d8
+# client.focused_inactive #101010     #000000     #666666     #101010     #101010
+# client.unfocused        #0a0a0a     #000000     #444444     #0a0a0a     #101010
+# client.urgent           #101010     #000000     #d8d8d8     #4d4d4d     #4d4d4d
+# client.placeholder      #000000     #000000     #2a2a2a     #000000     #000000
+
+# client.background        #000000
+
+# Resize
+
+set $resize i3-msg resize
+set $resize_size 2 px or 2 ppt
+
+
+# Resize mode
+mode "resize" {
+    bindsym h resize shrink width 2 px or 2 ppt
+    bindsym l resize grow width 2 px or 2 ppt
+    bindsym k resize grow height 2 px or 2 ppt
+    bindsym j resize shrink height 2 px or 2 ppt
+
+    bindsym Left resize shrink width 2 px or 2 ppt
+    bindsym Right resize grow width 2 px or 2 ppt
+    bindsym Up resize grow height 2 px or 2 ppt
+    bindsym Down resize shrink height 2 px or 2 ppt
+
+    bindsym Return mode "default"
+    bindsym Escape mode "default"
+}
+
+bindsym $mod+r mode "resize"
+
+
+# Direct resize (mod+u/i/o/p)
+bindsym $mod+u exec --no-startup-id \
+    $resize shrink right $resize_size &>/dev/null || \
+    $resize grow left $resize_size
+
+bindsym $mod+i exec --no-startup-id \
+    $resize shrink up $resize_size &>/dev/null || \
+    $resize grow down $resize_size
+
+bindsym $mod+o exec --no-startup-id \
+    $resize grow up $resize_size &>/dev/null || \
+    $resize shrink down $resize_size
+
+bindsym $mod+p exec --no-startup-id \
+    $resize grow right $resize_size &>/dev/null || \
+    $resize shrink left $resize_size
+
+# Pause mode
+
+mode "pause" {
+    bindsym $mod+Shift+p mode "default"
+}
+
+bindsym $mod+Shift+p mode "pause"
+
+# Focus
+
+bindsym $mod+h focus left
+bindsym $mod+j focus down
+bindsym $mod+k focus up
+bindsym $mod+l focus right
+
+bindsym Control+Left focus left
+bindsym Control+Down focus down
+bindsym Control+Up focus up
+bindsym Control+Right focus right
+
+# Focus parent
+bindsym $mod+Ctrl+a focus parent
+
+# Focus latest urgent window
+bindsym $mod+Ctrl+i [urgent=latest] focus
+
+# Focus monitor 
+bindsym $mod+Ctrl+j focus output down
+bindsym $mod+Ctrl+k focus output up
+
+# Move windows
+
+bindsym $mod+Shift+h move left
+bindsym $mod+Shift+j move down
+bindsym $mod+Shift+k move up
+bindsym $mod+Shift+l move right
+
+bindsym $mod+Shift+Left move left
+bindsym $mod+Shift+Down move down
+bindsym $mod+Shift+Up move up
+bindsym $mod+Shift+Right move right
+
+# Move the window directly to the other monitor (without moving the entire workspace)
+bindsym $mod+Ctrl+Shift+j move container to output down
+bindsym $mod+Ctrl+Shift+k move container to output up
+
+
+# Split / Layout
+
+workspace_layout tabbed
+
+bindsym $mod+w split h
+bindsym $mod+v split v
+
+bindsym $mod+y split toggle
+
+bindsym $mod+space focus mode_toggle
+
+bindsym $mod+Shift+space floating toggle
+
+bindsym $mod+t floating disable
+
+bindsym $mod+f fullscreen toggle
+
+bindsym $mod+Shift+s layout stacking
+bindsym $mod+Shift+w layout tabbed
+bindsym $mod+Shift+y layout toggle split
+
+# Window management
+
+bindsym $mod+q kill
+
+# Workspace navigation
+
+set $ws1 "1"
+set $ws2 "2"
+set $ws3 "3"
+set $ws4 "4"
+set $ws5 "5"
+set $ws6 "6"
+set $ws7 "7"
+set $ws8 "8"
+set $ws9 "9"
+
+# Next / previous / recent workspace (global, spans all monitors)
+bindsym $mod+n workspace next
+bindsym $mod+a workspace prev
+bindsym $mod+d workspace back_and_forth
+
+# Next / previous workspace apenas no monitor focado
+bindsym $mod+Ctrl+n workspace next_on_output
+bindsym $mod+Ctrl+Shift+a workspace prev_on_output
+
+# Move current container to previous workspace
+bindsym $mod+Shift+d \
+    move container to workspace back_and_forth; \
+    workspace back_and_forth
+
+# Cycle between siblings (tabs of a tabbed/stacked container)
+bindsym $mod+Tab focus next sibling
+bindsym $mod+Shift+Tab focus prev sibling
+
+# Switch workspace
+bindsym $mod+1 workspace number $ws1
+bindsym $mod+2 workspace number $ws2
+bindsym $mod+3 workspace number $ws3
+bindsym $mod+4 workspace number $ws4
+bindsym $mod+5 workspace number $ws5
+bindsym $mod+6 workspace number $ws6
+bindsym $mod+7 workspace number $ws7
+bindsym $mod+8 workspace number $ws8
+bindsym $mod+9 workspace number $ws9
+
+# Move workspace between monitors
+## (in my current setup, my external monitor is above the laptop, hence up/down instead of left/right) 
+bindsym $mod+Shift+a move workspace to output up
+bindsym $mod+Shift+f move workspace to output down
+bindsym $mod+Shift+Ctrl+s move workspace to output down
+
+
+# Move focused container to workspace
+
+bindsym $mod+Shift+1 \
+    move container to workspace number $ws1; workspace number $ws1
+
+bindsym $mod+Shift+2 \
+    move container to workspace number $ws2; workspace number $ws2
+
+bindsym $mod+Shift+3 \
+    move container to workspace number $ws3; workspace number $ws3
+
+bindsym $mod+Shift+4 \
+    move container to workspace number $ws4; workspace number $ws4
+
+bindsym $mod+Shift+5 \
+    move container to workspace number $ws5; workspace number $ws5
+
+bindsym $mod+Shift+6 \
+    move container to workspace number $ws6; workspace number $ws6
+
+bindsym $mod+Shift+7 \
+    move container to workspace number $ws7; workspace number $ws7
+
+bindsym $mod+Shift+8 \
+    move container to workspace number $ws8; workspace number $ws8
+
+bindsym $mod+Shift+9 \
+    move container to workspace number $ws9; workspace number $ws9
+
+
+# Send container to workspace without following it
+
+bindsym $mod+Ctrl+1 move container to workspace number $ws1
+bindsym $mod+Ctrl+2 move container to workspace number $ws2
+bindsym $mod+Ctrl+3 move container to workspace number $ws3
+bindsym $mod+Ctrl+4 move container to workspace number $ws4
+bindsym $mod+Ctrl+5 move container to workspace number $ws5
+bindsym $mod+Ctrl+6 move container to workspace number $ws6
+bindsym $mod+Ctrl+7 move container to workspace number $ws7
+bindsym $mod+Ctrl+8 move container to workspace number $ws8
+bindsym $mod+Ctrl+9 move container to workspace number $ws9
+
+# Scratchpad
+
+for_window [instance="scratchmux"] \
+    move scratchpad, \
+    sticky enable, \
+    resize set 900 520
+
+bindsym $mod+Ctrl+plus move scratchpad
+
+bindsym $mod+Ctrl+minus [instance="^(?!scratchmux)"] scratchpad show
+
+bindsym $mod+s [instance="scratchmux"] \
+    scratchpad show, \
+    move position center
+
+# Open scratchpad terminal
+bindsym $mod+Ctrl+Shift+m exec --no-startup-id kitty --class scratchmux
+
+# Application assignments
+
+for_window [class=".*"] title_format "%title"
+
+for_window [class="(?i)copyq"] floating enable
+for_window [class="(?i)pavucontrol"] floating enable
+for_window [class="(?i)blueman-manager"] floating enable
+for_window [class="(?i)nm-connection-editor"] floating enable
+for_window [window_role="pop-up"] floating enable
+for_window [window_role="task_dialog"] floating enable
+for_window [window_type="dialog"] floating enable
+for_window [class="(?i)zen" window_type="dialog"] floating enable
+
+assign [class="(?i)spotify"] $ws5
+assign [class="(?i)discord"] $ws5
+
+# Applications
+
+# Terminal
+bindsym $mod+Return exec kitty
+
+# Zen Browser
+bindsym $mod+b exec --no-startup-id zen-browser; workspace number $ws3
+
+# Helium Browser
+bindsym $mod2+b exec --no-startup-id helium-browser
+bindsym $mod2+Shift+b exec --no-startup-id helium-browser; workspace number $ws3
+
+# Qutebrowser
+bindsym $mod2+z exec --no-startup-id qutebrowser
+bindsym $mod2+Shift+z exec --no-startup-id qutebrowser; workspace number $ws3
+
+# Clipboard
+bindsym $mod2+v exec --no-startup-id copyq toggle
+
+# Obsidian
+bindsym $mod2+o exec --no-startup-id obsidian; workspace number $ws4
+
+# Rofi
+bindsym $mod+m exec --no-startup-id rofi -show drun
+
+# Thunar
+bindsym $mod+e exec --no-startup-id thunar
+
+# Monitors
+workspace 1 output HDMI-1 eDP-1
+workspace 2 output HDMI-1 eDP-1
+workspace 3 output HDMI-1 eDP-1
+workspace 4 output eDP-1
+workspace 5 output eDP-1
+workspace 6 output eDP-1
+
+# Productivy
+
+# Lock screen
+bindsym $mod+Ctrl+l exec --no-startup-id i3lock --nofork -c 000000
+
+# Quick capture
+bindsym $mod+Shift+g exec --no-startup-id sh -c \
+    'echo "$(date +%Y-%m-%d\ %H:%M) - $(rofi -dmenu -p "Quick note")" >> ~/personal/documents/vault/Dumping.md'
+
+
+# Reload / Restart / Exit
+
+bindsym $mod+Shift+r reload
+
+bindsym $mod+Shift+Ctrl+r restart
+
+bindsym $mod+Shift+e exec \
+    "i3-nagbar -t warning -m 'You pressed the exit shortcut. Do you really want to exit i3? This will end your X session.' -B 'Yes, exit i3' 'i3-msg exit'"
+
+# System mode
+
+set $mode_system (e)xit, (r)eboot, (Shift+s)hutdown
+
+bindsym $mod+plus mode "$mode_system"
+
+mode "$mode_system" {
+    bindsym e exec --no-startup-id i3-msg exit, mode "default"
+    bindsym r exec --no-startup-id reboot, mode "default"
+    bindsym Shift+s exec --no-startup-id shutdown now, mode "default"
+
+    bindsym Return mode "default"
+    bindsym Escape mode "default"
+}
+
+# Screenshots
+set $ss_dir $HOME/media/screenshots
+
+bindsym F10 exec --no-startup-id sh -c 'maim "$HOME/media/screenshots/$(date +%Y-%m-%d_%H-%M-%S).png"'
+bindsym $mod+F10 exec --no-startup-id sh -c 'maim -s "$HOME/media/screenshots/$(date +%Y-%m-%d_%H-%M-%S).png"'
+bindsym $mod+Shift+F10 exec --no-startup-id sh -c 'maim -s | xclip -selection clipboard -t image/png'
+
+
+# i3bar 
+bar {
+    id bar-ext
+    status_command i3status
+    output HDMI-1
+    position bottom
+    tray_output none
+    separator_symbol "  "
+    font pango:JetBrainsMono Nerd Font Bold 9
+}
+
+bar {
+    id bar-laptop
+    status_command i3status
+    output eDP-1
+    position bottom
+    tray_output primary
+    separator_symbol "  "
+    font pango:JetBrainsMono Nerd Font Bold 9
+}
+
+# Polybar
+# exec_always --no-startup-id ~/.config/polybar/launch.sh
+
+# Keyboard
+exec_always --no-startup-id setxkbmap -option ctrl:swapcaps
+
+# Clipboard
+exec --no-startup-id copyq --start-server
+
+# Dual monitors 
+exec_always --no-startup-id ~/.config/i3/monitor-setup.sh 

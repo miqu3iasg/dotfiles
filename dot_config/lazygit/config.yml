@@ -1,0 +1,9 @@
+gui:
+  showFileTree: true
+  nerdFontsVersion: "3"
+git:
+  diffRenderers:
+    - colorArg: always
+      command: delta --dark --paging=never
+os:
+  editPreset: nvim

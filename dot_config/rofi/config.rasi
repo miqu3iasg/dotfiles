@@ -1,0 +1,12 @@
+configuration {
+    modi: "window,drun,run,clipboard:greenclip print";
+    show-icons: false;
+    display-drun: "drun";
+    display-run: "run";
+    display-window: "windows";
+    display-clipboard: "clipboard";
+    drun-display-format: "{name}";
+    disable-history: false;
+}
+
+@theme "~/.config/rofi/theme.rasi"

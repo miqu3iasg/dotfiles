@@ -1,0 +1,371 @@
+#git alias
+# ref: https://stackoverflow.com/a/12538667
+
+gs() {
+	git status "$@"
+}
+
+gc() {
+	git commit -m "$*"
+}
+
+alias \
+	gd='git diff -p --numstat' \
+	gmv='git mv' \
+	gcl='git clone' \
+	gss='git status -sb'
+
+# ref: https://stackoverflow.com/a/30050792 (xargs -a)
+alias \
+	ga='git add'
+	# gap='xargs -a <(git status -s | awk "{print \$2}") git add -p'
+
+# ref: https://github.com/junegunn/fzf/issues/2887#issuecomment-1199258039 (fzf reload example)
+# note: only able to parse filename without spacing.
+gaf() {
+	local inside_worktree
+	inside_worktree=$(git rev-parse --is-inside-work-tree) || return "$?"
+	[ "$inside_worktree" = false ] && echo 'Not inside git worktree' && return 1
+
+	# ref split long string:
+	# https://stackoverflow.com/a/46808582
+	local diff_unstaged="\
+[ {1} = '??' ] && \
+{ \
+git diff --color=always --no-index -- /dev/null {2} | less -c -i --incsearch --search-options=W -g -R \
+} || \
+{ \
+git diff --color=always -- {2} | less -c -i --incsearch --search-options=W -g -R \
+}"
+
+	# ref:
+	# - https://stackoverflow.com/a/3527985
+	# - `man git-diff` (EXAMPLES section)
+	local diff_staged='git diff --color=always --cached -- {2} | less -c -i --incsearch --search-options=W -g -R'
+
+	local git_config='git -c color.status=always'
+
+	FZF_DEFAULT_COMMAND="$git_config status -s | sort" \
+		fzf \
+		--exit-0 \
+		--nth=2.. \
+		--layout=reverse-list \
+		--cycle \
+		--ansi \
+		--no-sort \
+		--bind 'ctrl-i:reload(git add -- {2} && eval "$FZF_DEFAULT_COMMAND")' \
+		--bind 'ctrl-s:execute(git add -p -- {2})+reload(eval "$FZF_DEFAULT_COMMAND")' \
+		--bind 'ctrl-d:reload(git reset -- {2} >/dev/null && eval "$FZF_DEFAULT_COMMAND")' \
+		--bind 'ctrl-g:reload(git reset >/dev/null && eval "$FZF_DEFAULT_COMMAND")' \
+		--bind 'ctrl-r:reload(eval "$FZF_DEFAULT_COMMAND")' \
+		--bind "ctrl-t:transform-query(echo {2})+reload($git_config status -su -- {2})" \
+		--bind "enter:execute($diff_unstaged)" \
+		--bind "ctrl-x:execute($diff_staged)"
+}
+
+alias \
+	gp='git push' \
+	gpf='git push --force-with-lease' \
+	ggp='git push -u origin "$(git branch --show-current)"' \
+	ggpd='git push origin -d "$(git branch --show-current)" --no-verify && git branch --unset-upstream'
+
+alias \
+	gb='git branch' \
+	gbm='git branch -m' \
+	nj='git branch --show-current'
+
+# ref: https://unix.stackexchange.com/questions/141285/using-xargs-with-git
+# ref: https://unix.stackexchange.com/a/174717
+alias \
+	gch='git checkout' \
+	gcb='git checkout -b' \
+	gct='git branch -r | fzf | xargs -r git checkout -t' \
+	gchf='git status -s | awk "/^[^??]/ {print \$2}" | fzf --multi --layout=reverse-list | xargs -r git checkout'
+
+gco() {
+	local inside_worktree
+	inside_worktree=$(git rev-parse --is-inside-work-tree) || return "$?"
+	[ "$inside_worktree" = false ] && echo 'Not inside git worktree' && return 1
+
+	FZF_DEFAULT_COMMAND='git branch | awk "/^[^*+]/ {print \$1}"' \
+		fzf \
+			--exit-0 \
+			--cycle \
+			--bind 'enter:become(git checkout {1})' \
+			--bind 'ctrl-r:reload(eval "$FZF_DEFAULT_COMMAND")' \
+			--bind 'ctrl-d:execute-silent(git branch -D {1})+reload(eval "$FZF_DEFAULT_COMMAND")+down' \
+			--bind 'ctrl-/:execute(git log --date=human --abbrev-commit {1})'
+}
+
+gchff() {
+	local inside_worktree
+	inside_worktree=$(git rev-parse --is-inside-work-tree) || return "$?"
+	[ "$inside_worktree" = false ] && echo 'Not inside git worktree' && return 1
+
+	git diff --name-only HEAD $1 | \
+		fzf --ansi --multi --height=80% --reverse --preview="git diff --color=always HEAD $1 -- {1}" --preview-window=nohidden | \
+		xargs -r git restore -s $1
+}
+
+# ref:
+# check current branch upstream: https://stackoverflow.com/a/9753364
+# local variable exit code: https://superuser.com/a/1103711
+# options using while: https://stackoverflow.com/a/22395652
+# options using getopts: https://archive.is/TRzn4
+# shift command: https://www.geeksforgeeks.org/shift-command-in-linux-with-examples/
+# prefix and suffix parameter expansion: https://unix.stackexchange.com/a/732587
+# default branch on remote repo: https://davidwalsh.name/get-default-branch-name
+ggl() {
+	local inside_worktree
+	inside_worktree=$(git rev-parse --is-inside-work-tree) || return "$?"
+	[ "$inside_worktree" = false ] && echo 'Not inside git worktree' && return 1
+
+	local option
+	local remote_name
+	local remote_branch_name
+
+	local upstream_reference
+	upstream_reference="$(git for-each-ref --format='%(upstream:short)' --count=1 --omit-empty "$(git symbolic-ref -q HEAD)")" || return "$?"
+	local upstream_remote_name="${upstream_reference%%/*}" # something like `origin`
+	local upstream_branch_name="${upstream_reference#*/}"
+
+	# manually handle options that aren't listed:
+	# https://pubs.opengroup.org/onlinepubs/9699919799/utilities/getopts.html
+	while getopts :b:r: option; do
+		case "$option" in
+			b)
+				[ ! -z "${OPTARG#-[br]}" ] &&
+				{
+					git check-ref-format --branch "$OPTARG" >/dev/null &&
+						remote_branch_name="$OPTARG" ||
+						return "$?"
+				} || {
+					echo "Can not use option '$OPTARG' as argument" && return 1
+				}
+				;;
+			r)
+				[ ! -z "${OPTARG#-[br]}" ] &&
+				{
+					git check-ref-format --allow-onelevel "$OPTARG" >/dev/null &&
+						remote_name="$OPTARG" ||
+						return "$?"
+				} || {
+					echo "Can not use option '$OPTARG' as argument" && return 1
+				}
+				;;
+			:)
+				echo "Option -$OPTARG requires an argument"
+				return 1
+				;;
+			?)
+				echo 'Usage: ggl [-b <branch-name>] [-r <remote-name>]'
+				return 1
+				;;
+		esac
+	done
+
+	[ -z "$option" ] && [ -z "$upstream_reference" ] && \
+		echo 'No upstream reference' && return 1
+
+	[ -z "$remote_name" ] && remote_name="${upstream_remote_name:-origin}"
+
+	[ -z "$remote_branch_name" ] && {
+		remote_branch_name="${upstream_branch_name:-$(git branch --show-current)}" || return "$?"
+	}
+
+	local git_ls_remote
+	# `timeout` command is from GNU coreutils.
+	git_ls_remote="$(timeout --preserve-status 5s git ls-remote --head "$remote_name" "$remote_branch_name")" || return "$?"
+
+	if [ ! -z "$git_ls_remote" ]; then
+		echo "Pulling from branch "$remote_branch_name" on remote "$remote_name""
+		git pull "$remote_name" "$remote_branch_name" || return "$?"
+	else
+		if [ -z "$option" ]; then
+			printf "No branch "$remote_branch_name" on remote "$remote_name"\nUnset upstream reference\n"
+			git branch --unset-upstream || return "$?"
+		else
+			echo "No branch "$remote_branch_name" on remote "$remote_name""
+		fi
+	fi
+}
+
+# note:
+# if we use `ctrl-c`, the exit code will be 130, not 0.
+# ref:
+# - https://github.com/wfxr/forgit/blob/b727321f2bd3d79c1dae805441261c45888cbb41/forgit.plugin.zsh#L17-L34
+# - https://stackoverflow.com/a/1441062
+# - https://stackoverflow.com/a/8977668 (about shell piping).
+# - https://unix.stackexchange.com/a/14276 (pipestatus in zsh and bash).
+# - https://www.rapidtables.com/code/text/ascii-table.html (hex number).
+# - https://matthew-brett.github.io/pydagogue/git_log_dots.html
+gl() {
+	local inside_worktree
+	inside_worktree=$(git rev-parse --is-inside-work-tree) || return "$?"
+	[ "$inside_worktree" = false ] && echo 'Not inside git worktree' && return 1
+
+	local git_show='git show --color=always --format=fuller --numstat -p {1}'
+	local git_log='git log --color=never --date=short --format="%C(auto)%h%x20%cd%x20%x20%s%d"'
+
+	while getopts :b: option; do
+		case "$option" in
+			b)
+				git check-ref-format --branch "$OPTARG" >/dev/null || return "$?"
+				git show-ref --quiet "$OPTARG" || {
+					echo 'Git branch not found'
+					return 1
+				}
+				git_log="$git_log $OPTARG.."
+		esac
+	done
+
+	FZF_DEFAULT_COMMAND="$git_log"\
+		fzf \
+		--exit-0 \
+		--no-multi \
+		--no-sort \
+		--height=80% \
+		--tiebreak=index \
+		--reverse \
+		--bind "enter:execute($git_show | less -c -i --incsearch --search-options=W -g -R)" \
+		--bind 'ctrl-r:reload(eval "$FZF_DEFAULT_COMMAND")' \
+		--bind "ctrl-y:execute-silent(echo {1} | tr -d '[:space:]' | xsel --clipboard --input)" \
+		--preview='git show --color=always --numstat --format="%C(auto)%D%n%s" {1}' \
+		--preview-window=up,nohidden,20%
+}
+
+alias \
+	glg='git log -g' \
+	gld='git log --graph --oneline --decorate $(git fsck --no-reflog | awk "/dangling commit/ {print \$3}")'
+
+gfc() {
+	local inside_worktree
+	inside_worktree=$(git rev-parse --is-inside-work-tree) || return "$?"
+	[ "$inside_worktree" = false ] && echo 'Not inside git worktree' && return 1
+
+	local cmd='git show --color=always --format=fuller --numstat -p {3}'
+
+	FZF_DEFAULT_COMMAND="git fsck --no-reflog --connectivity-only" \
+		fzf \
+		--no-sort \
+		--ansi \
+		+m \
+		--height=80% \
+		--tiebreak=index \
+		--reverse \
+		--bind "enter:execute($cmd | less -c -i --incsearch --search-options=W -g -R)" \
+		--bind "ctrl-y:execute-silent(echo {3} | tr -d '[:space:]' | xsel --clipboard --input)" \
+		--preview="$cmd"
+}
+
+alias \
+	gmt='git mergetool'
+
+alias \
+	grm='git rm' \
+	grmc='git rm --cached'
+
+# Ref:
+# https://unix.stackexchange.com/a/305192 (remove trailing character with awk)
+# https://stackoverflow.com/a/12681856 (show git stash untracked file)
+# https://stackoverflow.com/a/1105666 (checkout stash)
+# https://stackoverflow.com/a/3801554 (list untracked file)
+alias \
+	gurm='git ls-files --others --exclude-standard | fzf --multi --layout=reverse-list | xargs -r rm -v'
+
+alias \
+	gres='git reset'
+
+alias \
+	greb='git rebase' \
+	grebs='git rebase --autosquash'
+
+alias \
+	gf='git fetch' \
+	gfp='git fetch --prune'
+
+# ref: https://stackoverflow.com/a/47698869 (using awk in shell alias)
+alias \
+	gwl='git worktree list' \
+	gwr='git worktree list | awk "NR>1 {print \$1}" | fzf --exit-0 | xargs -r git worktree remove'
+
+gwa() {
+	local inside_worktree
+	inside_worktree=$(git rev-parse --is-inside-work-tree) || return "$?"
+	[ "$inside_worktree" = false ] && echo 'Not inside git worktree' && return 1
+
+	local git_root="$(git rev-parse --show-toplevel)"
+	local git_branch="$(git branch -a | awk '/^[^*+]/ {print $1}' | fzf --exit-0 )"
+	local worktree_dir="$(printf '%s\n' $git_branch | sed 's/\//-/g')"
+	if [ ! -z "$git_branch" ]; then
+		git worktree add \
+			"${XDG_STATE_HOME:-$HOME/.local/state}/git-worktrees/${git_root##*/}/$worktree_dir" "$git_branch" || return "$?"
+	fi
+}
+
+gwc() {
+	local inside_worktree selected workdir
+
+	inside_worktree=$(git rev-parse --is-inside-work-tree) || return "$?"
+	[ "$inside_worktree" = false ] && echo 'Not inside git worktree' && return 1
+
+	workdir="$(pwd)" || return "$?"
+
+	# Ref: https://stackoverflow.com/a/7584479
+	selected="$(git worktree list | \
+		awk -v "pwd=$workdir" '$1 != pwd {print $1}' | \
+		fzf --exit-0)" || \
+		return "$?"
+
+	cd "$selected"
+}
+
+alias \
+	gra='git remote add' \
+	gru='git remote update' \
+	grs='git remote set-url' \
+	grv='git remote -v'
+
+alias \
+	gst='git stash' \
+	gstu='git stash -u' \
+	gstp='git stash pop --quiet --index' \
+	gstf='git status -su | awk "!/^M/ {print \$2}" | fzf --multi --layout=reverse-list | xargs -r git stash push -u'
+
+# Ref: https://stackoverflow.com/a/66831429
+gstl() {
+	local inside_worktree
+	inside_worktree=$(git rev-parse --is-inside-work-tree) || return "$?"
+	[ "$inside_worktree" = false ] && echo 'Not inside git worktree' && return 1
+
+	local cmd='git stash show -u --color=always --format=medium --numstat -p {1}'
+
+	FZF_DEFAULT_COMMAND='git stash list --color=never --format="%gd%x20%gs"' \
+		fzf \
+		--exit-0 \
+		--ansi \
+		+m \
+		--height=20% \
+		--tiebreak=index \
+		--reverse \
+		--preview='git stash show -u --color=always --numstat {1}' \
+		--preview-window=up,nohidden \
+		--bind "enter:execute($cmd | less -c -i --incsearch --search-options=W -g -R)" \
+		--bind 'ctrl-r:reload(eval "$FZF_DEFAULT_COMMAND")' \
+		--bind "ctrl-y:execute-silent(echo {1} | tr -d '[:space:]' | xsel --clipboard --input)" \
+		--bind 'ctrl-s:become(git stash pop --quiet --index {1})' \
+		--bind 'ctrl-d:execute-silent(git stash drop {1})+reload(eval "$FZF_DEFAULT_COMMAND")'
+}
+
+# Create a private GitHub repository from the current directory,
+# push all branches, and open it in the browser
+ghc() {
+    gh repo create --private --source=. --remote=origin &&
+        git push -u --all &&
+        gh browse
+}
+
+alias \
+	gcd='cd "$(git rev-parse --show-toplevel)"'
+
+# vim:ft=sh

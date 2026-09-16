@@ -1,0 +1,20 @@
+0000000000000000000000000000000000000000 5abd656832b554ca724de1595a0e35f5c659636c Miquéias Alves <miqueiasalves.developer@gmail.com> 1786411098 -0300	clone: from https://github.com/vimichael/my-nvim-config.git
+5abd656832b554ca724de1595a0e35f5c659636c 1ca2ea4ae3f4deab8301d75d1a3729d8c3777749 miqu3iasg <147787560+miqu3iasg@users.noreply.github.com> 1788201461 -0300	commit: initial commit
+1ca2ea4ae3f4deab8301d75d1a3729d8c3777749 9aaf32147ba416c70e22639a0aefd9877f774f0c miqu3iasg <147787560+miqu3iasg@users.noreply.github.com> 1788201667 -0300	commit: docs: update readme
+9aaf32147ba416c70e22639a0aefd9877f774f0c f7be2fe2c83a8c8d1c97b2332b0f0f017ca0587a miqu3iasg <147787560+miqu3iasg@users.noreply.github.com> 1788298023 -0300	commit: add new cool stuff
+f7be2fe2c83a8c8d1c97b2332b0f0f017ca0587a 36144fba0a3c9c636315b32c0af44fcd384e0a0c miqu3iasg <147787560+miqu3iasg@users.noreply.github.com> 1788300301 -0300	commit: add more cool stuff
+36144fba0a3c9c636315b32c0af44fcd384e0a0c 65dee60fb15a81ad5279ae1e2af616a24bf94b3c miqu3iasg <147787560+miqu3iasg@users.noreply.github.com> 1788488187 -0300	commit: feat: add new formatter mapping
+65dee60fb15a81ad5279ae1e2af616a24bf94b3c c40a6b724a0e57708bc8b04a892da1704c108865 miqu3iasg <147787560+miqu3iasg@users.noreply.github.com> 1788573972 -0300	commit: improve buffer navigation
+c40a6b724a0e57708bc8b04a892da1704c108865 6bca66184d7d6c1198054d3f8c59808bcd90d262 miqu3iasg <147787560+miqu3iasg@users.noreply.github.com> 1788821767 -0300	commit: fix conflicts and improve productivity
+6bca66184d7d6c1198054d3f8c59808bcd90d262 687f7cd5080b2b80d9b8df02f075e4c970102ae6 miqu3iasg <147787560+miqu3iasg@users.noreply.github.com> 1788832128 -0300	commit: improve searching features
+687f7cd5080b2b80d9b8df02f075e4c970102ae6 aea83324fb5cae3c6ecba07a04cfad1e12adaf1a miqu3iasg <147787560+miqu3iasg@users.noreply.github.com> 1788833050 -0300	commit: arrumando uns trem aqui na minha config pessoal
+aea83324fb5cae3c6ecba07a04cfad1e12adaf1a 8d477b360414e0ce36d6115e943cb982dda1c0ec miqu3iasg <147787560+miqu3iasg@users.noreply.github.com> 1789186044 -0300	commit: add support for markdown and latex
+8d477b360414e0ce36d6115e943cb982dda1c0ec 21db3239de9d69e120a2e0e0c6034f1bc80d884a miqu3iasg <147787560+miqu3iasg@users.noreply.github.com> 1789335453 -0300	commit: improving some stuff and documentation
+21db3239de9d69e120a2e0e0c6034f1bc80d884a 858c2d06579981992ec7ef8335576f6d9db5118f miqu3iasg <147787560+miqu3iasg@users.noreply.github.com> 1789492245 -0300	commit: add support for lisp (scheme)
+858c2d06579981992ec7ef8335576f6d9db5118f a8772655be372c93c80c450a2867dca56753132d miqu3iasg <147787560+miqu3iasg@users.noreply.github.com> 1789492416 -0300	commit: add highlighting for evaluted forms for lisp in conjure
+a8772655be372c93c80c450a2867dca56753132d 16c8d691f034fb5c7dad505467d6bbb57c96df67 miqu3iasg <147787560+miqu3iasg@users.noreply.github.com> 1789495522 -0300	commit: add documentation
+16c8d691f034fb5c7dad505467d6bbb57c96df67 273eff42aef2b6fd2700cc9ecf0691db070f3ad5 miqu3iasg <147787560+miqu3iasg@users.noreply.github.com> 1789510685 -0300	commit: add friendly snippets as main snippets source and clean the original snippets file. Add new custom documentation snippets
+273eff42aef2b6fd2700cc9ecf0691db070f3ad5 0c70ca7b71e0fbb929e1ca3cc0c2b7ab778c8b51 miqu3iasg <147787560+miqu3iasg@users.noreply.github.com> 1789513817 -0300	commit: add a dedicated module for languages and expand configuration for java
+0c70ca7b71e0fbb929e1ca3cc0c2b7ab778c8b51 566588ee675403e397b1a59b056b5f26548cb84c miqu3iasg <147787560+miqu3iasg@users.noreply.github.com> 1789522216 -0300	commit: organize stuff
+566588ee675403e397b1a59b056b5f26548cb84c e2a452b2bbf3a413627c1f724842a83bafe0d9fe miqu3iasg <147787560+miqu3iasg@users.noreply.github.com> 1789523355 -0300	commit: fixing stuff
+e2a452b2bbf3a413627c1f724842a83bafe0d9fe 381318329fc00931a5ae0326efff6aa20b7981ff miqu3iasg <147787560+miqu3iasg@users.noreply.github.com> 1789574503 -0300	commit: fix bugs and add latex snippets

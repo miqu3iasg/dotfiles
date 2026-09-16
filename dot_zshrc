@@ -1,0 +1,339 @@
+# ~/.zshrc
+
+# Environment
+
+# Deduplicate PATH entries, even if .zshrc gets sourced more than once
+typeset -U PATH
+
+# Custom completions directory
+fpath=(~/.zsh/completions $fpath)
+
+# Default applications
+export EDITOR="nvim"
+export VISUAL="nvim"
+export PAGER="less"
+export LESS="-R"
+
+# Locale
+export LANG="en_US.UTF-8"
+export LC_ALL="en_US.UTF-8"
+
+# Application-specific paths and settings
+export BAT_THEME="ansi"
+export OBSIDIAN_VAULT_PATH="$HOME/personal/documents/vault"
+# export STARSHIP_CONFIG="$HOME/.config/starship/starship.toml"
+# export TMUX_CONF="$HOME/.config/tmux/tmux.conf"
+
+
+# Shell options
+
+setopt AUTO_CD
+setopt AUTO_PUSHD
+setopt PUSHD_IGNORE_DUPS
+setopt PUSHD_SILENT
+setopt INTERACTIVE_COMMENTS
+setopt EXTENDED_GLOB
+setopt AUTO_PARAM_SLASH
+setopt NO_CASE_GLOB
+setopt NO_CASE_MATCH
+setopt ALWAYS_TO_END
+
+
+# Command timing
+
+# Print elapsed time and resource usage for commands that take
+# longer than REPORTTIME seconds, as if run with `time`.
+# ref: man zshparam
+REPORTTIME=10
+TIMEFMT='%J  %*U user %*S system %P cpu %*E total'
+
+
+# History
+
+HISTFILE="$HOME/.zsh_history"
+HISTSIZE=50000
+SAVEHIST=50000
+
+setopt APPEND_HISTORY
+setopt SHARE_HISTORY
+setopt HIST_IGNORE_DUPS
+setopt HIST_IGNORE_ALL_DUPS
+setopt HIST_FIND_NO_DUPS
+setopt HIST_SAVE_NO_DUPS
+setopt HIST_IGNORE_SPACE
+setopt HIST_NO_FUNCTIONS
+setopt HIST_REDUCE_BLANKS
+setopt HIST_VERIFY
+setopt EXTENDED_HISTORY
+
+
+# Terminal behavior
+
+# Chars removed from a completion suffix when you keep typing past it
+# ref: man zshparam
+ZLE_REMOVE_SUFFIX_CHARS=$' \t\n;'
+
+# Disable Ctrl+S freezing terminal output
+# Ctrl+Q would otherwise be needed to resume it
+stty stop undef
+
+
+# Window title
+
+_set_win_title() {
+    # echo -ne "\033]0; $(basename "$PWD") \007"
+    print -Pn "\e]0;%~\a"
+}
+
+# Update the terminal title before each prompt
+# check `man zshmisc`
+precmd_functions+=(_set_win_title)
+
+
+# Command hooks
+
+# Save the current shell history and mark the beginning of a command
+preexec() {
+    fc -AI
+    print -n "\e]133;C\e\\"
+}
+
+
+# Vi mode
+
+bindkey -v
+
+# Make Vi command mode timeout responsive
+export KEYTIMEOUT=1
+
+# Vi command mode: undo and redo
+bindkey -M vicmd 'u' undo
+bindkey -M vicmd 'U' redo
+
+# Ctrl+K = clear screen
+bindkey -M viins '^K' clear-screen
+bindkey -M vicmd '^K' clear-screen
+
+# Ctrl+U = delete from start of line to cursor
+bindkey -M viins '^U' backward-kill-line
+bindkey -M vicmd '^U' backward-kill-line
+
+# Alt+Left / Alt+Right = move by word
+bindkey -M viins '^[[1;3D' backward-word
+bindkey -M viins '^[[1;3C' forward-word
+
+
+# Word movement and deletion
+
+# Treat hyphens, slashes, and similar characters as word boundaries
+# for word-motion commands
+autoload -Uz select-word-style
+select-word-style bash
+
+# Keep Ctrl+W / Alt+Backspace / Ctrl+Backspace
+# deleting up to the previous space
+autoload -Uz backward-kill-word-match
+zle -N backward-kill-space-word backward-kill-word-match
+zstyle ':zle:backward-kill-space-word' word-style space
+
+bindkey -M viins '^W' backward-kill-space-word
+bindkey -M viins '^[^?' backward-kill-space-word
+bindkey -M viins '^H' backward-kill-space-word
+bindkey -M vicmd '^H' backward-kill-space-word
+
+
+# History navigation
+
+# Search history using the current command-line prefix
+autoload -Uz up-line-or-history
+autoload -Uz down-line-or-history
+
+bindkey -M viins '^P' up-line-or-history
+bindkey -M viins '^N' down-line-or-history
+bindkey -M vicmd '^P' up-line-or-history
+bindkey -M vicmd '^N' down-line-or-history
+
+
+# Completion
+
+# Only rebuild the completion cache once a day
+# compinit -C skips the check entirely but may miss new completions
+autoload -Uz compinit
+
+for dump in ~/.zcompdump(N.mh+24); do
+    compinit
+done
+
+compinit -C
+
+# Needed for the menuselect keymap
+zmodload zsh/complist
+
+zstyle ':completion:*' menu select
+zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'
+zstyle ':completion:*' list-colors "${(s.:.)LS_COLORS}"
+zstyle ':completion:*' special-dirs true
+zstyle ':completion:*:*:ls:*:*' list-dirs-first true
+
+# Tab completion
+bindkey -M viins '^I' expand-or-complete
+
+# Shift+Tab = go back one entry in the completion menu
+bindkey -M menuselect '^[[Z' reverse-menu-complete
+
+# Esc inside the completion menu cancels it
+cancel-completion() {
+    zle .send-break
+}
+
+zle -N cancel-completion
+bindkey -M menuselect '\e' cancel-completion
+
+
+# Autosuggestions
+
+source /usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
+
+ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE='fg=#444444'
+
+# Ctrl+G = accept autosuggestion
+bindkey -M viins '^G' autosuggest-accept
+
+# Right arrow moves through the suggestion character by character
+bindkey -M viins '^[[C' forward-char
+
+# End = accept the current suggestion
+bindkey -M viins '^[[F' autosuggest-accept
+
+
+# zoxide
+
+eval "$(zoxide init zsh --cmd z)"
+
+
+# fzf
+
+# Disable tmux popup, force inline rendering in the current pane
+export FZF_TMUX=0
+
+export FZF_DEFAULT_OPTS="
+--height 20%
+--bind 'ctrl-/:toggle-preview'
+--bind 'ctrl-n:down'
+--bind 'ctrl-p:up'
+--bind 'ctrl-f:preview-down'
+--bind 'ctrl-b:preview-up'
+--preview-window=wrap,hidden
+"
+
+export FZF_DEFAULT_COMMAND='fd --type f --hidden --follow --exclude .git'
+export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
+export FZF_ALT_C_COMMAND='fd --type d --hidden --follow --exclude .git'
+
+# File preview with bat, fallback to cat if unavailable
+export FZF_CTRL_T_OPTS="--preview 'bat --color=always --style=numbers {} 2>/dev/null || cat {}'"
+
+# Load fzf key bindings before Atuin
+# so Atuin can take control of Ctrl+R
+source /usr/share/fzf/key-bindings.zsh
+source /usr/share/fzf/completion.zsh
+
+# Starship
+
+eval "$(starship init zsh)"
+
+
+# Atuin
+
+# SQLite-backed shell history with fuzzy search and context
+# (directory, exit code, duration, and more).
+#
+# Install on Arch: sudo pacman -S atuin
+# Import existing zsh history once with: atuin import auto
+
+# Disable automatic key bindings so they can be configured explicitly
+export ATUIN_NOBIND="true"
+
+eval "$(atuin init zsh)"
+
+# Atuin takes over Ctrl+R after fzf is loaded
+bindkey -M viins '^R' atuin-search-viins
+bindkey -M vicmd '^R' atuin-search-viins
+
+# load aliases if exist
+[ -f "${XDG_CONFIG_HOME:-$HOME/.config}/zsh/aliasrc" ] && . "${XDG_CONFIG_HOME:-$HOME/.config}/zsh/aliasrc"
+[ -f "${XDG_CONFIG_HOME:-$HOME/.config}/zsh/gitrc" ] && . "${XDG_CONFIG_HOME:-$HOME/.config}/zsh/gitrc"
+
+# Profile management
+
+# Reload the current shell configuration
+reload() {
+    source ~/.zshrc
+}
+
+# Open the zsh configuration in Neovim
+profile() {
+    nvim ~/.zshrc
+}
+
+# Command-line helpers
+
+# Press Esc twice to prepend or remove "sudo " from the command line
+sudo-command-line() {
+    [[ -z $BUFFER ]] && zle up-history
+
+    if [[ $BUFFER == sudo\ * ]]; then
+        BUFFER="${BUFFER#sudo }"
+        CURSOR=$((CURSOR - 5))
+    else
+        BUFFER="sudo $BUFFER"
+        CURSOR=$((CURSOR + 5))
+    fi
+}
+
+zle -N sudo-command-line
+bindkey -M viins '\e\e' sudo-command-line
+bindkey -M vicmd '\e\e' sudo-command-line
+
+
+# Resume the last background job with Ctrl+Z
+Resume() {
+    fg
+    zle push-input
+    BUFFER=""
+    zle accept-line
+}
+
+zle -N Resume
+bindkey -M viins '^Z' Resume
+bindkey -M vicmd '^Z' Resume
+
+
+# Edit the current command line in $EDITOR
+autoload -Uz edit-command-line
+zle -N edit-command-line
+
+bindkey -M viins '^X^E' edit-command-line
+bindkey -M vicmd '^X^E' edit-command-line
+
+# Man pages
+
+# Colorize man pages using terminal capability escape sequences
+# export LESS_TERMCAP_mb=$'\e[1;32m'
+# export LESS_TERMCAP_md=$'\e[1;32m'
+# export LESS_TERMCAP_me=$'\e[0m'
+# export LESS_TERMCAP_se=$'\e[0m'
+# export LESS_TERMCAP_so=$'\e[01;33m'
+# export LESS_TERMCAP_ue=$'\e[0m'
+# export LESS_TERMCAP_us=$'\e[1;4;31m'
+export MANPAGER='less -i --incsearch --search-options=W -g -R --use-color -DER -DPY -DSWM -Ddg -Du+c'
+export MANROFFOPT='-P -c'
+
+# Syntax highlighting
+
+# Must be sourced last because it wraps existing ZLE widgets.
+# Anything defined after this point may not be highlighted correctly.
+source /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+
+# Created by `pipx` on 2026-09-08 15:51:08
+export PATH="$PATH:/home/miqu3iasg/.local/bin"

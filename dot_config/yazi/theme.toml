@@ -1,0 +1,223 @@
+# ~/.config/yazi/theme.toml
+# Tema "Black Metal" para o Yazi — paleta extraída diretamente do
+# eyes-dark.conf (Kitty), baseado em amedoeyes/eyes.nvim.
+# Monocromático puro: só as 8 cores abaixo, nada fora da paleta.
+# Testado contra o schema atual do Yazi (yazi-config/preset/theme-dark.toml).
+
+# ---------------------------------------------------------------------------
+# Paleta (extraída de eyes-dark.conf, apenas anotação — TOML não tem vars):
+# bg        = "#000000"  background
+# bg_alt    = "#101010"  tab_bar_background / inactive_tab_background
+# selection = "#202020"  usada em [input].selected (seleção de texto nos prompts)
+# danger    = "#404040"  color1/color4 (red/blue) — bordas, oculto, perigo
+# mid       = "#606060"  color2/color5 (green/magenta) — tom intermediário
+# tertiary  = "#707070"  inactive_tab_foreground — texto terciário
+# highlight = "#808080"  color3/color6 — realces, cwd, bordas ativas
+# fg        = "#A0A0A0"  foreground / color7 — texto padrão
+#
+# Nota sobre o hover (CORRIGIDO): o Yazi NÃO faz reverse-video automático
+# na linha sob o cursor. Isso só acontece se você definir explicitamente
+# `reversed = true` (ou um `bg`) em [indicator]. É isso que faltava aqui —
+# por isso não havia nenhum destaque visual na linha atual.
+# ---------------------------------------------------------------------------
+
+[app]
+overall = { bg = "#000000" }
+
+[mgr]
+cwd = { fg = "#808080", bold = true }
+
+find_keyword   = { fg = "#A0A0A0", bold = true, underline = true }
+find_position  = { fg = "#707070", bg = "reset" }
+symlink_target = { fg = "#707070", italic = true }
+
+marker_copied   = { fg = "#808080", bg = "#808080" }
+marker_cut      = { fg = "#404040", bg = "#404040" }
+marker_marked   = { fg = "#A0A0A0", bg = "#A0A0A0" }
+marker_selected = { fg = "#606060", bg = "#606060" }
+
+count_copied   = { fg = "#000000", bg = "#808080" }
+count_cut      = { fg = "#A0A0A0", bg = "#404040" }
+count_selected = { fg = "#000000", bg = "#606060" }
+
+border_symbol = "│"
+border_style  = { fg = "#404040" }
+
+# : Indicador do arquivo sob o cursor — AQUI estava o bug do destaque {{{
+[indicator]
+# `reversed = true` inverte fg<->bg da própria linha (usa a cor do arquivo,
+# não uma cor fixa) — é assim que o Yazi de fato realça a linha atual.
+# Isso é EXPLÍCITO, não automático (ao contrário do que dizia o comentário
+# antigo deste arquivo).
+parent  = { reversed = true }
+current = { reversed = true }
+preview = { underline = true }
+# `padding` não estava definido aqui, então herdava o padrão do Yazi, que
+# usa um glyph Nerd Font arredondado (estilo "powerline pill") como
+# abre/fecha da linha destacada — é essa a "borda arredondada" que você
+# via. Deixando open/close vazios, o destaque vira um retângulo reto,
+# sem cantos.
+padding = { open = "", close = "" }
+# : }}}
+
+[tabs]
+active    = { fg = "#000000", bg = "#A0A0A0", bold = true }
+inactive  = { fg = "#707070", bg = "#101010" }
+sep_inner = { open = " ", close = " " }
+sep_outer = { open = "", close = "" }
+
+[mode]
+normal_main = { fg = "#000000", bg = "#A0A0A0", bold = true }
+normal_alt  = { fg = "#A0A0A0", bg = "#101010" }
+
+select_main = { fg = "#000000", bg = "#808080", bold = true }
+select_alt  = { fg = "#808080", bg = "#101010" }
+
+unset_main = { fg = "#A0A0A0", bg = "#404040", bold = true }
+unset_alt  = { fg = "#404040", bg = "#101010" }
+
+[status]
+overall = { fg = "#A0A0A0" }
+
+sep_left  = { open = "", close = "" }
+sep_right = { open = "", close = "" }
+
+perm_type  = { fg = "#808080" }
+perm_read  = { fg = "#A0A0A0" }
+perm_write = { fg = "#A0A0A0" }
+perm_exec  = { fg = "#606060" }
+perm_sep   = { fg = "#404040" }
+
+progress_label  = { fg = "#808080", bold = true }
+progress_normal = { fg = "#A0A0A0", bg = "#101010" }
+progress_error  = { fg = "#404040", bg = "#101010" }
+
+[which]
+border          = { fg = "#404040" }
+cols            = 2
+mask            = { bg = "#000000" }
+cand            = { fg = "#808080" }
+rest            = { fg = "#404040" }
+desc            = { fg = "#A0A0A0" }
+separator       = "  "
+separator_style = { fg = "#404040" }
+
+[confirm]
+border  = { fg = "#808080" }
+title   = { fg = "#A0A0A0", bold = true }
+body    = {}
+list    = {}
+btn_yes = { fg = "#000000", bg = "#A0A0A0" }
+btn_no  = { fg = "#707070", bg = "#101010" }
+btn_labels = ["[Y]es", "[N]o"]
+
+[spot]
+border   = { fg = "#404040" }
+title    = { fg = "#808080" }
+tbl_col  = { fg = "#A0A0A0" }
+tbl_cell = {}
+
+[notify]
+title_info  = { fg = "#606060" }
+title_warn  = { fg = "#808080" }
+title_error = { fg = "#404040" }
+
+[pick]
+border   = { fg = "#404040" }
+active   = { fg = "#808080" }
+inactive = {}
+
+# : Input — AQUI é onde a cor "selection" (#202020) realmente se encaixa {{{
+[input]
+border   = { fg = "#404040" }
+title    = {}
+value    = {}
+# Antes: `selected = { reversed = true }` — funcionava, mas não usava a cor
+# "selection" declarada na paleta (que ficava sem nenhum uso no arquivo).
+# Agora a seleção de texto no prompt (filtro, renomear, etc.) usa a cor
+# dedicada da paleta em vez de depender de reverse-video genérico.
+selected = { bg = "#202020", fg = "#A0A0A0" }
+# : }}}
+
+[cmp]
+border       = { fg = "#404040" }
+active       = { bg = "#101010" }
+inactive     = {}
+icon_file    = ""
+icon_folder  = ""
+icon_command = ""
+
+[tasks]
+border  = { fg = "#404040" }
+title   = { fg = "#808080" }
+hovered = { underline = true }
+
+[help]
+border  = { fg = "#404040" }
+chord   = { fg = "#000000", bg = "#A0A0A0" }
+action  = {}
+hovered = { bg = "#101010", bold = true }
+
+# : Tipos de arquivo — cores realinhadas com os globs oficiais do Yazi {{{
+# O bug aqui: seus padrões de mime (ex: "image/*") não seguem a convenção
+# oficial ("**/image/*"). Isso faz alguns tipos não baterem com a regra
+# certa e caírem no fallback genérico — por isso "as cores não estavam
+# nos lugares certos". Também faltava uma regra para arquivos de VFS
+# (ex: arquivos de nuvem ainda não baixados), que também caíam no fallback.
+[filetype]
+rules = [
+	# Diretórios — prioridade máxima, sempre com o tom de destaque
+	{ url = "*/", fg = "#808080", bold = true },
+
+	# Imagens, vídeo e áudio — texto padrão
+	{ mime = "**/image/*",         fg = "#A0A0A0" },
+	{ mime = "**/{audio,video}/*", fg = "#A0A0A0" },
+
+	# Arquivos compactados — tom intermediário
+	{ mime = "**/application/{zip,rar,7z*,tar,gzip,xz,zstd,bzip*,lzma,compress,archive,cpio,arj,xar,ms-cab*}", fg = "#606060" },
+
+	# Documentos
+	{ mime = "**/application/{pdf,doc,rtf}", fg = "#A0A0A0" },
+
+	# Arquivos de sistema de arquivos virtual (ex: nuvem não baixados) — NOVO
+	{ mime = "vfs/{absent,stale}", fg = "#404040" },
+
+	# Arquivo vazio
+	{ mime = "inode/empty", fg = "#404040" },
+
+	# Links simbólicos órfãos — tom mais escuro (perigo)
+	{ url = "*", is = "orphan", fg = "#404040" },
+
+	# Links simbólicos normais
+	{ url = "*", is = "link", fg = "#707070", italic = true },
+
+	# Executáveis
+	{ url = "*", is = "exec", fg = "#A0A0A0", bold = true },
+
+	# Fallback (todos os arquivos restantes)
+	{ url = "*", fg = "#A0A0A0" },
+]
+# : }}}
+
+[icon]
+# REMOVIDO: a regra abaixo usava o glyph "" (ícone de pasta da família
+# Material Design Icons). Ela entrava via `prepend_conds`, ou seja, na
+# FRENTE da lista padrão de regras — por isso substituía o ícone de pasta
+# nativo do Yazi (que funcionava antes de aplicar este tema) por um glyph
+# que não existe na sua fonte Nerd Font (nem toda fonte Nerd Font inclui
+# o conjunto completo de Material Design Icons — algumas trazem só
+# Devicons/Seti, que é o que cobre a maioria dos ícones de extensão de
+# arquivo, por isso esses continuavam funcionando normalmente).
+#
+# Sem nenhuma regra aqui, pastas voltam a usar o ícone padrão do Yazi —
+# o mesmo que já funcionava sem o tema custom.
+#
+# { if = "dir", text = "", fg = "#808080" },
+#
+# Se quiser recolorir o ícone de pasta genérico mantendo um ícone que
+# funciona na sua fonte, use o MESMO glyph do ícone padrão de pasta do
+# Yazi (não um novo) e só troque o `fg`. Pra descobrir qual glyph é esse
+# no seu sistema, rode: `yazi --debug` não ajuda aqui — mais fácil é
+# checar o preset em yazi-config/preset/theme-dark.toml (seção [icon]
+# conds) na sua versão instalada, ou simplesmente testar candidatos como
+# "", "", "" um de cada vez.
