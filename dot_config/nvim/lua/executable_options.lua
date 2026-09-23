@@ -70,6 +70,8 @@ vim.opt.titlestring = "%t"
 vim.opt.fillchars = { eob = " " }
 vim.opt.shortmess:append("acFWIS")
 vim.opt.display:append("lastline")
+vim.opt.fillchars = { eob = " " }
+vim.opt.more = false
 
 -- Folding
 vim.opt.foldmethod = "expr"

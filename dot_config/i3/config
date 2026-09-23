@@ -53,6 +53,7 @@ bindsym XF86MonBrightnessDown exec --no-startup-id \
 # Window behavior
 floating_modifier $mod
 tiling_drag modifier titlebar
+popup_during_fullscreen leave_fullscreen
 
 focus_follows_mouse no
 focus_on_window_activation urgent
@@ -65,7 +66,7 @@ gaps inner 0
 gaps outer 0
 smart_gaps off
 
-# default_border normal 
+# default_border normal
 # default_floating_border normal 0
 
 default_border pixel 1
@@ -153,7 +154,7 @@ bindsym $mod+Ctrl+a focus parent
 # Focus latest urgent window
 bindsym $mod+Ctrl+i [urgent=latest] focus
 
-# Focus monitor 
+# Focus monitor
 bindsym $mod+Ctrl+j focus output down
 bindsym $mod+Ctrl+k focus output up
 
@@ -185,7 +186,7 @@ bindsym $mod+y split toggle
 
 bindsym $mod+space focus mode_toggle
 
-bindsym $mod+Shift+space floating toggle
+bindsym $mod+Shift+space floating toggle, resize set 1200 px 700 px, move position center
 
 bindsym $mod+t floating disable
 
@@ -194,6 +195,7 @@ bindsym $mod+f fullscreen toggle
 bindsym $mod+Shift+s layout stacking
 bindsym $mod+Shift+w layout tabbed
 bindsym $mod+Shift+y layout toggle split
+bindsym $mod+Shift+t layout toggle splith tabbed
 
 # Window management
 
@@ -241,7 +243,7 @@ bindsym $mod+8 workspace number $ws8
 bindsym $mod+9 workspace number $ws9
 
 # Move workspace between monitors
-## (in my current setup, my external monitor is above the laptop, hence up/down instead of left/right) 
+## (in my current setup, my external monitor is above the laptop, hence up/down instead of left/right)
 bindsym $mod+Shift+a move workspace to output up
 bindsym $mod+Shift+f move workspace to output down
 bindsym $mod+Shift+Ctrl+s move workspace to output down
@@ -319,9 +321,14 @@ for_window [window_role="pop-up"] floating enable
 for_window [window_role="task_dialog"] floating enable
 for_window [window_type="dialog"] floating enable
 for_window [class="(?i)zen" window_type="dialog"] floating enable
+for_window [floating_from="auto"] move position center
 
 assign [class="(?i)spotify"] $ws5
 assign [class="(?i)discord"] $ws5
+
+# Notification controls (Dunst)
+bindsym $mod+Ctrl+space exec dunstctl close-all
+bindsym Ctrl+Shift+space exec dunstctl history-pop
 
 # Applications
 
@@ -348,6 +355,10 @@ bindsym $mod2+o exec --no-startup-id obsidian; workspace number $ws4
 # Rofi
 bindsym $mod+m exec --no-startup-id rofi -show drun
 
+# Vicinae
+bindsym $mod2+m exec --no-startup-id vicinae toggle
+bindsym $mod2+f exec --no-startup-id vicinae vicinae://launch/files/search
+
 # Thunar
 bindsym $mod+e exec --no-startup-id thunar
 
@@ -368,6 +379,10 @@ bindsym $mod+Ctrl+l exec --no-startup-id i3lock --nofork -c 000000
 bindsym $mod+Shift+g exec --no-startup-id sh -c \
     'echo "$(date +%Y-%m-%d\ %H:%M) - $(rofi -dmenu -p "Quick note")" >> ~/personal/documents/vault/Dumping.md'
 
+# Pomodoro
+bindsym $mod+Ctrl+p exec --no-startup-id /home/miqu3iasg/.local/bin/pomo.sh start
+bindsym $mod+Ctrl+Shift+p exec --no-startup-id /home/miqu3iasg/.local/bin/pomo.sh pause
+bindsym $mod+Ctrl+x exec --no-startup-id /home/miqu3iasg/.local/bin/pomo.sh stop
 
 # Reload / Restart / Exit
 
@@ -401,10 +416,10 @@ bindsym $mod+F10 exec --no-startup-id sh -c 'maim -s "$HOME/media/screenshots/$(
 bindsym $mod+Shift+F10 exec --no-startup-id sh -c 'maim -s | xclip -selection clipboard -t image/png'
 
 
-# i3bar 
+# i3bar
 bar {
     id bar-ext
-    status_command i3status
+    status_command ~/.config/i3/scripts/statusbar.sh
     output HDMI-1
     position bottom
     tray_output none
@@ -414,7 +429,7 @@ bar {
 
 bar {
     id bar-laptop
-    status_command i3status
+    status_command ~/.config/i3/scripts/statusbar.sh
     output eDP-1
     position bottom
     tray_output primary
@@ -431,5 +446,11 @@ exec_always --no-startup-id setxkbmap -option ctrl:swapcaps
 # Clipboard
 exec --no-startup-id copyq --start-server
 
-# Dual monitors 
-exec_always --no-startup-id ~/.config/i3/monitor-setup.sh 
+# Dual monitors
+exec_always --no-startup-id ~/.config/i3/scripts/monitor-setup.sh
+
+# Pomodoro notifications
+exec --no-startup-id /home/miqu3iasg/.local/bin/pomo.sh notify
+
+# Noitification manager
+exec --no-startup-id dunst
