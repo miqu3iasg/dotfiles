@@ -1,99 +1,44 @@
-# Aliases
+# /home/miqu3iasg/.config/zsh/aliasrc
 
-alias cat='bat'
+# General replacements
+alias cat='bat'                     # cat with syntax highlighting
 alias g='git'
-alias vim='nvim'
 alias ls='eza'
-alias ll='eza -lah'
-alias la='eza -A'
-alias lt='eza --tree --level=2'
-alias lta='eza --tree --level=2 -a'
+alias ll='eza -lah'                 # long listing, all files, human-readable sizes
+alias la='eza -A'                   # all files, short format
+alias lt='eza --tree --level=2'     # tree view, 2 levels deep
+alias lta='eza --tree --level=2 -a' # tree view, 2 levels deep, all files
 
+# Shell shortcuts
 alias c='clear'
 alias q='exit'
 
+# Colorized output
 alias grep='grep --color=auto'
 alias diff='diff --color=auto'
+
+# Confirm before overwriting or bulk-deleting
 alias cp='cp -i'
 alias mv='mv -i'
 alias rm='rm -I'
 
-# Open the Neovim configuration
+# Neovim
+alias vim='nvim'
+
+# Open the Neovim config directory in Neovim
 alias nvc='cd ~/.config/nvim && nvim .'
 
-
 # Neovim profiles
-
-# NVIM_APPNAME gives each profile its own config, plugins,
-# state, and cache directories under ~/.config/<appname>.
 #
+# NVIM_APPNAME gives each profile its own config, plugins, state,
+# and cache directories under ~/.config/<appname>.
 # Useful for testing configurations without touching the main setup.
-alias nvim-scratch='NVIM_APPNAME=nvim-scratch nvim'
-alias nvim-min='NVIM_APPNAME=nvim-min nvim'
+alias nvs='NVIM_APPNAME=nvim-scratch nvim' # scratch profile
+alias nvn='NVIM_APPNAME=nvim-min nvim'     # minimal profile
 
-# File search
-
-# Find files recursively, including hidden files but excluding .git
-alias ff='fd --type f --hidden --exclude .git'
-
-# List files tracked by ripgrep's file search
-alias rgf='rg --files --hidden --glob "!.git"'
-
-
-# Navigation
-
-# Jump to the root directory of the current Git repository
-groot() {
-    cd "$(git rev-parse --show-toplevel)"
-}
-
-# Jump to the Git repository root and open it in Neovim
-croot() {
-    cd "$(git rev-parse --show-toplevel)" &&
-        nvim .
-}
-
-# Create a directory and enter it
-mkcd() {
-    mkdir -p "$1" && cd "$1"
-}
-
-# Show the directory stack
-d() {
-    dirs -v | head
-}
-
-
-# Search and open files
-
-# Search file contents and open the selected match in Neovim
-sf() {
-    local result
-
-    result=$(
-        rg --line-number --no-heading --hidden --glob '!.git' "$*" |
-            fzf --delimiter : \
-                --preview 'bat --color=always --highlight-line {2} {1}' \
-                --preview-window 'right,60%,border-left' \
-                --bind 'enter:become(nvim {1} +{2})'
-    )
-
-    [[ -n "$result" ]] && nvim "${result%%:*}" "+${result#*:}"
-}
-
-# Search and open files from the current directory
-alias sc='[ "$PWD" != "$HOME" ] &&
-    rg --hidden --files --glob "!.git" |
-    fzf --multi \
-        --height 20% \
-        --bind "enter:become(nvim {+})" \
-        --bind "ctrl-/:execute(less -c -i --incsearch --search-options=W -g {})"'
-
-
-# Neovim recent files
-
-# List Neovim's recently opened files and open the selection with nvim
-nlof() {
+# Pick from Neovim's recently opened files (via oldfiles) and open
+# the selection. Also cds into the directory of the first file picked.
+nvr() {
     local oldfiles=(
         "${(@f)$(nvim -u NONE --headless \
             +'lua io.write(table.concat(vim.v.oldfiles, "\n") .. "\n")' \
@@ -126,10 +71,75 @@ nlof() {
     fi
 }
 
+# File search
+
+# Find files recursively, including hidden files, excluding .git
+alias ff='fd --type f --hidden --exclude .git'
+
+# List files tracked by ripgrep's file search, excluding .git
+alias rgf='rg --files --hidden --glob "!.git"'
+
+# Navigation
+
+# cd to the root of the current Git repository
+groot() {
+    cd "$(git rev-parse --show-toplevel)"
+}
+
+# cd to the root of the current Git repository and open it in Neovim
+croot() {
+    cd "$(git rev-parse --show-toplevel)" &&
+        nvim .
+}
+
+# Create a directory and cd into it
+mkcd() {
+    mkdir -p "$1" && cd "$1"
+}
+
+# Show the directory stack (recently visited directories)
+d() {
+    dirs -v | head
+}
+
+# Fuzzy-find a directory under $HOME (up to 2 levels deep) and cd into it.
+# Limited to 2 levels to avoid searching the entire home directory.
+#
+# See: https://www.linuxquestions.org/questions/linux-newbie-8/xargs-cd-is-not-working-796219/#post3906430 (why cd does not work with xargs)
+# See: https://www.linuxquestions.org/questions/linux-newbie-8/xargs-cd-is-not-working-796219/#post3907371 (about pipeline)
+alias sd='cd "$(find ~ -mindepth 1 -maxdepth 2 -name .eclipse -prune -o -type d | fzf --height 20% --bind change:first)"'
+
+# Search and open files
+
+# Search file contents with ripgrep, preview matches with bat,
+# and open the selected match in Neovim at the matched line
+sf() {
+    local result
+
+    result=$(
+        rg --line-number --no-heading --hidden --glob '!.git' "$*" |
+            fzf --delimiter : \
+                --preview 'bat --color=always --highlight-line {2} {1}' \
+                --preview-window 'right,60%,border-left' \
+                --bind 'enter:become(nvim {1} +{2})'
+    )
+
+    [[ -n "$result" ]] && nvim "${result%%:*}" "+${result#*:}"
+}
+
+# List files in the current directory (excluding .git) with fzf,
+# allowing multi-select to open in Neovim, or Ctrl+/ to preview with less.
+# Refuses to run from $HOME to avoid listing the entire home directory.
+alias sc='[ "$PWD" != "$HOME" ] &&
+    rg --hidden --files --glob "!.git" |
+    fzf --multi \
+        --height 20% \
+        --bind "enter:become(nvim {+})" \
+        --bind "ctrl-/:execute(less -c -i --incsearch --search-options=W -g {})"'
 
 # Archive extraction
 
-# Extract common archive formats with one command
+# Extract common archive formats based on file extension
 extract() {
     if [[ -z "$1" || ! -f "$1" ]]; then
         echo "Usage: extract <file>"
@@ -153,10 +163,9 @@ extract() {
     esac
 }
 
-
 # Obsidian
 
-# Open the Obsidian vault in Neovim
+# Open the Obsidian vault (path from $OBSIDIAN_VAULT_PATH) in Neovim
 oo() {
     if [[ ! -d "$OBSIDIAN_VAULT_PATH" ]]; then
         echo "Obsidian vault not found:"
@@ -167,10 +176,9 @@ oo() {
     nvim "$OBSIDIAN_VAULT_PATH"
 }
 
-
 # Yazi
 
-# Open Yazi and change the shell directory to the selected location
+# Open Yazi and cd the shell into whatever directory it exits into
 y() {
     local tmp cwd
 

@@ -1,5 +1,7 @@
-#git alias
-# ref: https://stackoverflow.com/a/12538667
+# /home/miqu3iasg/.config/zsh/gitrc
+
+# Git aliases
+# See: https://stackoverflow.com/a/12538667
 
 gs() {
 	git status "$@"
@@ -10,25 +12,29 @@ gc() {
 }
 
 alias \
+	gcan='git commit --amend --no-edit' \
+	gcam='git commit --amend'
+
+alias \
 	gd='git diff -p --numstat' \
+	gdc='git diff --cached -p --numstat' \
 	gmv='git mv' \
 	gcl='git clone' \
 	gss='git status -sb'
 
-# ref: https://stackoverflow.com/a/30050792 (xargs -a)
+# See: https://stackoverflow.com/a/30050792 (xargs -a)
 alias \
 	ga='git add'
 	# gap='xargs -a <(git status -s | awk "{print \$2}") git add -p'
 
-# ref: https://github.com/junegunn/fzf/issues/2887#issuecomment-1199258039 (fzf reload example)
-# note: only able to parse filename without spacing.
+# See: https://github.com/junegunn/fzf/issues/2887#issuecomment-1199258039 (fzf reload example)
+# Note: only able to parse filename without spacing.
 gaf() {
 	local inside_worktree
 	inside_worktree=$(git rev-parse --is-inside-work-tree) || return "$?"
 	[ "$inside_worktree" = false ] && echo 'Not inside git worktree' && return 1
 
-	# ref split long string:
-	# https://stackoverflow.com/a/46808582
+	# See: https://stackoverflow.com/a/46808582
 	local diff_unstaged="\
 [ {1} = '??' ] && \
 { \
@@ -38,9 +44,9 @@ git diff --color=always --no-index -- /dev/null {2} | less -c -i --incsearch --s
 git diff --color=always -- {2} | less -c -i --incsearch --search-options=W -g -R \
 }"
 
-	# ref:
-	# - https://stackoverflow.com/a/3527985
-	# - `man git-diff` (EXAMPLES section)
+	# Referenes:
+	#   - https://stackoverflow.com/a/3527985
+	#   - `man git-diff` (EXAMPLES section)
 	local diff_staged='git diff --color=always --cached -- {2} | less -c -i --incsearch --search-options=W -g -R'
 
 	local git_config='git -c color.status=always'
@@ -74,8 +80,8 @@ alias \
 	gbm='git branch -m' \
 	nj='git branch --show-current'
 
-# ref: https://unix.stackexchange.com/questions/141285/using-xargs-with-git
-# ref: https://unix.stackexchange.com/a/174717
+# See: https://unix.stackexchange.com/questions/141285/using-xargs-with-git
+# See: https://unix.stackexchange.com/a/174717
 alias \
 	gch='git checkout' \
 	gcb='git checkout -b' \
@@ -107,14 +113,14 @@ gchff() {
 		xargs -r git restore -s $1
 }
 
-# ref:
-# check current branch upstream: https://stackoverflow.com/a/9753364
-# local variable exit code: https://superuser.com/a/1103711
-# options using while: https://stackoverflow.com/a/22395652
-# options using getopts: https://archive.is/TRzn4
-# shift command: https://www.geeksforgeeks.org/shift-command-in-linux-with-examples/
-# prefix and suffix parameter expansion: https://unix.stackexchange.com/a/732587
-# default branch on remote repo: https://davidwalsh.name/get-default-branch-name
+# References:
+#   - check current branch upstream: https://stackoverflow.com/a/9753364
+#   - local variable exit code: https://superuser.com/a/1103711
+#   - options using while: https://stackoverflow.com/a/22395652
+#   - options using getopts: https://archive.is/TRzn4
+#   - shift command: https://www.geeksforgeeks.org/shift-command-in-linux-with-examples/
+#   - prefix and suffix parameter expansion: https://unix.stackexchange.com/a/732587
+#   - default branch on remote repo: https://davidwalsh.name/get-default-branch-name
 ggl() {
 	local inside_worktree
 	inside_worktree=$(git rev-parse --is-inside-work-tree) || return "$?"
@@ -129,8 +135,8 @@ ggl() {
 	local upstream_remote_name="${upstream_reference%%/*}" # something like `origin`
 	local upstream_branch_name="${upstream_reference#*/}"
 
-	# manually handle options that aren't listed:
-	# https://pubs.opengroup.org/onlinepubs/9699919799/utilities/getopts.html
+	# Manually handle options that aren't listed:
+	# See: https://pubs.opengroup.org/onlinepubs/9699919799/utilities/getopts.html
 	while getopts :b:r: option; do
 		case "$option" in
 			b)
@@ -190,15 +196,14 @@ ggl() {
 	fi
 }
 
-# note:
-# if we use `ctrl-c`, the exit code will be 130, not 0.
-# ref:
-# - https://github.com/wfxr/forgit/blob/b727321f2bd3d79c1dae805441261c45888cbb41/forgit.plugin.zsh#L17-L34
-# - https://stackoverflow.com/a/1441062
-# - https://stackoverflow.com/a/8977668 (about shell piping).
-# - https://unix.stackexchange.com/a/14276 (pipestatus in zsh and bash).
-# - https://www.rapidtables.com/code/text/ascii-table.html (hex number).
-# - https://matthew-brett.github.io/pydagogue/git_log_dots.html
+# If we use `ctrl-c`, the exit code will be 130, not 0.
+# References:
+#   - https://github.com/wfxr/forgit/blob/b727321f2bd3d79c1dae805441261c45888cbb41/forgit.plugin.zsh#L17-L34
+#   - https://stackoverflow.com/a/1441062
+#   - https://stackoverflow.com/a/8977668 (about shell piping).
+#   - https://unix.stackexchange.com/a/14276 (pipestatus in zsh and bash).
+#   - https://www.rapidtables.com/code/text/ascii-table.html (hex number).
+#   - https://matthew-brett.github.io/pydagogue/git_log_dots.html
 gl() {
 	local inside_worktree
 	inside_worktree=$(git rev-parse --is-inside-work-tree) || return "$?"
@@ -265,11 +270,11 @@ alias \
 	grm='git rm' \
 	grmc='git rm --cached'
 
-# Ref:
-# https://unix.stackexchange.com/a/305192 (remove trailing character with awk)
-# https://stackoverflow.com/a/12681856 (show git stash untracked file)
-# https://stackoverflow.com/a/1105666 (checkout stash)
-# https://stackoverflow.com/a/3801554 (list untracked file)
+# References:
+#   - https://unix.stackexchange.com/a/305192 (remove trailing character with awk)
+#   - https://stackoverflow.com/a/12681856 (show git stash untracked file)
+#   - https://stackoverflow.com/a/1105666 (checkout stash)
+#   - https://stackoverflow.com/a/3801554 (list untracked file)
 alias \
 	gurm='git ls-files --others --exclude-standard | fzf --multi --layout=reverse-list | xargs -r rm -v'
 
@@ -278,13 +283,23 @@ alias \
 
 alias \
 	greb='git rebase' \
-	grebs='git rebase --autosquash'
+	grebs='git rebase --autosquash' \
+	grebi='git rebase -i' \
+	grbc='git rebase --continue' \
+	grba='git rebase --abort'
 
 alias \
 	gf='git fetch' \
 	gfp='git fetch --prune'
 
-# ref: https://stackoverflow.com/a/47698869 (using awk in shell alias)
+alias \
+	gcp='git cherry-pick'
+
+alias \
+	gt='git tag' \
+	gtd='git tag -d'
+
+# See: https://stackoverflow.com/a/47698869 (using awk in shell alias)
 alias \
 	gwl='git worktree list' \
 	gwr='git worktree list | awk "NR>1 {print \$1}" | fzf --exit-0 | xargs -r git worktree remove'
@@ -311,7 +326,7 @@ gwc() {
 
 	workdir="$(pwd)" || return "$?"
 
-	# Ref: https://stackoverflow.com/a/7584479
+	# See: https://stackoverflow.com/a/7584479
 	selected="$(git worktree list | \
 		awk -v "pwd=$workdir" '$1 != pwd {print $1}' | \
 		fzf --exit-0)" || \
@@ -332,7 +347,7 @@ alias \
 	gstp='git stash pop --quiet --index' \
 	gstf='git status -su | awk "!/^M/ {print \$2}" | fzf --multi --layout=reverse-list | xargs -r git stash push -u'
 
-# Ref: https://stackoverflow.com/a/66831429
+# See: https://stackoverflow.com/a/66831429
 gstl() {
 	local inside_worktree
 	inside_worktree=$(git rev-parse --is-inside-work-tree) || return "$?"
@@ -355,6 +370,26 @@ gstl() {
 		--bind "ctrl-y:execute-silent(echo {1} | tr -d '[:space:]' | xsel --clipboard --input)" \
 		--bind 'ctrl-s:become(git stash pop --quiet --index {1})' \
 		--bind 'ctrl-d:execute-silent(git stash drop {1})+reload(eval "$FZF_DEFAULT_COMMAND")'
+}
+
+gwip() {
+	git add -A && git commit -m "WIP"
+}
+
+# References: 
+#   - https://git-scm.com/docs/pretty-formats (%B - raw body, subject and message body)
+#   - https://stackoverflow.com/a/8244039 (get last commit message)
+#   - https://stackoverflow.com/a/927386 (git reset HEAD~1 to undo last commit)
+gunwip() {
+	local last_msg
+	last_msg="$(git log -1 --pretty=%B)" || return "$?"
+
+	if [ "$last_msg" = "WIP" ]; then
+		git reset HEAD~1
+	else
+		echo 'Last commit is not a WIP. Nothing was undone.'
+		return 1
+	fi
 }
 
 # Create a private GitHub repository from the current directory,
