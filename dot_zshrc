@@ -153,7 +153,6 @@ bindkey -M viins '^N' down-line-or-history
 bindkey -M vicmd '^P' up-line-or-history
 bindkey -M vicmd '^N' down-line-or-history
 
-
 # Completion
 
 # Only rebuild the completion cache once a day
@@ -237,6 +236,16 @@ export FZF_CTRL_T_OPTS="--preview 'bat --color=always --style=numbers {} 2>/dev/
 # so Atuin can take control of Ctrl+R
 source /usr/share/fzf/key-bindings.zsh
 source /usr/share/fzf/completion.zsh
+
+
+# Use Ctrl+F for fzf directory selection.
+bindkey -M viins '^F' fzf-cd-widget
+bindkey -M vicmd '^F' fzf-cd-widget
+
+# Disable fzf's default Alt+C binding.
+bindkey -M viins -r '^[c'
+bindkey -M vicmd -r '^[c'
+
 
 # Starship
 

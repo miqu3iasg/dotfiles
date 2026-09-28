@@ -11,12 +11,12 @@ if xrandr --query | grep -q "HDMI-1 connected"; then
     echo "HDMI-1 detected, loading externo profile" >> "$LOG"
     autorandr --load externo >> "$LOG" 2>&1
 
-    feh --bg-scale ~/wallpapers/black.jpg ~/wallpapers/dark-houses.jpg
+    feh --bg-scale ~/wallpapers/black.jpg ~/wallpapers/eye.jpg
 else
     echo "HDMI-1 not detected, loading notebook profile" >> "$LOG"
     autorandr --load notebook >> "$LOG" 2>&1
 
-    feh --bg-scale ~/wallpapers/dark-houses.jpg
+    feh --bg-scale ~/wallpapers/eye.jpg
 fi
 
 echo "Current state: $(autorandr --current)" >> "$LOG"

@@ -294,6 +294,8 @@ bindsym $mod+Ctrl+9 move container to workspace number $ws9
 # Scratchpad
 
 for_window [instance="scratchmux"] \
+    title_format "scratchmux", \
+    border normal 1, \
     move scratchpad, \
     sticky enable, \
     resize set 900 520
@@ -311,7 +313,7 @@ bindsym $mod+Ctrl+Shift+m exec --no-startup-id kitty --class scratchmux
 
 # Application assignments
 
-for_window [class=".*"] title_format "%title"
+# for_window [class=".*"] title_format "%title"
 
 for_window [class="(?i)copyq"] floating enable
 for_window [class="(?i)pavucontrol"] floating enable
@@ -350,7 +352,7 @@ bindsym $mod2+Shift+z exec --no-startup-id qutebrowser; workspace number $ws3
 bindsym $mod2+v exec --no-startup-id copyq toggle
 
 # Obsidian
-bindsym $mod2+o exec --no-startup-id obsidian; workspace number $ws4
+bindsym $mod2+o exec --no-startup-id obsidian; workspace number $ws2
 
 # Rofi
 bindsym $mod+m exec --no-startup-id rofi -show drun

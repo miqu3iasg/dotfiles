@@ -24,6 +24,8 @@ alias rm='rm -I'
 
 # Neovim
 alias vim='nvim'
+alias vi='nvim'
+alias im='nvim'
 
 # Open the Neovim config directory in Neovim
 alias nvc='cd ~/.config/nvim && nvim .'
