@@ -25,8 +25,8 @@ wireless _first_ {
 }
 
 ethernet _first_ {
-  format_up = "net [%speed]"
-  format_down = "net down"
+  format_up = "net [%speed]   "
+  format_down = "net down   "
 }
 
 battery all {
