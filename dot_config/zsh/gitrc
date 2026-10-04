@@ -3,9 +3,7 @@
 # Git aliases
 # See: https://stackoverflow.com/a/12538667
 
-gs() {
-	git status "$@"
-}
+alias gs='git status'
 
 gc() {
 	git commit -m "$*"
@@ -17,7 +15,7 @@ alias \
 
 alias \
 	gcm='git commit' \
-	gcv='git commit --verbose' \
+	gcv='git commit --v' \
 	gca='git commit --all' \
 	gcpa='git commit --patch' \
 	gcs='git commit --signoff' \
@@ -80,49 +78,20 @@ git diff --color=always -- {2} | less -c -i --incsearch --search-options=W -g -R
 		--bind "ctrl-x:execute($diff_staged)"
 }
 
+# Fetch / Pull / Push
+alias \
+	gf='git fetch' \
+	gfp='git fetch --prune'
+
+alias \
+	gpl='git pull' \
+	gplr='git pull --rebase'
+
 alias \
 	gp='git push' \
 	gpf='git push --force-with-lease' \
 	ggp='git push -u origin "$(git branch --show-current)"' \
 	ggpd='git push origin -d "$(git branch --show-current)" --no-verify && git branch --unset-upstream'
-
-alias \
-	gb='git branch' \
-	gbm='git branch -m' \
-	nj='git branch --show-current'
-
-# See: https://unix.stackexchange.com/questions/141285/using-xargs-with-git
-# See: https://unix.stackexchange.com/a/174717
-alias \
-	gch='git checkout' \
-	gcb='git checkout -b' \
-	gct='git branch -r | fzf | xargs -r git checkout -t' \
-	gchf='git status -s | awk "/^[^??]/ {print \$2}" | fzf --multi --layout=reverse-list | xargs -r git checkout'
-
-gco() {
-	local inside_worktree
-	inside_worktree=$(git rev-parse --is-inside-work-tree) || return "$?"
-	[ "$inside_worktree" = false ] && echo 'Not inside git worktree' && return 1
-
-	FZF_DEFAULT_COMMAND='git branch | awk "/^[^*+]/ {print \$1}"' \
-		fzf \
-			--exit-0 \
-			--cycle \
-			--bind 'enter:become(git checkout {1})' \
-			--bind 'ctrl-r:reload(eval "$FZF_DEFAULT_COMMAND")' \
-			--bind 'ctrl-d:execute-silent(git branch -D {1})+reload(eval "$FZF_DEFAULT_COMMAND")+down' \
-			--bind 'ctrl-/:execute(git log --date=human --abbrev-commit {1})'
-}
-
-gchff() {
-	local inside_worktree
-	inside_worktree=$(git rev-parse --is-inside-work-tree) || return "$?"
-	[ "$inside_worktree" = false ] && echo 'Not inside git worktree' && return 1
-
-	git diff --name-only HEAD $1 | \
-		fzf --ansi --multi --height=80% --reverse --preview="git diff --color=always HEAD $1 -- {1}" --preview-window=nohidden | \
-		xargs -r git restore -s $1
-}
 
 # References:
 #   - check current branch upstream: https://stackoverflow.com/a/9753364
@@ -151,7 +120,7 @@ ggl() {
 	while getopts :b:r: option; do
 		case "$option" in
 			b)
-				[ ! -z "${OPTARG#-[br]}" ] &&
+				[ -n "${OPTARG#-[br]}" ] &&
 				{
 					git check-ref-format --branch "$OPTARG" >/dev/null &&
 						remote_branch_name="$OPTARG" ||
@@ -161,7 +130,7 @@ ggl() {
 				}
 				;;
 			r)
-				[ ! -z "${OPTARG#-[br]}" ] &&
+				[ -n "${OPTARG#-[br]}" ] &&
 				{
 					git check-ref-format --allow-onelevel "$OPTARG" >/dev/null &&
 						remote_name="$OPTARG" ||
@@ -194,7 +163,7 @@ ggl() {
 	# `timeout` command is from GNU coreutils.
 	git_ls_remote="$(timeout --preserve-status 5s git ls-remote --head "$remote_name" "$remote_branch_name")" || return "$?"
 
-	if [ ! -z "$git_ls_remote" ]; then
+	if [ -n "$git_ls_remote" ]; then
 		echo "Pulling from branch "$remote_branch_name" on remote "$remote_name""
 		git pull "$remote_name" "$remote_branch_name" || return "$?"
 	else
@@ -205,6 +174,49 @@ ggl() {
 			echo "No branch "$remote_branch_name" on remote "$remote_name""
 		fi
 	fi
+}
+
+# Branch
+alias \
+	gb='git branch' \
+	gbm='git branch -m' \
+	gbc='git branch --show-current'
+
+# Switch / Restore
+# See: https://unix.stackexchange.com/questions/141285/using-xargs-with-git
+# See: https://unix.stackexchange.com/a/174717
+alias \
+	gsw='git switch' \
+	gswc='git switch -c' \
+	gswt='git branch -r | fzf | xargs -r git switch -t' \
+	grst='git restore' \
+	grstf='git status -s | awk "/^[^??]/ {print \$2}" | fzf --multi --layout=reverse-list | xargs -r git restore'
+
+# Interactive branch switcher
+gsws() {
+	local inside_worktree
+	inside_worktree=$(git rev-parse --is-inside-work-tree) || return "$?"
+	[ "$inside_worktree" = false ] && echo 'Not inside git worktree' && return 1
+
+	FZF_DEFAULT_COMMAND='git branch | awk "/^[^*+]/ {print \$1}"' \
+		fzf \
+			--exit-0 \
+			--cycle \
+			--bind 'enter:become(git switch {1})' \
+			--bind 'ctrl-r:reload(eval "$FZF_DEFAULT_COMMAND")' \
+			--bind 'ctrl-d:execute-silent(git branch -D {1})+reload(eval "$FZF_DEFAULT_COMMAND")+down' \
+			--bind 'ctrl-/:execute(git log --date=human --abbrev-commit {1})'
+}
+
+# Restore files from another ref (interactive)
+grsts() {
+	local inside_worktree
+	inside_worktree=$(git rev-parse --is-inside-work-tree) || return "$?"
+	[ "$inside_worktree" = false ] && echo 'Not inside git worktree' && return 1
+
+	git diff --name-only HEAD $1 | \
+		fzf --ansi --multi --height=80% --reverse --preview="git diff --color=always HEAD $1 -- {1}" --preview-window=nohidden | \
+		xargs -r git restore -s $1
 }
 
 # If we use `ctrl-c`, the exit code will be 130, not 0.
@@ -293,23 +305,20 @@ alias \
 	gres='git reset'
 
 alias \
-	greb='git rebase' \
-	grebs='git rebase --autosquash' \
-	grebi='git rebase -i' \
+	grb='git rebase' \
+	grbs='git rebase --autosquash' \
+	grbi='git rebase -i' \
 	grbc='git rebase --continue' \
 	grba='git rebase --abort'
 
 alias \
-	gf='git fetch' \
-	gfp='git fetch --prune'
-
-alias \
-	gcp='git cherry-pick'
+	gcpk='git cherry-pick'
 
 alias \
 	gt='git tag' \
 	gtd='git tag -d'
 
+# Worktree
 # See: https://stackoverflow.com/a/47698869 (using awk in shell alias)
 alias \
 	gwl='git worktree list' \
@@ -320,10 +329,11 @@ gwa() {
 	inside_worktree=$(git rev-parse --is-inside-work-tree) || return "$?"
 	[ "$inside_worktree" = false ] && echo 'Not inside git worktree' && return 1
 
-	local git_root="$(git rev-parse --show-toplevel)"
-	local git_branch="$(git branch -a | awk '/^[^*+]/ {print $1}' | fzf --exit-0 )"
-	local worktree_dir="$(printf '%s\n' $git_branch | sed 's/\//-/g')"
-	if [ ! -z "$git_branch" ]; then
+	local git_root git_branch worktree_dir
+	git_root=$(git rev-parse --show-toplevel) || return "$?"
+	git_branch=$(git branch -a | awk '/^[^*+]/ {print $1}' | fzf --exit-0) || return "$?"
+	worktree_dir=$(printf '%s\n' $git_branch | sed 's/\//-/g') || return "$?"
+	if [ -n "$git_branch" ]; then
 		git worktree add \
 			"${XDG_STATE_HOME:-$HOME/.local/state}/git-worktrees/${git_root##*/}/$worktree_dir" "$git_branch" || return "$?"
 	fi
@@ -335,7 +345,7 @@ gwc() {
 	inside_worktree=$(git rev-parse --is-inside-work-tree) || return "$?"
 	[ "$inside_worktree" = false ] && echo 'Not inside git worktree' && return 1
 
-	workdir="$(pwd)" || return "$?"
+	workdir="$PWD"
 
 	# See: https://stackoverflow.com/a/7584479
 	selected="$(git worktree list | \
@@ -345,6 +355,9 @@ gwc() {
 
 	cd "$selected"
 }
+
+alias \
+	gcd='cd "$(git rev-parse --show-toplevel)"'
 
 alias \
 	gra='git remote add' \
@@ -388,12 +401,12 @@ gwip() {
 }
 
 # References: 
-#   - https://git-scm.com/docs/pretty-formats (%B - raw body, subject and message body)
+#   - https://git-scm.com/docs/pretty-formats (%s - subject)
 #   - https://stackoverflow.com/a/8244039 (get last commit message)
 #   - https://stackoverflow.com/a/927386 (git reset HEAD~1 to undo last commit)
 gunwip() {
 	local last_msg
-	last_msg="$(git log -1 --pretty=%B)" || return "$?"
+	last_msg="$(git log -1 --pretty=%s)" || return "$?"
 
 	if [ "$last_msg" = "WIP" ]; then
 		git reset HEAD~1
@@ -406,12 +419,9 @@ gunwip() {
 # Create a private GitHub repository from the current directory,
 # push all branches, and open it in the browser
 ghc() {
-    gh repo create --private --source=. --remote=origin &&
-        git push -u --all &&
-        gh browse
+	gh repo create --private --source=. --remote=origin &&
+		git push -u --all &&
+		gh browse
 }
-
-alias \
-	gcd='cd "$(git rev-parse --show-toplevel)"'
 
 # vim:ft=sh
