@@ -25,6 +25,9 @@ exec --no-startup-id xss-lock --transfer-sleep-lock -- i3lock --nofork
 # NetworkManager applet.
 exec --no-startup-id nm-applet
 
+# Notification daemon
+exec --no-startup-id dunst
+
 # Disable screen blanking and DPMS.
 exec --no-startup-id xset s off -dpms s noblank
 
@@ -411,12 +414,10 @@ mode "$mode_system" {
 }
 
 # Screenshots
-set $ss_dir $HOME/media/screenshots
-
-bindsym F10 exec --no-startup-id sh -c 'maim "$HOME/media/screenshots/$(date +%Y-%m-%d_%H-%M-%S).png"'
-bindsym $mod+F10 exec --no-startup-id sh -c 'maim -s "$HOME/media/screenshots/$(date +%Y-%m-%d_%H-%M-%S).png"'
-bindsym $mod+Shift+F10 exec --no-startup-id sh -c 'maim -s | xclip -selection clipboard -t image/png'
-
+bindsym F10 exec --no-startup-id /home/miqu3iasg/.local/bin/print.sh full
+bindsym $mod+F10 exec --no-startup-id /home/miqu3iasg/.local/bin/print.sh area
+bindsym $mod+Shift+F10 exec --no-startup-id /home/miqu3iasg/.local/bin/print.sh clip
+bindsym $mod+Ctrl+F10 exec --no-startup-id /home/miqu3iasg/.local/bin/print.sh window
 
 # i3bar
 bar {

@@ -57,9 +57,9 @@ end, { desc = "Toggle diagnostics" })
 
 -- Toggle inline diagnostics (virtual text); off by default in options.lua
 km("n", "<leader>vi", function()
-  local enabled = vim.diagnostic.config().virtual_text
-  vim.diagnostic.config({ virtual_text = not enabled })
-end, { desc = "Toggle inline diagnostics" })
+  local cfg = vim.diagnostic.config()
+  vim.diagnostic.config({ virtual_text = not cfg.virtual_text })
+end)
 
 -- Info and health
 
@@ -76,6 +76,7 @@ km("n", "<leader>zs", "<cmd>e ~/.zshrc<cr>", { desc = "Edit .zshrc" })
 km("n", "<leader>zt", "<cmd>e ~/.config/tmux/tmux.conf<cr>", { desc = "Edit tmux.conf" })
 km("n", "<leader>zn", function() require("oil").open("~/.config/nvim") end, { desc = "Edit nvim config directory (Oil)" })
 km("n", "<leader>zi", "<cmd>e ~/.config/i3/config<cr>", { desc = "Edit i3 configuration" })
+km("n", "<leader>zg", "<cmd>e ~/.gitconfig<cr>", { desc = "Edit Git configuration" })
 
 -- Save and quit
 
