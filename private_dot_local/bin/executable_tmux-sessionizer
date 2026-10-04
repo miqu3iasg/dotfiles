@@ -1,6 +1,13 @@
 #!/usr/bin/env bash
-# Lista diretórios de projeto via zoxide (por frequência de uso) e abre/cria sessão tmux
-selected=$(zoxide query -l | fzf)
+
+# If a path is passed as an argument, it uses that. Otherwise, it opens zoxide and fzf
+if [[ $# -eq 1 ]]; then
+    selected=$1
+else
+    selected=$(zoxide query -l | fzf)
+fi
+
+# If you haven't selected anything, exit
 [ -z "$selected" ] && exit 0
 
 selected_name=$(basename "$selected" | tr . _)
