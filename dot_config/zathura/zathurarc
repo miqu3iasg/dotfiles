@@ -11,9 +11,6 @@ set adjust-open "width"
 # Window title shows filename only, not full path
 set window-title-basename true
 
-# Pre-render offscreen pages for smoother scrolling
-set render-loading true
-
 # Navigation and scroll
 
 set scroll-step 60
@@ -34,7 +31,7 @@ set recolor-darkcolor "#dcdcdc"
 # Keep original hues on graphics/diagrams instead of full grayscale
 set recolor-keephue true
 
-# Interface theme 
+# Interface theme
 
 # Statusbar
 set statusbar-fg "#cccccc"
@@ -74,10 +71,13 @@ set synctex-editor-command "code --goto %{input}:%{line}"
 # Utils
 map K zoom in
 map J zoom out
+map <C-n> navigate next
+map <C-p> navigate previous
 map p print
 
 # Toggle dark mode
 map <C-r> recolor
+map i recolor
 
 # Rotate page
 map r rotate
@@ -87,16 +87,19 @@ map gg goto top
 map G goto bottom
 
 # Search
-map / search
 map n search forward
 map N search backward
 
 # Presentation / fullscreen mode
-map <F5> toggle_fullscreen
+map <F5> toggle_presentation
+map <F11> toggle_fullscreen
 
 # Reload document
 map R reload
 
+# GUI options
+map b toggle_statusbar
+map <Tab> toggle_index
+
 # Copy current file path to clipboard
-map <C-c> feedkeys ":exec echo -n '%{filepath}' | xclip -selection clipboard<Return>"
-map y feedkeys ":exec echo -n '%{filepath}' | xclip -selection clipboard<Return>"
+map y exec "sh -c 'printf %s \"$FILE\" | xclip -selection clipboard'"

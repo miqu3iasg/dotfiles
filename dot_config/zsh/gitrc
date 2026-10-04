@@ -16,6 +16,17 @@ alias \
 	gcam='git commit --amend'
 
 alias \
+	gcm='git commit' \
+	gcv='git commit --verbose' \
+	gca='git commit --all' \
+	gcpa='git commit --patch' \
+	gcs='git commit --signoff' \
+	gcf='git commit --fixup' \
+	gcae='git commit --allow-empty' \
+	gcre='git commit --reedit-message' \
+	gcrn='git commit --reuse-message'
+
+alias \
 	gd='git diff -p --numstat' \
 	gdc='git diff --cached -p --numstat' \
 	gmv='git mv' \

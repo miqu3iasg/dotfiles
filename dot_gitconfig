@@ -6,24 +6,12 @@
 	defaultBranch = main
 
 [core]
-	pager = delta
 	editor = nvim
 	autocrlf = input
 	excludesfile = ~/.gitignore_global
 
-[interactive]
-	diffFilter = delta --color-only
-
-[delta]
-	navigate = true
-	light = false
-	side-by-side = false
-	line-numbers = true
-	syntax-theme = none
-	minus-style = "red"
-	plus-style = "green"
-	minus-emph-style = "reverse red"
-	plus-emph-style = "reverse green"
+[color]
+  ui = auto
 
 [merge]
 	conflictstyle = diff3
@@ -31,10 +19,11 @@
 
 [mergetool "nvimdiff"]
 	cmd = nvim -d $LOCAL $BASE $REMOTE $MERGED -c '$wincmd w' -c 'wincmd J'
+  keepbackup = false
 
 [diff]
-	colorMoved = default
 	algorithm = histogram
+	wsErrorHighlight = all
 
 [pull]
 	rebase = true
@@ -59,6 +48,12 @@
 
 [branch]
 	sort = -committerdate
+
+[rebase]
+	autosquash = true
+
+[interactive]
+	singlekey = true
 
 [column]
 	ui = auto
