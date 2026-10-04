@@ -28,7 +28,7 @@ alias vi='nvim'
 alias im='nvim'
 
 # Open the Neovim config directory in Neovim
-alias nvc='cd ~/.config/nvim && nvim .'
+alias nvcfg='cd ~/.config/nvim && nvim .'
 
 # Neovim profiles
 #
@@ -177,6 +177,86 @@ oo() {
 
     nvim "$OBSIDIAN_VAULT_PATH"
 }
+
+# Starship theme switcher
+
+# Switch the active Starship theme globally and persistently.
+#
+# Starship reads ~/.config/starship.toml by default, so this function
+# keeps that path as a symlink to the chosen theme, stored next to it as
+# starship.<name>.toml. Because the link lives on disk, the choice
+# survives new shells and reboots, and every open terminal picks it up
+# on its next prompt, since Starship re-reads its config on each run.
+#
+# This only works while STARSHIP_CONFIG is unset: when set, Starship
+# uses that file and ignores the symlink. To make it work, remove any
+# export of STARSHIP_CONFIG from ~/.zshrc, and in terminals that are
+# already open, run:
+#
+#   $ unset STARSHIP_CONFIG
+#
+# Usage:
+#   sp <name>   switch to starship.<name>.toml
+#   sp          show the current theme and list the available ones
+#
+# If starship.toml exists as a regular file, it is moved to
+# starship.toml.bak before the link is created, so nothing is lost.
+#
+# See: https://starship.rs/config/ (config location and STARSHIP_CONFIG)
+# See: https://specifications.freedesktop.org/basedir-spec/latest/ (XDG_CONFIG_HOME)
+# See: https://man7.org/linux/man-pages/man1/ln.1.html (symbolic links)
+sp() {
+    local dir="${XDG_CONFIG_HOME:-$HOME/.config}"
+    local link="$dir/starship.toml"
+    local name="$1"
+    local f
+
+    # With no argument, report the current theme and list the others.
+    # The current theme is the target of the symlink, with the
+    # "starship." prefix and ".toml" suffix removed.
+    if [[ -z "$name" ]]; then
+        local current="${$(readlink -f "$link" 2>/dev/null):t:r}"
+        echo "current: ${current#starship.}"
+        echo "available:"
+
+        # (N) avoids an error when nothing matches; :t keeps the file
+        # name and :r drops the extension.
+        # The pattern requires a name between the dots, so the link
+        # itself (starship.toml) is never listed.
+        # See: https://zsh.sourceforge.io/Doc/Release/Expansion.html (glob qualifiers and modifiers)
+        for f in "$dir"/starship.*.toml(N:t:r); do
+            echo "  ${f#starship.}"
+        done
+        return
+    fi
+
+    local target="$dir/starship.$name.toml"
+
+    if [[ ! -f "$target" ]]; then
+        echo "sp: theme '$name' not found ($target)"
+        return 1
+    fi
+
+    # Back up a regular file before replacing it. Existing symlinks are
+    # skipped, since ln -sf below overwrites them safely.
+    [[ -e "$link" && ! -L "$link" ]] && mv "$link" "$link.bak"
+
+    ln -sf "$target" "$link"
+}
+
+# Tab completion for theme names, built from the same file pattern that
+# sp uses, so new themes are completed as soon as the file exists.
+# See: https://zsh.sourceforge.io/Doc/Release/Completion-System.html (compdef and compadd)
+_sp() {
+    local dir="${XDG_CONFIG_HOME:-$HOME/.config}"
+    local -a themes=("$dir"/starship.*.toml(N:t:r))
+
+    # Strip the "starship." prefix from every entry.
+    themes=("${themes[@]#starship.}")
+
+    compadd -a themes
+}
+compdef _sp sp
 
 # Yazi
 

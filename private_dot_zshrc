@@ -21,7 +21,7 @@ export LC_ALL="en_US.UTF-8"
 # Application-specific paths and settings
 export BAT_THEME="ansi"
 export OBSIDIAN_VAULT_PATH="$HOME/personal/documents/vault"
-# export STARSHIP_CONFIG="$HOME/.config/starship/starship.toml"
+# export STARSHIP_CONFIG="$HOME/.config/starship.lean.toml"
 # export TMUX_CONF="$HOME/.config/tmux/tmux.conf"
 
 
@@ -164,6 +164,8 @@ for dump in ~/.zcompdump(N.mh+24); do
 done
 
 compinit -C
+
+zstyle ':completion:*' list-colors 'di=0:ow=0:tw=0:st=0'
 
 # Needed for the menuselect keymap
 zmodload zsh/complist
@@ -346,3 +348,11 @@ source /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zs
 
 # Created by `pipx` on 2026-09-08 15:51:08
 export PATH="$PATH:/home/miqu3iasg/.local/bin"
+
+# pnpm
+export PNPM_HOME='/home/miqu3iasg/.local/share/pnpm'
+case ":$PATH:" in
+  *":$PNPM_HOME/bin:"*) ;;
+  *) export PATH="$PNPM_HOME/bin:$PATH" ;;
+esac
+# pnpm end
