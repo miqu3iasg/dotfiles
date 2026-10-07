@@ -130,8 +130,8 @@ bindkey -M viins '^[[3~' delete-char
 bindkey -M viins '^[.' insert-last-word
 
 # Clear screen 
-bindkey -M viins '^X^O' clear-screen
-bindkey -M vicmd '^X^O' clear-screen
+bindkey -M viins '^X^S' clear-screen
+bindkey -M vicmd '^X^S' clear-screen
 
 # Delete from start of line to cursor 
 bindkey -M viins '^U' backward-kill-line
