@@ -1,9 +1,17 @@
 # ~/.zshrc
 
+# Startup profiling (run: ZSH_PROF=1 zsh -i -c exit)
+[[ -n $ZSH_PROF ]] && zmodload zsh/zprof
+
+
 # Environment
 
 # Deduplicate PATH entries, even if .zshrc gets sourced more than once
 typeset -U PATH
+
+# pipx (appended) and pnpm (prepended)
+export PNPM_HOME="$HOME/.local/share/pnpm"
+path=("$PNPM_HOME" $path "$HOME/.local/bin")
 
 # Custom completions directory
 fpath=(~/.zsh/completions $fpath)
@@ -14,15 +22,22 @@ export VISUAL="nvim"
 export PAGER="less"
 export LESS="-R"
 
-# Locale
+# Locale (avoid LC_ALL: it overrides every other LC_* variable)
 export LANG="en_US.UTF-8"
-export LC_ALL="en_US.UTF-8"
 
 # Application-specific paths and settings
 export BAT_THEME="ansi"
 export OBSIDIAN_VAULT_PATH="$HOME/personal/documents/vault"
-# export STARSHIP_CONFIG="$HOME/.config/starship.lean.toml"
-# export TMUX_CONF="$HOME/.config/tmux/tmux.conf"
+
+# Silence direnv's load/unload logs
+export DIRENV_LOG_FORMAT=
+
+# Make sure LS_COLORS is set (used by completion colors)
+[[ -z $LS_COLORS ]] && (( $+commands[dircolors] )) && eval "$(dircolors -b)"
+
+# Cache directory for zsh (completion dump and cache)
+_zcache="${XDG_CACHE_HOME:-$HOME/.cache}/zsh"
+[[ -d $_zcache ]] || mkdir -p "$_zcache"
 
 
 # Shell options
@@ -33,7 +48,6 @@ setopt PUSHD_IGNORE_DUPS
 setopt PUSHD_SILENT
 setopt INTERACTIVE_COMMENTS
 setopt EXTENDED_GLOB
-setopt AUTO_PARAM_SLASH
 setopt NO_CASE_GLOB
 setopt NO_CASE_MATCH
 setopt ALWAYS_TO_END
@@ -54,9 +68,7 @@ HISTFILE="$HOME/.zsh_history"
 HISTSIZE=50000
 SAVEHIST=50000
 
-setopt APPEND_HISTORY
 setopt SHARE_HISTORY
-setopt HIST_IGNORE_DUPS
 setopt HIST_IGNORE_ALL_DUPS
 setopt HIST_FIND_NO_DUPS
 setopt HIST_SAVE_NO_DUPS
@@ -81,7 +93,6 @@ stty stop undef
 # Window title
 
 _set_win_title() {
-    # echo -ne "\033]0; $(basename "$PWD") \007"
     print -Pn "\e]0;%~\a"
 }
 
@@ -92,35 +103,38 @@ precmd_functions+=(_set_win_title)
 
 # Command hooks
 
-# Save the current shell history and mark the beginning of a command
-preexec() {
-    fc -AI
+# Mark the beginning of a command output (OSC 133;C)
+_osc133_preexec() {
     print -n "\e]133;C\e\\"
 }
+preexec_functions+=(_osc133_preexec)
 
 
 # Vi mode
 
 bindkey -v
 
-# Make Vi command mode timeout responsive
-export KEYTIMEOUT=1
+KEYTIMEOUT=10
 
-# Vi command mode: undo and redo
 bindkey -M vicmd 'u' undo
 bindkey -M vicmd 'U' redo
 
-# Ctrl+K = clear screen
-bindkey -M viins '^K' clear-screen
-bindkey -M vicmd '^K' clear-screen
+# Y yanks to end of line
+bindkey -M vicmd 'Y' vi-yank-eol
 
-# Ctrl+U = delete from start of line to cursor
+# Backspace deletes past the point where insert mode started
+bindkey -M viins '^?' backward-delete-char
+bindkey -M viins '^[[3~' delete-char
+
+# Insert last argument of the previous command
+bindkey -M viins '^[.' insert-last-word
+
+# Clear screen 
+bindkey -M viins '^X^O' clear-screen
+bindkey -M vicmd '^X^O' clear-screen
+
+# Delete from start of line to cursor 
 bindkey -M viins '^U' backward-kill-line
-bindkey -M vicmd '^U' backward-kill-line
-
-# Alt+Left / Alt+Right = move by word
-bindkey -M viins '^[[1;3D' backward-word
-bindkey -M viins '^[[1;3C' forward-word
 
 
 # Word movement and deletion
@@ -130,8 +144,6 @@ bindkey -M viins '^[[1;3C' forward-word
 autoload -Uz select-word-style
 select-word-style bash
 
-# Keep Ctrl+W / Alt+Backspace / Ctrl+Backspace
-# deleting up to the previous space
 autoload -Uz backward-kill-word-match
 zle -N backward-kill-space-word backward-kill-word-match
 zstyle ':zle:backward-kill-space-word' word-style space
@@ -139,45 +151,44 @@ zstyle ':zle:backward-kill-space-word' word-style space
 bindkey -M viins '^W' backward-kill-space-word
 bindkey -M viins '^[^?' backward-kill-space-word
 bindkey -M viins '^H' backward-kill-space-word
-bindkey -M vicmd '^H' backward-kill-space-word
 
 
 # History navigation
 
 # Search history using the current command-line prefix
-autoload -Uz up-line-or-history
-autoload -Uz down-line-or-history
+# up-line-or-search / down-line-or-search match what is already typed,
+# unlike up-line-or-history / down-line-or-history
+autoload -Uz up-line-or-search
+autoload -Uz down-line-or-search
+bindkey -M viins '^P' up-line-or-search
+bindkey -M viins '^N' down-line-or-search
+bindkey -M vicmd '^P' up-line-or-search
+bindkey -M vicmd '^N' down-line-or-search
 
-bindkey -M viins '^P' up-line-or-history
-bindkey -M viins '^N' down-line-or-history
-bindkey -M vicmd '^P' up-line-or-history
-bindkey -M vicmd '^N' down-line-or-history
 
 # Completion
 
-# Only rebuild the completion cache once a day
-# compinit -C skips the check entirely but may miss new completions
+# Rebuild the completion dump only if it is older than 24h,
+# otherwise skip the security check with -C
+_zcompdump="$_zcache/zcompdump"
 autoload -Uz compinit
-
-for dump in ~/.zcompdump(N.mh+24); do
-    compinit
-done
-
-compinit -C
-
-zstyle ':completion:*' list-colors 'di=0:ow=0:tw=0:st=0'
+if [[ -n $_zcompdump(#qN.mh+24) ]]; then
+    compinit -d "$_zcompdump"
+else
+    compinit -C -d "$_zcompdump"
+fi
 
 # Needed for the menuselect keymap
 zmodload zsh/complist
 
 zstyle ':completion:*' menu select
-zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'
+zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}' 'r:|[._-]=* r:|=*'
 zstyle ':completion:*' list-colors "${(s.:.)LS_COLORS}"
 zstyle ':completion:*' special-dirs true
 zstyle ':completion:*:*:ls:*:*' list-dirs-first true
-
-# Tab completion
-bindkey -M viins '^I' expand-or-complete
+zstyle ':completion:*' use-cache on
+zstyle ':completion:*' cache-path "$_zcache/zcompcache"
+zstyle ':completion:*' group-name ''
 
 # Shift+Tab = go back one entry in the completion menu
 bindkey -M menuselect '^[[Z' reverse-menu-complete
@@ -189,27 +200,6 @@ cancel-completion() {
 
 zle -N cancel-completion
 bindkey -M menuselect '\e' cancel-completion
-
-
-# Autosuggestions
-
-source /usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
-
-ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE='fg=#444444'
-
-# Ctrl+G = accept autosuggestion
-bindkey -M viins '^G' autosuggest-accept
-
-# Right arrow moves through the suggestion character by character
-bindkey -M viins '^[[C' forward-char
-
-# End = accept the current suggestion
-bindkey -M viins '^[[F' autosuggest-accept
-
-
-# zoxide
-
-eval "$(zoxide init zsh --cmd z)"
 
 
 # fzf
@@ -249,9 +239,33 @@ bindkey -M viins -r '^[c'
 bindkey -M vicmd -r '^[c'
 
 
+# Autosuggestions
+
+[[ -r /usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh ]] \
+    && source /usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
+
+ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE='fg=#444444'
+
+bindkey -M viins '^E' autosuggest-accept
+bindkey -M viins '^Y' forward-word
+bindkey -M viins '^O' autosuggest-execute
+bindkey -M viins '^X^A' autosuggest-toggle
+
+
+# zoxide
+
+(( $+commands[zoxide] )) && eval "$(zoxide init zsh --cmd z)"
+
+
+# direnv
+
+# Before the prompt init, so the prompt reflects the loaded environment
+(( $+commands[direnv] )) && eval "$(direnv hook zsh)"
+
+
 # Starship
 
-eval "$(starship init zsh)"
+(( $+commands[starship] )) && eval "$(starship init zsh)"
 
 
 # Atuin
@@ -265,27 +279,35 @@ eval "$(starship init zsh)"
 # Disable automatic key bindings so they can be configured explicitly
 export ATUIN_NOBIND="true"
 
-eval "$(atuin init zsh)"
+if (( $+commands[atuin] )); then
+    eval "$(atuin init zsh)"
 
-# Atuin takes over Ctrl+R after fzf is loaded
-bindkey -M viins '^R' atuin-search-viins
-bindkey -M vicmd '^R' atuin-search-viins
+    # Atuin takes over Ctrl+R after fzf is loaded
+    bindkey -M viins '^R' atuin-search-viins
+    bindkey -M vicmd '^R' atuin-search-vicmd
+fi
+
+
+# Aliases
 
 # load aliases if exist
 [ -f "${XDG_CONFIG_HOME:-$HOME/.config}/zsh/aliasrc" ] && . "${XDG_CONFIG_HOME:-$HOME/.config}/zsh/aliasrc"
 [ -f "${XDG_CONFIG_HOME:-$HOME/.config}/zsh/gitrc" ] && . "${XDG_CONFIG_HOME:-$HOME/.config}/zsh/gitrc"
 
+
 # Profile management
 
 # Reload the current shell configuration
+# (exec avoids registering hooks twice)
 reload() {
-    source ~/.zshrc
+    exec zsh
 }
 
 # Open the zsh configuration in Neovim
 profile() {
     nvim ~/.zshrc
 }
+
 
 # Command-line helpers
 
@@ -295,10 +317,10 @@ sudo-command-line() {
 
     if [[ $BUFFER == sudo\ * ]]; then
         BUFFER="${BUFFER#sudo }"
-        CURSOR=$((CURSOR - 5))
+        (( CURSOR = CURSOR > 5 ? CURSOR - 5 : 0 ))
     else
         BUFFER="sudo $BUFFER"
-        CURSOR=$((CURSOR + 5))
+        (( CURSOR += 5 ))
     fi
 }
 
@@ -307,17 +329,21 @@ bindkey -M viins '\e\e' sudo-command-line
 bindkey -M vicmd '\e\e' sudo-command-line
 
 
-# Resume the last background job with Ctrl+Z
-Resume() {
-    fg
-    zle push-input
-    BUFFER=""
-    zle accept-line
+# Ctrl+Z: resume the last background job if the line is empty,
+# otherwise stash the current line and clear the screen
+fancy-ctrl-z() {
+    if [[ -z $BUFFER ]]; then
+        BUFFER="fg"
+        zle accept-line -w
+    else
+        zle push-input -w
+        zle clear-screen -w
+    fi
 }
 
-zle -N Resume
-bindkey -M viins '^Z' Resume
-bindkey -M vicmd '^Z' Resume
+zle -N fancy-ctrl-z
+bindkey -M viins '^Z' fancy-ctrl-z
+bindkey -M vicmd '^Z' fancy-ctrl-z
 
 
 # Edit the current command line in $EDITOR
@@ -326,35 +352,21 @@ zle -N edit-command-line
 
 bindkey -M viins '^X^E' edit-command-line
 bindkey -M vicmd '^X^E' edit-command-line
+bindkey -M vicmd '^V' edit-command-line
+
 
 # Man pages
 
-# Colorize man pages using terminal capability escape sequences
-# export LESS_TERMCAP_mb=$'\e[1;32m'
-# export LESS_TERMCAP_md=$'\e[1;32m'
-# export LESS_TERMCAP_me=$'\e[0m'
-# export LESS_TERMCAP_se=$'\e[0m'
-# export LESS_TERMCAP_so=$'\e[01;33m'
-# export LESS_TERMCAP_ue=$'\e[0m'
-# export LESS_TERMCAP_us=$'\e[1;4;31m'
 export MANPAGER='less -i --incsearch --search-options=W -g -R --use-color -DER -DPY -DSWM -Ddg -Du+c'
 export MANROFFOPT='-P -c'
+
 
 # Syntax highlighting
 
 # Must be sourced last because it wraps existing ZLE widgets.
 # Anything defined after this point may not be highlighted correctly.
-source /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+[[ -r /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh ]] \
+    && source /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 
-# Created by `pipx` on 2026-09-08 15:51:08
-export PATH="$PATH:/home/miqu3iasg/.local/bin"
-
-# pnpm
-export PNPM_HOME='/home/miqu3iasg/.local/share/pnpm'
-case ":$PATH:" in
-  *":$PNPM_HOME/bin:"*) ;;
-  *) export PATH="$PNPM_HOME/bin:$PATH" ;;
-esac
-# pnpm end
-
-eval "$(direnv hook zsh)"
+# Print the startup profile (see top of file)
+[[ -n $ZSH_PROF ]] && zprof

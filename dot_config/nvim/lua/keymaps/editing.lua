@@ -71,6 +71,8 @@ km("n", "<leader>,", "mzA,<Esc>`z", { desc = "Append , to end of line" })
 -- Change case word
 km("n", "<leader>u", "viwU", { desc = "Uppercase word" })
 km("n", "<leader>l", "viwu", { desc = "Lowercase word" })
+km("v", "<leader>u", "U", { desc = "Uppercase selection" })
+km("v", "<leader>l", "u", { desc = "Lowercase selection" })
 
 -- Clipboard
 km({ "n", "x" }, "<leader>y", '"+y', { desc = "Yank to system clipboard" })
