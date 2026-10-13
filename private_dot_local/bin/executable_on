@@ -1,0 +1,32 @@
+#!/bin/zsh
+
+# `on` creates a new note in the Obsidian inbox
+
+if [ -z "$1" ]; then
+  echo "Error: A note name must be provided, e.g.: on \"My New Note\""
+  exit 1
+fi
+
+VAULT_DIR="${HOME}/personal/documents/vault"
+INBOX_DIR="${VAULT_DIR}/_inbox"
+
+# combine arguments in case arguments were passed without quotes
+note_name="$*"
+
+# strip trailing .md if provided
+note_name="${note_name%.md}"
+
+# normalize title to use kebab case
+slug="${note_name// /-}"
+slug="${slug//[^[:alnum:]-]/}"
+slug="${slug:l}"
+
+# fallback when the slug ends up empty (same idea as os.time() in the plugin)
+[ -z "$slug" ] && slug="$(date +%s)"
+
+mkdir -p "$INBOX_DIR"
+target_file="${INBOX_DIR}/${slug}.md"
+
+touch "$target_file"
+cd "$VAULT_DIR" || exit 1
+${VISUAL:-${EDITOR:-nvim}} "$target_file"
