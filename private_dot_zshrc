@@ -78,6 +78,11 @@ setopt HIST_REDUCE_BLANKS
 setopt HIST_VERIFY
 setopt EXTENDED_HISTORY
 
+# Trivial commands that are not worth keeping in the history.
+# (Atuin keeps its own database; filter it with `history_filter`
+# in ~/.config/atuin/config.toml.)
+HISTORY_IGNORE='(cd|cd ..|cd -|clear|c|q|exit|reload|reset|profile|ls|ls *|ll|la|lt|lta|d|sd|sc|ff|y|z|z *|nvr|nvc|nvs|nvn|nvim|vim|vi|less *|which *|command -v *|cp *|mv *|rm *|g|gs|gss|gd|gdc|gaf|ga|gc|gcm|gca|gcan|gp|gpf|ggp|gf|gfp|gpl|gplr|ggl|ggl *|gl|gb|gbc|gsw|gsws|gswt|gres|gst|gstu|gstp|gstf|gstl|gwip|gunwip|gwl|gwa|gwr|gwc|gcd|groot|croot)'
+
 
 # Terminal behavior
 
@@ -129,11 +134,11 @@ bindkey -M viins '^[[3~' delete-char
 # Insert last argument of the previous command
 bindkey -M viins '^[.' insert-last-word
 
-# Clear screen 
+# Clear screen
 bindkey -M viins '^X^S' clear-screen
 bindkey -M vicmd '^X^S' clear-screen
 
-# Delete from start of line to cursor 
+# Delete from start of line to cursor
 bindkey -M viins '^U' backward-kill-line
 
 
@@ -222,7 +227,7 @@ export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
 export FZF_ALT_C_COMMAND='fd --type d --hidden --follow --exclude .git'
 
 # File preview with bat, fallback to cat if unavailable
-export FZF_CTRL_T_OPTS="--preview 'bat --color=always --style=numbers {} 2>/dev/null || cat {}'"
+export FZF_CTRL_T_OPTS="--preview 'cat {}'"
 
 # Load fzf key bindings before Atuin
 # so Atuin can take control of Ctrl+R

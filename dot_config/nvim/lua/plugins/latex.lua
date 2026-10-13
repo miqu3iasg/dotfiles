@@ -1,7 +1,7 @@
 -- lua/plugins/latex.lua
 
 -- The .tex writing-mode setup (wrap, conceallevel, readable width,
--- <leader>x compile/view/toc keymaps) lives in lua/langs/latex/,
+-- <localleader>x compile/view/toc keymaps) lives in lua/langs/latex/,
 -- alongside MarkdownWriting.
 --
 -- For this configuration to work, you need a full TeX distribution,
@@ -30,7 +30,12 @@
 --     - https://github.com/lervag/vimtex
 --     - https://github.com/cmhughes/latexindent.pl
 --     - https://github.com/latex3/latex2e
---     - https://github.com/kylechui/nvim-surround
+--     - https://github.com/echasnovski/mini.surround
+--     - https://github.com/echasnovski/mini.pairs
+
+-- Augroup shared by the buffer-local mini.pairs / nvim-surround
+-- overrides below. Both only apply to .tex buffers.
+local tex_group = vim.api.nvim_create_augroup("latex_buffer_plugins", { clear = true })
 
 return {
   -- Core LaTeX engine, continuous compilation, PDF viewer sync
@@ -81,11 +86,7 @@ return {
       -- cite-key matching) instead of its default "smart" one (a fuzzy
       -- search over titles/authors done by vimtex itself). vimtex's own
       -- docs recommend "simple" whenever an autocomplete plugin is
-      -- driving the menu (see :h g:vimtex_complete_bib) -- here that's
-      -- cmp-vimtex -> blink.cmp, which already does its own fuzzy
-      -- matching, so "smart" mode was redundant work and slower to
-      -- populate. The title/author/year still show up, just in the
-      -- documentation window instead of being searched directly.
+      -- driving the menu (see :h g:vimtex_complete_bib)
       vim.g.vimtex_complete_bib = {
         simple = 1,
         info_fmt = "@author_all (@year)\n@title",
@@ -131,61 +132,6 @@ return {
     end,
   },
 
-  -- Completion for \cite{}, \ref{}, labels, environments, packages,
-  -- wired into blink.cmp through blink.compat (blink has no native
-  -- vimtex source, this is the same bridge used below for
-  -- cmp-latex-symbols).
-  { "micangl/cmp-vimtex",        ft = { "tex" } },
-
-  -- LaTeX symbol completion (\alpha, \sum, \Rightarrow -> shown with
-  -- their preview glyph) for both real .tex files and math typed
-  -- inside markdown/Obsidian notes.
-  { "kdheepak/cmp-latex-symbols" },
-
-  -- Bridges old nvim-cmp-only sources (both above) into blink.cmp.
-  { "saghen/blink.compat",       version = "*", lazy = true, opts = {} },
-
-  -- Extends the blink.cmp spec that already exists in completions.lua
-  -- (lazy.nvim merges specs for the same plugin across files) instead
-  -- of duplicating its whole config here.
-  {
-    "saghen/blink.cmp",
-    dependencies = { "saghen/blink.compat", "micangl/cmp-vimtex", "kdheepak/cmp-latex-symbols" },
-    opts = function(_, opts)
-      opts.sources = opts.sources or {}
-      opts.sources.providers = opts.sources.providers or {}
-
-      -- score_offset raised from the shared default (50 for most
-      -- extra sources) to 80: in a .tex buffer, a \ref/\cite/\alpha
-      -- match should almost always outrank a same-looking word pulled
-      -- from the buffer or from ripgrep.
-      opts.sources.providers.latex_symbols = {
-        name = "latex_symbols",
-        module = "blink.compat.source",
-        score_offset = 80,
-      }
-      opts.sources.providers.vimtex = {
-        name = "vimtex",
-        module = "blink.compat.source",
-        score_offset = 80,
-      }
-
-      -- latex_symbols is useful in both tex and markdown (Obsidian
-      -- math); vimtex's own source (citations/refs/labels) only
-      -- makes sense in real .tex files.
-      opts.sources.per_filetype = opts.sources.per_filetype or {}
-
-      -- Listed explicitly (rather than derived from opts.sources.default)
-      -- so that "lazydev" -- irrelevant outside Lua buffers -- isn't
-      -- carried into every .tex buffer's candidate list for no reason.
-      opts.sources.per_filetype.tex = { "lsp", "path", "snippets", "vimtex", "latex_symbols", "buffer", "ripgrep" }
-      opts.sources.per_filetype.markdown =
-          vim.list_extend(vim.deepcopy(opts.sources.default), { "latex_symbols" })
-
-      return opts
-    end,
-  },
-
   -- Makes sure the `latex` treesitter grammar is present so that
   -- markdown_inline can inject it into $...$ / $$...$$ regions (this
   -- is what lets render-markdown.nvim, below, actually see the math).
@@ -194,21 +140,6 @@ return {
     opts = function(_, opts)
       opts.ensure_installed = opts.ensure_installed or {}
       vim.list_extend(opts.ensure_installed, { "latex" })
-      return opts
-    end,
-  },
-
-  -- Converts math inside markdown/Obsidian notes into readable
-  -- Unicode inline (e.g. \alpha -> α, x^2 -> x²), the same idea as
-  -- render-markdown's heading/checkbox rendering. Requires the
-  -- pylatexenc Python package -- see the note at the bottom of this
-  -- file.
-  {
-    "MeanderingProgrammer/render-markdown.nvim",
-    opts = function(_, opts)
-      opts.latex = {
-        enabled = true,
-      }
       return opts
     end,
   },
@@ -224,17 +155,118 @@ return {
     end,
   },
 
-  -- Structural "surround" text objects (ys, ds, cs). Set up with empty
-  -- defaults here (parentheses, quotes, tags, ...); the LaTeX-specific
-  -- surrounds ($, \text{}, \left(\right)) are added per-buffer by
-  -- lua/langs/latex/surround.lua, loaded from ftplugin/tex.lua, so they
-  -- only apply in .tex buffers and never shadow the defaults elsewhere.
+  -- Buffer-local mini.pairs overrides for .tex files.
+  --
+  -- mini.pairs normally prevents "(" and "[" from pairing when the
+  -- preceding character is a backslash (neigh_pattern = "[^\\].").
+  -- This is unsuitable for LaTeX, where "\(" and "\[" are math
+  -- delimiters rather than escaped brackets. Using ".." makes these
+  -- delimiters pair normally, producing "\)" and "\]" as expected.
+  --
+  -- "$" is not a default pair because it uses the same character to
+  -- open and close. A "closeopen" rule is therefore added so typing
+  -- the second "$" moves past the existing character instead of
+  -- creating a nested pair ("$$" -> "$$$$"). The backslash guard
+  -- remains to prevent escaped dollar signs (e.g. "\$5") from pairing.
+  --
+  -- Refs:
+  --     - https://github.com/echasnovski/mini.pairs
+  --     - :h MiniPairs.map_buf()
   {
-    "kylechui/nvim-surround",
+    "echasnovski/mini.pairs",
+    init = function()
+      vim.api.nvim_create_autocmd("FileType", {
+        group = tex_group,
+        pattern = "tex",
+        callback = function(args)
+          local ok, pairs_mod = pcall(require, "mini.pairs")
+          if not ok then
+            return
+          end
+
+          local bufnr = args.buf
+
+          -- "register.cr = false": a bare <CR> after the opening character
+          -- does not close the pair, matching mini.pairs' default behavior;
+          -- only the pairing pattern is overridden here.
+          local always = { register = { cr = false }, neigh_pattern = ".." }
+
+          pairs_mod.map_buf(bufnr, "i", "(", vim.tbl_extend("force", { action = "open", pair = "()" }, always))
+          pairs_mod.map_buf(bufnr, "i", ")", vim.tbl_extend("force", { action = "close", pair = "()" }, always))
+          pairs_mod.map_buf(bufnr, "i", "[", vim.tbl_extend("force", { action = "open", pair = "[]" }, always))
+          pairs_mod.map_buf(bufnr, "i", "]", vim.tbl_extend("force", { action = "close", pair = "[]" }, always))
+
+          pairs_mod.map_buf(bufnr, "i", "$", {
+            action = "closeopen",
+            pair = "$$",
+            neigh_pattern = "[^\\].",
+            register = { cr = false },
+          })
+        end,
+      })
+    end,
+  },
+
+  -- Structural "surround" text objects (sa, sd, sr). Set up with the
+  -- defaults globally (parentheses, quotes, tags, ...); the LaTeX-specific
+  -- surroundings are added per-buffer through `vim.b.minisurround_config`
+  -- in .tex files, so they never shadow the defaults elsewhere.
+  --
+  -- LaTeX-specific surroundings:
+  --
+  -- "$" for inline math, "x" for \text{}, and "l" for \left...\right.
+  --
+  -- Usage:
+  --
+  --   saiw$   -> $x$
+  --   sd$     -> x
+  --   sr$x    -> \text{x}
+  --
+  --   saiwx   -> \text{hello}
+  --   sdx     -> hello
+  --   srx$    -> $x$
+  --
+  --   saiwl   -> \left(x+y\right)
+  --   sdl     -> x+y
+  --
+  -- "x" is used for \text{} instead of "t" to avoid overriding the
+  -- default HTML/XML tag surrounding.
+  --
+  -- In `input` patterns, the two empty captures "()" mark where the
+  -- surrounded text starts and ends; everything outside them is the
+  -- surrounding itself.
+  --
+  -- Refs:
+  --     - https://github.com/echasnovski/mini.surround
+  --     - :h MiniSurround-surrounding-specification
+  {
+    "echasnovski/mini.surround",
     version = "*",
     event = "VeryLazy",
-    config = function()
-      require("nvim-surround").setup({})
+    opts = {},
+    init = function()
+      vim.api.nvim_create_autocmd("FileType", {
+        group = tex_group,
+        pattern = "tex",
+        callback = function(args)
+          vim.b[args.buf].minisurround_config = {
+            custom_surroundings = {
+              ["$"] = {
+                input = { "%$().-()%$" },
+                output = { left = "$", right = "$" },
+              },
+              ["x"] = {
+                input = { "\\text{().-()}" },
+                output = { left = "\\text{", right = "}" },
+              },
+              ["l"] = {
+                input = { "\\left%(().-()\\right%)" },
+                output = { left = "\\left(", right = "\\right)" },
+              },
+            },
+          }
+        end,
+      })
     end,
   },
 }

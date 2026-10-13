@@ -1,4 +1,5 @@
 -- lua/plugins/mini.lua
+
 -- mini.nvim modules configuration for LazyVim
 
 return {
@@ -23,31 +24,11 @@ return {
         },
       })
 
-      require("mini.operators").setup({
-        evaluate = {
-          prefix = "g=", -- Evaluate text and replace with result
-        },
-        exchange = {
-          prefix = "gx", -- Exchange two pieces of text
-        },
-        multiply = {
-          prefix = "ge", -- Duplicate text
-        },
-        replace = {
-          prefix = "gr", -- Replace text with register content
-        },
-        sort = {
-          prefix = "gs", -- Sort text
-        },
-      })
-
       require("mini.jump").setup({
         mappings = {
-          forward = "f",       -- Jump forward to char
-          backward = "F",      -- Jump backward to char
-          forward_till = "t",  -- Jump forward till char (before it)
-          backward_till = "T", -- Jump backward till char (after it)
-          repeat_jump = "\\",  -- Repeat last jump
+          forward = "f",      -- Jump forward to char
+          backward = "F",     -- Jump backward to char
+          repeat_jump = "\\", -- Repeat last jump
         },
       })
 
