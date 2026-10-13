@@ -87,10 +87,12 @@ local colors = {
   -- single background; the only other "surface" tone is `cursorline`
   bg = "#000000",
   cursorline = "#111111", -- state tone: cursorline, selected menu item, matchparen, references
+  popup_bg = "#0d0d0d",   -- completion menu and docs popup
+  popup_sel = "#1c1c1c",  -- selected item inside the popup
 
   fg_0 = "#3b3b3b",
   fg_1 = "#808080",
-  fg_2 = "#b9b9b9",
+  fg_2 = "#d8d8d8",
   fg_3 = "#d8d8d8",
 
   linenr = "#3a3a3a",
@@ -99,6 +101,8 @@ local colors = {
 
   border = "#2a2a2a",
   border_subtle = "#0f0f0f",
+  split = "#5a5a5a",
+  statusline_nc = "#4f4f48",
 
   comment = "#4a4a4a",
   comment_doc = "#5a5a5a",
@@ -108,7 +112,7 @@ local colors = {
   yellow = "#7d7d70",
   blue = "#5f87ff",
   magenta = "#d787af",
-  cyan = "#5fafaf",
+  cyan = "#80bdbd",
 
   br_red = "#ff5f5f",
   br_green = "#93b093",
@@ -224,8 +228,8 @@ local groups = {
   CursorLineSign = { link = "CursorLineNr" },
   EndOfBuffer = { link = "NonText" },
 
-  VertSplit = { fg = colors.border, bg = colors.bg },
-  WinSeparator = { fg = colors.border, bg = colors.bg },
+  VertSplit = { fg = colors.split, bg = colors.bg },
+  WinSeparator = { fg = colors.split, bg = colors.bg },
   WinBar = { link = "StatusLine" },
   WinBarNC = { link = "StatusLineNC" },
 
@@ -258,7 +262,7 @@ local groups = {
 
   -- Status line
   StatusLine = { bg = colors.bg, fg = colors.fg_1, nocombine = true },
-  StatusLineNC = { bg = colors.bg, fg = colors.yellow, nocombine = true },
+  StatusLineNC = { bg = colors.bg, fg = colors.statusline_nc, nocombine = true },
   StatuslineTerm = { link = "StatusLine" },
   StatuslineTermNC = { link = "StatusLineNC" },
 
@@ -641,6 +645,32 @@ local groups = {
   CmpItemAbbrMatchFuzzy = { link = "PmenuMatch" },
   CmpItemKind = { link = "Special" },
   CmpItemMenu = { link = "Comment" },
+
+  -- Plugins: blink.cmp
+  BlinkCmpMenu = { fg = colors.fg_2, bg = colors.popup_bg },
+  BlinkCmpMenuBorder = { fg = colors.border_subtle, bg = colors.popup_bg },
+  BlinkCmpMenuSelection = { fg = colors.fg_3, bg = colors.popup_sel },
+  BlinkCmpScrollBarThumb = { bg = colors.fg_0 },
+  BlinkCmpScrollBarGutter = { bg = colors.popup_bg },
+
+  BlinkCmpLabel = { fg = colors.fg_2 },
+  BlinkCmpLabelDeprecated = { fg = colors.fg_1, strikethrough = true },
+  BlinkCmpLabelMatch = { fg = colors.fg_3, bold = true },
+  BlinkCmpLabelDetail = { fg = colors.comment },
+  BlinkCmpLabelDescription = { fg = colors.comment },
+
+  BlinkCmpKind = { fg = colors.fg_1 },
+  BlinkCmpSource = { fg = colors.comment },
+  BlinkCmpGhostText = { fg = colors.comment },
+
+  BlinkCmpDoc = { fg = colors.fg_2, bg = colors.popup_bg },
+  BlinkCmpDocBorder = { fg = colors.border_subtle, bg = colors.popup_bg },
+  BlinkCmpDocSeparator = { fg = colors.border, bg = colors.popup_bg },
+  BlinkCmpDocCursorLine = { bg = colors.popup_sel },
+
+  BlinkCmpSignatureHelp = { fg = colors.fg_2, bg = colors.popup_bg },
+  BlinkCmpSignatureHelpBorder = { fg = colors.border_subtle, bg = colors.popup_bg },
+  BlinkCmpSignatureHelpActiveParameter = { link = "LspSignatureActiveParameter" },
 }
 
 for group, opts in pairs(groups) do

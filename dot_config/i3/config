@@ -296,9 +296,17 @@ bindsym $mod+Ctrl+9 move container to workspace number $ws9
 
 # Scratchpad
 
+exec --no-startup-id tmuxdd
+
+# for_window [instance="scratchmux"] \
+#     title_format "scratchmux", \
+#     border normal 1, \
+#     move scratchpad, \
+#     sticky enable, \
+#     resize set 900 520
+
 for_window [instance="scratchmux"] \
     title_format "scratchmux", \
-    border normal 1, \
     move scratchpad, \
     sticky enable, \
     resize set 900 520
@@ -311,8 +319,7 @@ bindsym $mod+s [instance="scratchmux"] \
     scratchpad show, \
     move position center
 
-# Open scratchpad terminal
-bindsym $mod+Ctrl+Shift+m exec --no-startup-id kitty --class scratchmux
+bindsym $mod+Ctrl+Shift+m exec --no-startup-id tmuxdd
 
 # Application assignments
 
@@ -454,6 +461,3 @@ exec_always --no-startup-id ~/.config/i3/scripts/monitor-setup.sh
 
 # Pomodoro notifications
 exec --no-startup-id /home/miqu3iasg/.local/bin/pomo.sh notify
-
-# Noitification manager
-exec --no-startup-id dunst
