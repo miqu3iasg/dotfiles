@@ -109,14 +109,16 @@ return {
         show_hidden = true,
       },
       skip_confirm_for_simple_edits = true,
+      skip_confirm_for_delete = true, -- don't ask before deleting
+      skip_confirm_for_move = true,   -- don't ask before moving/renaming
       preview_win = {
         border = "single",
       },
       win_options = {
-        -- signcolumn = "yes:2",
         signcolumn = "no",
         number = false,
         relativenumber = false,
+        cursorline = true,
       },
     })
     -- require("oil-git-status").setup()

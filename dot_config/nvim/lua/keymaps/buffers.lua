@@ -1,5 +1,7 @@
 -- lua/keymaps/buffers.lua
 
+-- TODO: move this functions to lua/utils/buffer.lua to clean this file and simplifie it
+
 local utils = require("utils.buffer")
 
 -- Helpers

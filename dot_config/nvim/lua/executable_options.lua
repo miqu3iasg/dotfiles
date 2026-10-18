@@ -17,6 +17,7 @@ vim.opt.wrap = false
 vim.opt.startofline = false
 vim.opt.list = false
 vim.opt.listchars = { tab = '¬·', trail = '•', nbsp = '·', space = '·' }
+vim.opt.diffopt:append({ "algorithm:histogram", "indent-heuristic", "linematch:60" })
 
 -- Search and completion
 vim.opt.ignorecase = true
@@ -60,14 +61,14 @@ vim.opt.winborder = "single"
 -- Display
 vim.opt.number = false
 vim.opt.relativenumber = false
-vim.opt.scrolloff = 0
+vim.opt.scrolloff = 8
 vim.opt.sidescrolloff = 5
 vim.opt.cmdheight = 1
 vim.opt.signcolumn = "no"
 vim.opt.termguicolors = true
 vim.opt.title = false
 vim.opt.titlestring = "%t"
-vim.opt.fillchars = { eob = " " }
+-- vim.opt.fillchars = { eob = " " }
 vim.opt.display:append("lastline")
 vim.opt.more = true
 
