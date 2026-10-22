@@ -1,13 +1,46 @@
-# /home/miqu3iasg/.config/zsh/aliasrc
+# ~/.config/zsh/aliasrc
 
 # General replacements
 alias cat='bat'                     # cat with syntax highlighting
-alias g='git'
-alias ls='eza'
-alias ll='eza -lah'                 # long listing, all files, human-readable sizes
-alias la='eza -A'                   # all files, short format
-alias lt='eza --tree --level=2'     # tree view, 2 levels deep
-alias lta='eza --tree --level=2 -a' # tree view, 2 levels deep, all files
+
+# Functions instead of aliases so extra arguments can be passed and combined with the flags of each variant.
+_eza() {
+    eza --group-directories-first --time-style=long-iso "$@"
+}
+l()   { _eza -ahl "$@"; }
+ls()  { _eza "$@"; }
+la()  { _eza -A "$@"; }                   # all files, short format
+ll()  { _eza -lah --git "$@"; }           # long listing, header, git status
+
+# Sorting (the most relevant entry ends up last, next to the prompt)
+lm()  { _eza -lah --git --sort=modified "$@"; }   # newest last
+lS()  { _eza -lah --git --sort=size "$@"; }       # largest last
+lsd() { _eza -lah --only-dirs "$@"; }             # directories only
+lsf() { _eza -lah --only-files "$@"; }            # files only
+
+# inode, octal permissions, link count, allocated blocks, owner/group and exact size in bytes.
+lx()  {
+    _eza -la --inode --octal-permissions --links --blocksize --group \
+         --bytes --git "$@"
+}
+
+# Same as lx, but with numeric UID/GID and extended attributes (xattrs).
+# Useful for debugging permissions in containers, mounts, NFS, SELinux, etc.
+lxx() {
+    _eza -la --inode --octal-permissions --links --blocksize --group \
+         --numeric --extended --bytes "$@"
+}
+
+# Total size of each directory, recursively (slow on large trees)
+lz()  { _eza -lah --total-size --sort=size "$@"; }
+
+# Git status per repository (useful for a projects directory)
+lgr() { _eza -lah --git --git-repos "$@"; }
+
+# Trees (accept -L N to change the depth)
+lt()  { _eza --tree --level=2 --git-ignore "$@"; }                # respects .gitignore
+lta() { _eza --tree --level=2 -a --ignore-glob='.git' "$@"; }     # all files, except .git
+ltl() { _eza --tree --level=2 -l --git --git-ignore "$@"; }       # tree with details
 
 # Shell shortcuts
 alias c='clear'
@@ -22,13 +55,16 @@ alias cp='cp -i'
 alias mv='mv -i'
 alias rm='rm -I'
 
+# Sessionizer
+alias ts='~/.local/bin/tmux-sessionizer'
+
 # Neovim
 alias vim='nvim'
 alias vi='nvim'
 alias im='nvim'
 
 # Open the Neovim config directory in Neovim
-alias nvcfg='cd ~/.config/nvim && nvim .'
+alias nvc='cd ~/.config/nvim && nvim .'
 
 # Neovim profiles
 #
@@ -72,6 +108,15 @@ nvr() {
         nvim "${files[@]}"
     fi
 }
+
+# Quick config editing
+alias cfa='nvim ~/.config/zsh/aliasrc'                                  # this file
+alias cfz='nvim ~/.config/zsh/.zshrc'
+alias cfk='nvim ~/.config/kitty/kitty.conf'
+alias cfi='nvim ~/.config/i3/config'
+alias cft='nvim ~/.config/tmux/tmux.conf'
+alias cfn='nvim ~/.config/nvim/init.lua'
+alias cfs='nvim ~/.config/starship.toml'                                # symlink: edits the active theme (see sp)
 
 # File search
 
@@ -129,15 +174,84 @@ sf() {
     [[ -n "$result" ]] && nvim "${result%%:*}" "+${result#*:}"
 }
 
-# List files in the current directory (excluding .git) with fzf,
-# allowing multi-select to open in Neovim, or Ctrl+/ to preview with less.
+# Run a GUI program detached from the shell, silencing its output.
+_detach() { "$@" &>/dev/null &! }
+
+# List files with fd and pick with fzf (multi-select).
+# Usage: _pick <preview-cmd> [fd args...]
+# Preview starts hidden; toggle with Ctrl+Space.
+_pick() {
+    local preview="$1"
+    shift
+
+    fd --type f --hidden --exclude .git --strip-cwd-prefix "$@" |
+        fzf --multi \
+            --preview "$preview" \
+            --bind 'ctrl-space:toggle-preview' \
+            --preview-window 'right,50%,hidden'
+}
+
+# Pick files and open all selections in one viewer instance.
+# Usage: _pick_open <viewer> <preview-cmd> [fd args...]
+_pick_open() {
+    local viewer="$1" preview="$2"
+    shift 2
+
+    local -a files=("${(@f)$(_pick "$preview" "$@")}")
+
+    [[ -n ${files[1]} ]] && _detach "$viewer" "${files[@]}"
+}
+
+_pdf_preview='pdfinfo {} 2>/dev/null || echo "no preview"'
+_img_preview='file -b {}'
+_img_ext=(-e jpg -e jpeg -e png -e gif -e webp -e bmp -e svg)
+
+sfp() { _pick_open zathura "$_pdf_preview" -e pdf; }             # PDFs -> zathura (light)
+sfpo() { _pick_open okular  "$_pdf_preview" -e pdf; }            # PDFs -> okular (annotations)
+sfi() { _pick_open imv     "$_img_preview" "${_img_ext[@]}"; }   # images -> imv
+
+# List files in the current directory (excluding .git) with fzf and open
+# the selection with the right tool, grouped by type so that several
+# selections open in a single window: PDFs -> zathura, images -> imv,
+# text -> nvim, anything else -> xdg-open. Ctrl+/ previews with less.
 # Refuses to run from $HOME to avoid listing the entire home directory.
-alias sc='[ "$PWD" != "$HOME" ] &&
-    rg --hidden --files --glob "!.git" |
-    fzf --multi \
-        --height 20% \
-        --bind "enter:become(nvim {+})" \
-        --bind "ctrl-/:execute(less -c -i --incsearch --search-options=W -g {})"'
+sc() {
+    if [[ "$PWD" == "$HOME" ]]; then
+        echo "sc: refusing to run from \$HOME"
+        return 1
+    fi
+
+    local -a files=("${(@f)$(
+        rg --hidden --files --glob '!.git' |
+            fzf --multi \
+                --height 20% \
+                --bind 'ctrl-/:execute(less -c -i --incsearch --search-options=W -g {})'
+    )}")
+    local -a pdfs imgs texts others
+    local f
+
+    [[ -n ${files[1]} ]] || return
+
+    for f in "${files[@]}"; do
+        case "${f:l}" in
+            *.pdf)
+                pdfs+=("$f") ;;
+            *.png|*.jpg|*.jpeg|*.gif|*.webp|*.bmp|*.svg)
+                imgs+=("$f") ;;
+            *)
+                if [[ "$(file -b --mime-type -- "$f")" == (text/*|application/json|inode/x-empty) ]]; then
+                    texts+=("$f")
+                else
+                    others+=("$f")
+                fi ;;
+        esac
+    done
+
+    (( $#pdfs ))  && _detach zathura "${pdfs[@]}"
+    (( $#imgs ))  && _detach imv "${imgs[@]}"
+    for f in "${others[@]}"; do _detach xdg-open "$f"; done
+    (( $#texts )) && nvim -- "${texts[@]}"
+}
 
 # Archive extraction
 
@@ -277,4 +391,109 @@ y() {
     fi
 
     rm -f -- "$tmp"
+}
+
+# Terminal quick reference no terminal
+cheat() {
+    [[ -z "$1" ]] && echo "usage: cheat <topic>" ||
+        curl -s "cheat.sh/$1" | bat --style=plain
+}
+
+# Pesquisar histórico com fzf e copar pro clipboard
+alias cpcmd='history | cut -c 8- | uniq | fzf | xclip -i -r -sel clipboard'
+
+# Standard library source
+
+# Directory where cloned/extracted sources are kept
+_src_root="${XDG_DATA_HOME:-$HOME/.local/share}/stdsrc"
+
+# Open a directory in Neovim, failing with a clear message if it doesn't exist
+_open_src() {
+    local dir="$1"
+
+    if [[ -z "$dir" || ! -d "$dir" ]]; then
+        echo "source directory not found: ${dir:-<empty>}"
+        return 1
+    fi
+
+    nvim -- "$dir"
+}
+
+# Shallow-clone a repo once (name, url optional tag/branch) and open it.
+# Later calls reuse the existing clone.
+_git_src() {
+    local name="$1" url="$2" ref="$3"
+    local dest="$_src_root/$name"
+    local -a args=(--depth 1)
+
+    [[ -n "$ref" ]] && args+=(--branch "$ref")
+
+    if [[ ! -d "$dest" ]]; then
+        echo "cloning $name${ref:+ ($ref)}..."
+        git clone "${args[@]}" "$url" "$dest" || {
+            rm -rf "$dest"
+            return 1
+        }
+    fi
+
+    _open_src "$dest"
+}
+
+# Rust
+# Requires: sudo pacman -S rust-src
+stdrs() { _open_src "$(rustc --print sysroot)/lib/rustlib/src/rust/library"; }
+
+# Go
+stdgo() { _open_src "$(go env GOROOT)/src"; }
+
+# Python
+stdpy() { _open_src "$(python3 -c 'import sysconfig; print(sysconfig.get_path("stdlib"))')"; }
+
+# C
+# glibc, following the release branch matching the installed version.
+# Arch builds glibc from the release/X.Y/master branch (a few commits
+# past the tag), so the branch is closer than the tag.
+# Requires: sudo pacman -S man-pages
+stdc() {
+    local ver
+    ver="$(ldd --version | head -1 | grep -oE '[0-9]+\.[0-9]+$')"
+
+    _git_src glibc "https://sourceware.org/git/glibc.git" "${ver:+release/$ver/master}"
+}
+
+# Lua
+# The stdlib is written in C, so this opens the interpreter source
+stdlua() {
+    local ver
+    ver="$(lua -v 2>/dev/null | awk '{print $2}')"
+
+    _git_src lua "https://github.com/lua/lua.git" "${ver:+v$ver}"
+}
+
+stdch() { _open_src /usr/include; }   # headers only, instant
+
+# Java
+# Extracts the JDK's src.zip once into the cache
+# Requires sudo pacman -S openjdk-src (matching your installed JDK version)
+stdjava() {
+    local home zip dest
+
+    home="$(dirname "$(dirname "$(readlink -f "$(command -v javac)")")")"
+    zip="$home/lib/src.zip"
+
+    if [[ ! -f "$zip" ]]; then
+        echo "src.zip not found: $zip"
+        return 1
+    fi
+
+    dest="${XDG_CACHE_HOME:-$HOME/.cache}/jdk-src/${home:t}"
+
+    if [[ ! -d "$dest" ]]; then
+        mkdir -p "$dest" && unzip -q "$zip" -d "$dest" || {
+            rm -rf "$dest"
+            return 1
+        }
+    fi
+
+    _open_src "$dest"
 }
