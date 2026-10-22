@@ -1,0 +1,1 @@
+refactor(nvim): replace configuration with new setup using neovim builtin package manager
