@@ -3,7 +3,7 @@
 general {
   output_format = none
   interval = 1
-  separator = "   |   "
+  separator = "    "
   colors = false
   color_good = "#5faf5f"
   color_degraded = "#ffd751"

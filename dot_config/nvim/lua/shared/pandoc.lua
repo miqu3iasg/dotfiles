@@ -2,25 +2,30 @@
 
 -- Converts the current markdown buffer to PDF, EPUB, DOCX or HTML by running
 -- `pandoc` asynchronously through `vim.system`, so the editor never blocks.
--- The buffer is sent through stdin, so unsaved changes are exported too.
--- The result goes to a hidden `.build/` folder next to the note (Obsidian
--- ignores dot folders) and is opened in zathura (PDF/EPUB) or xdg-open.
--- A preview mode builds and opens the document once, then rebuilds it on
--- every `:w`; zathura reloads the file by itself.
+-- The buffer is sent through stdin, so unsaved changes are exported too. The
+-- result goes to <repo>/exports/ (see lua/shared/exports.lua) and is opened in
+-- zathura (PDF/EPUB) or xdg-open (DOCX/HTML).
 --
--- Every export works for any markdown, from a shopping list to a paper:
---   * ~/.config/nvim/pandoc/defaults.yaml  the pipeline (always loaded)
---   * ~/.config/nvim/pandoc/metadata.yaml  academic layout and language; the
---                                          YAML header of a note overrides it
---   * a `defaults.yaml` in the note's folder or a parent folder (optional)
---   * profiles/<name>.yaml                 extra layout, `:Pandoc pdf <name>`
---   * citations are turned on ONLY when a bibliography exists (see
---     shared/bib.lua); otherwise "@john" stays plain text and nothing fails
---   * Obsidian [[wikilinks]] become plain text and ![[image.png|300]] becomes
---     a real image, looked up in any `attachments/` folder above the note
+-- Preview mode builds and opens the document once, then rebuilds it on every
+-- `:w`; zathura reloads the file by itself.
 --
--- Nothing is notified on success. Errors and pandoc warnings (for example a
--- citation missing from the .bib) are shown with pandoc's own message.
+-- Each export loads, in order, the pipeline in ~/.config/nvim/pandoc/
+-- defaults.yaml, an optional `defaults.yaml` in the note's folder or a parent
+-- folder, the default layout and language in metadata.yaml, and a profile from
+-- profiles/<name>.yaml if one is requested (`:Pandoc pdf abnt`). Later files
+-- win, and the YAML header of the note overrides all of them.
+--
+-- Wikilinks become plain text, and ![[image.png|300]] becomes a real image,
+-- looked up in any `attachments/` folder above the note. Citations are
+-- disabled, so "@john" is always plain text.
+--
+-- A second filter (filters/metadata-block.lua) adds a block with the reference
+-- fields of the note (file_name, authors, description, source, location,
+-- external_urls) below the title. Its labels follow the `lang` of the
+-- document.
+--
+-- Nothing is notified on success. Errors and pandoc warnings are shown with
+-- pandoc's own message.
 --
 -- Packages on Arch Linux:
 --
@@ -31,13 +36,12 @@
 -- See: https://pandoc.org/MANUAL.html
 -- See: https://neovim.io/doc/user/lua.html#vim.system()
 
-local bib = require("shared.bib")
+local exports = require("shared.exports")
 
 local M = {}
 
 M.formats = { "pdf", "epub", "docx", "html" }
 M.viewers = { pdf = "zathura", epub = "zathura", docx = "xdg-open", html = "xdg-open" }
-M.build_dir = ".build"
 M.config_dir = vim.fn.stdpath("config") .. "/pandoc"
 
 -- Last file built for each buffer
@@ -51,6 +55,32 @@ end
 
 local function readable(path)
 	return vim.fn.filereadable(path) == 1
+end
+
+-- Folder of the note, or the cwd for an unnamed buffer
+local function note_dir(buf)
+	local name = vim.api.nvim_buf_get_name(buf)
+	if name == "" then
+		return vim.uv.cwd()
+	end
+	return vim.fs.dirname(name)
+end
+
+-- True when the YAML header of the note defines `key`
+local function frontmatter_has(buf, key)
+	local lines = vim.api.nvim_buf_get_lines(buf, 0, 300, false)
+	if not (lines[1] and lines[1]:match("^%-%-%-%s*$")) then
+		return false
+	end
+	for i = 2, #lines do
+		if lines[i]:match("^%-%-%-%s*$") or lines[i]:match("^%.%.%.%s*$") then
+			return false
+		end
+		if lines[i]:match("^" .. key .. "%s*:") then
+			return true
+		end
+	end
+	return false
 end
 
 local function list_profiles()
@@ -94,11 +124,6 @@ local function preprocess(text)
 	)
 end
 
--- "@" preceded by something that is not a word character or a backslash
-local function uses_citations(text)
-	return ("\n" .. text):find("[^%w_\\]@[%w_]") ~= nil
-end
-
 -- Folders named `attachments` in the note's folder and in every parent up to $HOME
 local function resource_path(indir)
 	local dirs = { "." }
@@ -113,20 +138,6 @@ local function resource_path(indir)
 	return table.concat(dirs, ":")
 end
 
-local function find_csl(profile)
-	local names = {}
-	if profile then
-		names[#names + 1] = profile
-	end
-	names[#names + 1] = "default"
-	for _, name in ipairs(names) do
-		local path = M.config_dir .. "/csl/" .. name .. ".csl"
-		if readable(path) then
-			return path
-		end
-	end
-end
-
 -- opts: { fmt = "pdf", profile = "abnt", buf = <bufnr> }
 function M.build(opts, on_done)
 	opts = opts or {}
@@ -135,7 +146,7 @@ function M.build(opts, on_done)
 	local buf = opts.buf or vim.api.nvim_get_current_buf()
 
 	local name = vim.api.nvim_buf_get_name(buf)
-	local indir = bib.dir(buf)
+	local indir = note_dir(buf)
 	local base = name ~= "" and vim.fn.fnamemodify(name, ":t:r") or "scratch"
 
 	local defaults = M.config_dir .. "/defaults.yaml"
@@ -152,11 +163,11 @@ function M.build(opts, on_done)
 	end
 
 	local text = preprocess(table.concat(vim.api.nvim_buf_get_lines(buf, 0, -1, false), "\n") .. "\n")
-	local outdir = indir .. "/" .. M.build_dir
-	vim.fn.mkdir(outdir, "p")
-	local out = outdir .. "/" .. base .. "." .. fmt
 
-	-- Order matters: pandoc applies options as they appear, later ones win
+	local out = exports.output_path(buf, fmt)
+	vim.fn.mkdir(vim.fs.dirname(out), "p")
+
+	-- Order matters, pandoc applies options as they appear, later ones win
 	local cmd = { "pandoc", "-o", out, "-d", defaults }
 
 	local project = vim.fs.find("defaults.yaml", { path = indir, upward = true, stop = home })[1]
@@ -174,34 +185,22 @@ function M.build(opts, on_done)
 		cmd[#cmd + 1] = "--metadata-file=" .. profile_file
 	end
 
+	-- Filters run in this order: wikilinks first, so [[links]] inside the
+	-- metadata values are already plain text when the block is built
 	cmd[#cmd + 1] = "--lua-filter=" .. M.config_dir .. "/filters/wikilinks.lua"
-
-	-- Citations only when there is something to cite from. Otherwise "@john"
-	-- would be rendered as "(john?)"
-	local refs = bib.resolve(buf)
-	local cite = refs.declared or (refs.fallback and #refs.files > 0 and uses_citations(text))
-	if cite then
-		if refs.fallback then
-			for _, f in ipairs(refs.files) do
-				cmd[#cmd + 1] = "--bibliography=" .. f
-			end
-		end
-		if not refs.csl_declared then
-			local csl = find_csl(profile)
-			if csl then
-				cmd[#cmd + 1] = "--csl=" .. csl
-			end
-		end
-		cmd[#cmd + 1] = "--citeproc"
-	else
-		cmd[#cmd + 1] = "--lua-filter=" .. M.config_dir .. "/filters/cites_to_text.lua"
-	end
-
+	cmd[#cmd + 1] = "--lua-filter=" .. M.config_dir .. "/filters/metadata-block.lua"
 	cmd[#cmd + 1] = "--resource-path=" .. resource_path(indir)
+
+	-- The buffer goes through stdin, so pandoc does not know the file name;
+	-- always pass the real one (with extension). Command-line metadata wins
+	-- over the YAML header, so this also overrides `file_name` in the note
+	if name ~= "" then
+		cmd[#cmd + 1] = "--metadata=file_name:" .. vim.fs.basename(name)
+	end
 
 	-- EPUB needs a title and HTML a page title; use the file name when the
 	-- note has none
-	if not bib.has_key(bib.frontmatter(buf), "title") then
+	if not frontmatter_has(buf, "title") then
 		if fmt == "epub" then
 			cmd[#cmd + 1] = "--metadata=title:" .. base
 		elseif fmt == "html" then

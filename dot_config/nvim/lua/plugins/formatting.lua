@@ -84,11 +84,11 @@ require("conform").setup({
 	},
 	formatters = {
 		["google-java-format"] = {
-			prepend_args = { "--skip-javadoc-formatting" },
+			prepend_args = { "--aosp", "--skip-javadoc-formatting" },
 		},
 		clang_format = {
 			-- this file must be located in `~/.clang-format`. We have an example
-			-- of this file in `assets/templates/clang-format.example.yaml`
+			-- of this file in `resources/clang-format.example.yaml`
 			prepend_args = { "--style=file" },
 		},
 		golines = {

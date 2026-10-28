@@ -5,37 +5,9 @@
 local ai = require("mini.ai")
 local ts = ai.gen_spec.treesitter
 
-require("mini.align").setup({
-	mappings = {
-		start = "ga",
-		start_with_preview = "gA",
-	},
-})
-
-require("mini.comment").setup({
-	mappings = {
-		comment = "gc",
-		comment_line = "gcc",
-		comment_visual = "gc",
-		textobject = "gc",
-	},
-})
-
--- require("mini.cmdline").setup()
-
-require("mini.splitjoin").setup({
-	mappings = {
-		toggle = "gS",
-		split = "",
-		join = "",
-		detect = "",
-	},
-	options = {
-		split_join_toggle = {
-			separators = { "[", "]", "{", "}", "(", ")" },
-		},
-	},
-})
+require("mini.align").setup({})
+require("mini.comment").setup({})
+require("mini.splitjoin").setup({})
 
 local ai_opts = {
 	n_lines = 500,
@@ -43,6 +15,8 @@ local ai_opts = {
 		f = ts({ a = "@function.outer", i = "@function.inner" }),
 		c = ts({ a = "@class.outer", i = "@class.inner" }),
 		a = ts({ a = "@parameter.outer", i = "@parameter.inner" }),
+		k = ts({ a = "@code_block.outer", i = "@code_block.inner" }),
+		m = ts({ a = "@comment.outer", i = "@comment.inner" }),
 
 		-- Entire file
 		e = function()

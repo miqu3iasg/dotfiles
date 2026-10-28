@@ -1,5 +1,9 @@
 -- lua/plugins/init.lua
 
+-- Loads all plugin configuration modules. Plugin installation is managed
+-- by Neovim's built-in package manager (`vim.pack`), configured in
+-- lua/config/pack.lua. Add new plugin modules to the list below
+
 for _, mod in ipairs({
 	"treesitter",
 	"formatting",
@@ -10,8 +14,9 @@ for _, mod in ipairs({
 	"unnacessary-shit",
 	"latex",
 	"lisp",
-	"obsidian",
 	"oil",
+	"colorschemes",
+	"markdown",
 }) do
 	local ok, err = pcall(require, "plugins." .. mod)
 	if not ok then

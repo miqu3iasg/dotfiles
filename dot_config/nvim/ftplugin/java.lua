@@ -2,125 +2,145 @@
 
 local jdtls = require("jdtls")
 local mason = vim.fn.stdpath("data") .. "/mason"
+local pkg = mason .. "/packages"
 
-if vim.fn.isdirectory(mason .. "/packages/jdtls") == 0 then
-  vim.notify("Run :MasonInstall jdtls java-debug-adapter java-test vscode-spring-boot-tools", vim.log.levels.WARN)
-  return
+if vim.fn.isdirectory(pkg .. "/jdtls") == 0 then
+	vim.notify("Run :MasonInstall jdtls", vim.log.levels.WARN)
+	return
 end
 
 local jdks = {
-  { name = "JavaSE-1.8", path = "/usr/lib/jvm/java-8-openjdk" },
-  { name = "JavaSE-11",  path = "/usr/lib/jvm/java-11-openjdk" },
-  { name = "JavaSE-17",  path = "/usr/lib/jvm/java-17-openjdk" },
-  { name = "JavaSE-21",  path = "/usr/lib/jvm/java-21-openjdk", default = true },
+	{ name = "JavaSE-17", path = "/usr/lib/jvm/java-17-openjdk" },
+	{ name = "JavaSE-21", path = "/usr/lib/jvm/java-21-openjdk", default = true },
 }
-local runtimes = vim.tbl_filter(function(j) return vim.fn.isdirectory(j.path) == 1 end, jdks)
+
+local runtimes = vim.tbl_filter(function(j)
+	return vim.fn.isdirectory(j.path) == 1
+end, jdks)
 
 local server_jdk = "/usr/lib/jvm/java-21-openjdk"
 
-local root = vim.fs.root(0, { "mvnw", "gradlew", "pom.xml", "build.gradle", "build.gradle.kts", ".git" })
-    or vim.fn.getcwd()
-
-local bundles = vim.fn.glob(
-  mason .. "/packages/java-debug-adapter/extension/server/com.microsoft.java.debug.plugin-*.jar", true, true)
-vim.list_extend(bundles, vim.fn.glob(mason .. "/packages/java-test/extension/server/*.jar", true, true))
+local root = vim.fs.root(0, {
+	{ "mvnw", "gradlew", "settings.gradle", "settings.gradle.kts" },
+	".git",
+	{ "pom.xml", "build.gradle", "build.gradle.kts" },
+}) or vim.fn.getcwd()
 
 local ecc = vim.deepcopy(jdtls.extendedClientCapabilities)
 ecc.resolveAdditionalTextEditsSupport = true
 
 local function build(action)
-  local function has(f) return vim.uv.fs_stat(root .. "/" .. f) ~= nil end
-  local gradle = has("gradlew") or has("build.gradle") or has("build.gradle.kts")
-  local tool = has("mvnw") and "./mvnw" or has("gradlew") and "./gradlew" or (gradle and "gradle" or "mvn")
-  local tasks = {
-    run = gradle and "bootRun" or "spring-boot:run",
-    test = "test",
-    build = gradle and "build -x test" or "clean install -DskipTests",
-  }
-  vim.cmd(("botright vnew | lcd %s | terminal %s %s"):format(vim.fn.fnameescape(root), tool, tasks[action]))
+	local function has(f)
+		return vim.uv.fs_stat(root .. "/" .. f) ~= nil
+	end
+
+	local gradle = has("gradlew") or has("build.gradle") or has("build.gradle.kts")
+	local tool = has("mvnw") and "./mvnw" or has("gradlew") and "./gradlew" or (gradle and "gradle" or "mvn")
+
+	local tasks = {
+		run = gradle and "bootRun" or "spring-boot:run",
+		test = "test",
+		build = gradle and "build -x test" or "clean install -DskipTests",
+	}
+
+	vim.cmd(("botright vnew | lcd %s | terminal %s %s"):format(vim.fn.fnameescape(root), tool, tasks[action]))
 end
+
+local function bmap(lhs, rhs, desc)
+	vim.keymap.set("n", lhs, rhs, { buffer = 0, silent = true, desc = desc })
+end
+
+bmap("<leader>jL", function()
+	for _, c in ipairs(vim.lsp.get_clients({ name = "jdtls" })) do
+		c:stop()
+	end
+end, "Java: stop LSP")
 
 local function on_attach(client, bufnr)
-  local dap = require("dap")
-  require("jdtls.dap").setup_dap({ hotcodereplace = "auto" })
-  require("jdtls.dap").setup_dap_main_class_configs()
+	client.server_capabilities.semanticTokensProvider = nil
 
-  client.server_capabilities.semanticTokensProvider = nil
+	-- client.server_capabilities.completionProvider = nil
 
-  local function map(mode, lhs, rhs, desc)
-    vim.keymap.set(mode, lhs, rhs, { buffer = bufnr, silent = true, desc = desc })
-  end
+	local function map(lhs, rhs, desc)
+		vim.keymap.set("n", lhs, rhs, { buffer = bufnr, silent = true, desc = desc })
+	end
 
-  -- Debug
-  map("n", "<F5>", dap.continue, "DAP: continue/start")
-  map("n", "<F10>", dap.step_over, "DAP: step over")
-  map("n", "<F11>", dap.step_into, "DAP: step into")
-  map("n", "<F12>", dap.step_out, "DAP: step out")
-  map("n", "<leader>db", dap.toggle_breakpoint, "DAP: toggle breakpoint")
-  map("n", "<leader>dB", function() dap.set_breakpoint(vim.fn.input("Condition: ")) end, "DAP: conditional breakpoint")
-
-  -- Tests
-  map("n", "<leader>jtc", jdtls.test_class, "Java: test class")
-  map("n", "<leader>jtn", jdtls.test_nearest_method, "Java: nearest test")
+	map("<leader>jo", jdtls.organize_imports, "Java: organize imports")
 end
 
-jdtls.start_or_attach({
-  cmd = {
-    mason .. "/bin/jdtls",
-    "--jvm-arg=-javaagent:" .. mason .. "/packages/jdtls/lombok.jar",
-    "--jvm-arg=-Xmx2g",
-    "--jvm-arg=-XX:+UseParallelGC",
-    "--jvm-arg=-XX:GCTimeRatio=4",
-    "--jvm-arg=-XX:AdaptiveSizePolicyWeight=90",
-    "-data", vim.fn.stdpath("cache") .. "/jdtls-workspace/" .. vim.fs.basename(root),
-  },
-  cmd_env = { JAVA_HOME = server_jdk },
-  root_dir = root,
-  capabilities = require("blink.cmp").get_lsp_capabilities(),
-  on_attach = on_attach,
-  settings = {
-    java = {
-      autobuild = { enabled = false },
-      format = { enabled = false },
-      configuration = {
-        runtimes = runtimes,
-        updateBuildConfiguration = "automatic",
-      },
-      eclipse = { downloadSources = true },
-      maven = { downloadSources = true },
-      signatureHelp = { enabled = true },
-      sources = {
-        organizeImports = { starThreshold = 9999, staticStarThreshold = 9999 },
-      },
-      completion = {
-        favoriteStaticMembers = {
-          "org.hamcrest.MatcherAssert.assertThat",
-          "org.hamcrest.Matchers.*",
-          "org.hamcrest.CoreMatchers.*",
-          "org.junit.jupiter.api.Assertions.*",
-          "java.util.Objects.requireNonNull",
-          "java.util.Objects.requireNonNullElse",
-          "org.mockito.Mockito.*",
-        },
-        filteredTypes = {
-          "com.sun.*",
-          "io.micrometer.shaded.*",
-          "java.awt.*",
-          "jdk.*",
-          "sun.*",
-        },
-      },
-      codeGeneration = {
-        toString = {
-          template = "${object.className}{${member.name()}=${member.value}, ${otherMembers}}",
-        },
-        hashCodeEquals = { useJava7Objects = true },
-        useBlocks = true,
-      },
-    },
-  },
-  init_options = {
-    bundles = bundles,
-    extendedClientCapabilities = ecc,
-  },
-})
+local workspace = vim.fn.stdpath("cache")
+	.. "/jdtls-workspace/"
+	.. vim.fn.sha256(root):sub(1, 8)
+	.. "-"
+	.. vim.fs.basename(root)
+
+local cmd = {
+	mason .. "/bin/jdtls",
+	"--jvm-arg=-Xms256m",
+	"--jvm-arg=-Xmx1g",
+	"--jvm-arg=-XX:+UseParallelGC",
+	"--jvm-arg=-XX:GCTimeRatio=4",
+	"--jvm-arg=-XX:AdaptiveSizePolicyWeight=90",
+	"-data",
+	workspace,
+}
+
+local lombok = pkg .. "/jdtls/lombok.jar"
+if vim.uv.fs_stat(lombok) then
+	table.insert(cmd, 2, "--jvm-arg=-javaagent:" .. lombok)
+end
+
+local config = {
+	cmd = cmd,
+	cmd_env = { JAVA_HOME = server_jdk },
+	root_dir = root,
+	capabilities = require("blink.cmp").get_lsp_capabilities({
+		workspace = { didChangeWatchedFiles = { dynamicRegistration = false } },
+	}),
+	on_attach = on_attach,
+	flags = { debounce_text_changes = 800 },
+	settings = {
+		java = {
+			autobuild = { enabled = false },
+			format = { enabled = false },
+			signatureHelp = { enabled = true, description = { enabled = true } },
+			referencesCodeLens = { enabled = false },
+			implementationsCodeLens = { enabled = false },
+			inlayHints = { parameterNames = { enabled = "none" } },
+			references = { includeDecompiledSources = false },
+			edit = { validateAllOpenBuffersOnChanges = false },
+			configuration = {
+				runtimes = runtimes,
+				updateBuildConfiguration = "automatic",
+			},
+			project = {
+				outputPath = "out",
+				resourceFilters = {
+					"node_modules",
+					".git",
+					".gradle",
+					"target",
+					"build",
+					"out",
+				},
+			},
+			eclipse = { downloadSources = true },
+			maven = { downloadSources = true },
+			sources = {
+				organizeImports = { starThreshold = 9999, staticStarThreshold = 9999 },
+			},
+			codeGeneration = {
+				toString = {
+					template = "${object.className}{${member.name()}=${member.value}, ${otherMembers}}",
+				},
+				hashCodeEquals = { useJava7Objects = true },
+				useBlocks = true,
+			},
+		},
+	},
+	init_options = {
+		extendedClientCapabilities = ecc,
+	},
+}
+
+jdtls.start_or_attach(config)

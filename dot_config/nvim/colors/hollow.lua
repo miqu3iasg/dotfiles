@@ -16,73 +16,479 @@ vim.g.colors_name = "hollow"
 
 local set_hl = vim.api.nvim_set_hl
 
-local _ = false
+-- Pallete
+local p = {
+	-- Neutrals
+	black = "#000000",
+	white = "#ffffff",
+	fg = "#d6d6d6", -- default text
+	fg_alt = "#d6d6d6", -- statements, types, preproc
+	string = "#d6d6d6",
+	punct = "#e2e2e2",
+	tailwind = "#e2e2e2",
+	dim = "#707070",
+	comment = "#787470",
+	doc = "#7a7a7a",
+	line_nr = "#585858",
 
-local fg0 = "#c8c8c8"
-local fg1 = "#c8c8c8"
-local str = "#c8c8c8"
-local dim = "#707070"
-local cmt = "#6a6a6a"
-local doc = "#7a7a7a"
-
-local accent = "#6382eb"
-local accent_dim = "#1b2152"
-
-local punct = "#e2e2e2"
-local tw = "#e2e2e2"
-
-local err = "#b86a6a"
-local warn = "#b09b72"
-local ok = "#678a67"
-
--- Palette used by the status line / search changes (single source of truth)
-local c = {
-	fg = "#e2e2e2",
-	comment = "#636262",
+	-- Surfaces
 	line = "#111111", -- cursorline, statusline, code blocks
+	popup_bg = "#0d0d0d",
+	inlay_bg = "#0a0a0a",
+	surface = "#1c1c1c",
+	surface_hi = "#303030",
+	border = "#444444",
+
+	-- Statusline
+	statusline_fg = "#e2e2e2",
+	statusline_nc_fg = "#636262",
+
+	-- Accent and status
+	accent = "#6382eb",
+	error = "#b86a6a",
+	warn = "#b09b72",
+	ok = "#678a67",
+
+	-- Search
+	search_fg = "#D6C17A",
+	search_bg = "#3D3525",
+
+	-- Diff
+	diff = {
+		add_bg = "#0f1a12", -- added line
+		change_bg = "#101722", -- changed line
+		delete_bg = "#1a1112", -- deleted line
+		text_bg = "#1f3050", -- changed text inside a line
+		add_text_bg = "#1c3324", -- added text inside a line
+		delete_text_bg = "#3a1f21", -- deleted text inside a line
+		added = "#6f9a73",
+		changed = "#6f8fb8",
+		removed = "#b87a7a",
+		line = "#6f8fb8", -- hunk header
+	},
+
+	-- Regex injections
+	regex = {
+		string = "#8a94a0",
+		delimiter = "#946060",
+		property = "#5f7f5f",
+	},
+
+	-- Markdown
+	markdown = {
+		italic = "#949494",
+		strike = "#6c6c6c",
+		marker = "#585858",
+		block = "#b2b2b2",
+		string = "#cecece", -- yaml string values
+		code = "#93a0b4", -- blue-gray tint, brighter than italic
+		accent = "#738296", -- same tint, dimmer, exclusive color for markup markers
+	},
+
+	-- Micro-palette for tiny luminance steps so structure, operations and
+	-- values separate without ever reading as "color"
+	t = {
+		op = "#ebebeb", -- + - = == => && ||
+		special = "#f6f6f6", -- ${}, escapes, special regex chars
+		const = "#e3e3e3", -- numbers, booleans, nil
+		prop = "#c9c9c9", -- fields and properties (obj.field)
+		bracket = "#bcbcbc", -- ( ) [ ] { }
+		delim = "#989898", -- , ; . :
+	},
+
+	-- Constrast version
+	-- t = {
+	-- 	op = "#f6f6f6", -- + - = == => && ||
+	-- 	special = "#ffffff", -- ${}, escapes, special regex chars
+	-- 	const = "#ededed", -- numbers, booleans, nil
+	-- 	prop = "#b4b4b4", -- fields and properties (obj.field)
+	-- 	bracket = "#9a9a9a", -- ( ) [ ] { }
+	-- 	delim = "#808080", -- , ; . :
+	-- },
 }
 
-local search_fg = "#D6C17A"
-local search_bg = "#3D3525"
+local md = p.markdown
+local t = p.t
 
-local function attrs(s)
-	local t = {}
-	if s then
-		for a in s:gmatch("[^,]+") do
-			if a ~= "NONE" then
-				t[a] = true
+-- Helpers
+
+local GUI_ATTRS = { "bold", "italic", "underline", "undercurl", "reverse", "strikethrough" }
+
+-- xterm-256 has a 6x6x6 color cube (levels 0,95,135,175,215,255) and a
+-- 24-step gray ramp (8,18,...,238). For every hex we compute the closest
+-- candidate in each and keep the nearest one (euclidean RGB distance).
+-- Results are cached, so the cost is paid once per distinct color
+
+local CUBE = { 0, 95, 135, 175, 215, 255 }
+local cterm_cache = {}
+
+local function rgb(hex)
+	return tonumber(hex:sub(2, 3), 16), tonumber(hex:sub(4, 5), 16), tonumber(hex:sub(6, 7), 16)
+end
+
+local function dist2(r1, g1, b1, r2, g2, b2)
+	return (r1 - r2) ^ 2 + (g1 - g2) ^ 2 + (b1 - b2) ^ 2
+end
+
+local function nearest_cube_level(v)
+	local best_i, best_d = 1, math.huge
+	for i, c in ipairs(CUBE) do
+		local d = math.abs(v - c)
+		if d < best_d then
+			best_i, best_d = i, d
+		end
+	end
+	return best_i - 1
+end
+
+local function hex_to_256(hex)
+	if cterm_cache[hex] then
+		return cterm_cache[hex]
+	end
+
+	local r, g, b = rgb(hex)
+
+	-- Best color-cube candidate
+	local ri, gi, bi = nearest_cube_level(r), nearest_cube_level(g), nearest_cube_level(b)
+	local cube_d = dist2(r, g, b, CUBE[ri + 1], CUBE[gi + 1], CUBE[bi + 1])
+
+	-- Best gray-ramp candidate
+	local step = math.max(0, math.min(23, math.floor(((r + g + b) / 3 - 8) / 10 + 0.5)))
+	local gv = 8 + 10 * step
+	local gray_d = dist2(r, g, b, gv, gv, gv)
+
+	local idx = gray_d < cube_d and (232 + step) or (16 + 36 * ri + 6 * gi + bi)
+	cterm_cache[hex] = idx
+	return idx
+end
+
+local function is_hex(v)
+	return type(v) == "string" and v:match("^#%x%x%x%x%x%x$") ~= nil
+end
+
+-- Turns a group spec into `nvim_set_hl` options.
+-- ctermfg/ctermbg are derived from fg/bg unless given explicitly.
+local function normalize(spec)
+	if type(spec) == "string" then
+		return { link = spec, force = true }
+	end
+
+	local opts = vim.deepcopy(spec)
+
+	if is_hex(opts.fg) and not opts.ctermfg then
+		opts.ctermfg = hex_to_256(opts.fg)
+	end
+	if is_hex(opts.bg) and not opts.ctermbg then
+		opts.ctermbg = hex_to_256(opts.bg)
+	end
+
+	if not opts.cterm then
+		opts.cterm = {}
+		for _, attr in ipairs(GUI_ATTRS) do
+			if opts[attr] then
+				-- terminals without undercurl support fall back to underline
+				opts.cterm[attr == "undercurl" and "underline" or attr] = true
 			end
 		end
 	end
-	return t
+	return opts
 end
 
-local function apply(defs)
-	for _, d in ipairs(defs) do
-		local name, fg, bg, sp, gui, cfg, cbg, cterm = unpack(d, 1, 8)
-		local o = attrs(gui)
-		if fg then
-			o.fg = fg
-		end
-		if bg then
-			o.bg = bg
-		end
-		if sp then
-			o.sp = sp
-		end
-		if cfg then
-			o.ctermfg = cfg
-		end
-		if cbg then
-			o.ctermbg = cbg
-		end
-		o.cterm = attrs(cterm)
-		set_hl(0, name, o)
+local function apply(groups, ns)
+	for name, spec in pairs(groups) do
+		set_hl(ns or 0, name, normalize(spec))
 	end
 end
 
+-- Highlight groups
+
+-- Editor UI
+local editor = {
+	-- Base
+	Normal = { fg = p.fg, bg = p.black },
+	Cursor = { fg = p.black, bg = p.white },
+	CursorLine = { bg = p.line },
+	CursorColumn = { bg = p.surface_hi },
+	CursorLineNr = { fg = p.fg, bg = p.line, bold = true },
+	ColorColumn = { bg = p.surface },
+	Conceal = {},
+	LineNr = { fg = p.line_nr },
+	SignColumn = { fg = p.fg, bg = p.black },
+	FoldColumn = { fg = p.dim, bg = p.black },
+	Folded = { fg = p.dim, bg = p.black },
+	EndOfBuffer = { fg = p.dim },
+	NonText = { fg = p.dim },
+	SpecialKey = { fg = p.dim, bold = true },
+	Directory = { fg = p.fg },
+	MatchParen = { fg = p.search_fg, bold = true },
+	QuickFixLine = { bg = p.line, bold = true },
+	VertSplit = { fg = p.dim, bg = p.black },
+
+	-- Selection and search
+	Visual = { bg = p.border },
+	VisualNOS = { bg = p.surface_hi },
+	Search = { fg = p.search_fg, bg = p.search_bg },
+	IncSearch = { fg = p.search_bg, bg = p.search_fg, bold = true },
+	CurSearch = { fg = p.search_bg, bg = p.search_fg, bold = true },
+
+	-- Messages
+	ModeMsg = { fg = p.fg, bg = p.black, bold = true },
+	MoreMsg = { fg = p.fg, bg = p.black },
+	MsgArea = { fg = p.fg, bg = p.black },
+	MsgSeparator = { fg = p.border, bg = p.black },
+	Question = { fg = p.fg, bg = p.black },
+	WarningMsg = { fg = p.warn, bg = p.black },
+	ErrorMsg = { fg = p.error, bg = p.black, bold = true },
+	Error = { fg = p.error, bg = p.black, bold = true, reverse = true },
+	Todo = { fg = p.black, bg = p.warn, bold = true },
+
+	-- Statusline, tabline, titlebar, toolbar
+	StatusLine = { fg = p.statusline_fg, bg = p.line },
+	StatusLineNC = { fg = p.statusline_nc_fg, bg = p.black },
+	TabLine = { fg = p.dim, bg = p.black },
+	TabLineFill = { fg = p.fg, bg = p.black },
+	TabLineSel = { fg = p.fg, bg = p.black, bold = true },
+	TitleBar = { fg = p.fg, bg = p.black },
+	TitleBarNC = { fg = p.dim, bg = p.black },
+	ToolbarButton = { fg = p.fg, bg = p.black, bold = true },
+	ToolbarLine = { bg = p.black },
+
+	-- Spell
+	SpellBad = { fg = p.error, sp = p.error, undercurl = true },
+	SpellCap = { fg = p.warn, sp = p.warn, undercurl = true },
+	SpellLocal = { fg = p.dim, sp = p.dim, undercurl = true },
+	SpellRare = { fg = p.dim, sp = p.dim, undercurl = true },
+}
+
+-- Popups and floating windows
+local popup = {
+	NormalFloat = { fg = p.fg, bg = p.popup_bg },
+	FloatBorder = { fg = p.border, bg = p.popup_bg },
+	FloatTitle = { fg = p.fg, bg = p.popup_bg },
+	FloatFooter = { fg = p.dim, bg = p.popup_bg },
+
+	Pmenu = { fg = p.fg, bg = p.popup_bg },
+	PmenuSel = { fg = p.fg, bg = p.surface },
+	PmenuExtra = { fg = p.dim, bg = p.popup_bg },
+	PmenuExtraSel = { fg = p.fg, bg = p.surface_hi },
+	PmenuKind = { fg = p.dim, bg = p.popup_bg },
+	PmenuKindSel = { fg = p.fg, bg = p.surface_hi },
+	PmenuMatch = { fg = p.white, bg = p.popup_bg, bold = true },
+	PmenuMatchSel = { fg = p.white, bg = p.surface_hi, bold = true },
+	PmenuSbar = { bg = p.popup_bg },
+	PmenuThumb = { bg = p.border },
+	WildMenu = { fg = p.fg, bg = p.surface_hi },
+}
+
+-- Vim syntax groups
+local syntax = {
+	Comment = { fg = p.comment },
+	Constant = { fg = t.const },
+	Number = { fg = t.const },
+	String = { fg = p.string },
+	Identifier = { fg = p.fg },
+	Function = { fg = p.fg },
+	Statement = { fg = p.fg_alt },
+	Type = { fg = p.fg_alt },
+	PreProc = { fg = p.fg_alt },
+	Special = { fg = p.fg },
+	Ignore = { fg = p.fg },
+	Underlined = { fg = p.fg, underline = true },
+	Title = { fg = p.fg, bold = true },
+
+	Delimiter = { fg = t.delim },
+	Operator = { fg = t.op },
+}
+
+-- Treesitter and LSP semantic tokens
+local treesitter = {
+	-- Comments
+	["@comment.documentation"] = { fg = p.doc },
+
+	-- Structure
+	["@module"] = { fg = p.fg_alt },
+	["@attribute"] = { fg = p.doc, italic = true },
+
+	-- Functions (never bold)
+	["@function"] = { fg = p.fg },
+	["@function.method"] = { fg = p.fg },
+	["@function.call"] = { fg = p.fg },
+	["@function.method.call"] = { fg = p.fg },
+	["@function.builtin"] = { fg = p.fg },
+
+	-- LSP semantic tokens
+	["@lsp.type.function"] = { fg = p.fg },
+	["@lsp.type.method"] = { fg = p.fg },
+	["@lsp.typemod.function.declaration"] = {},
+	["@lsp.typemod.method.declaration"] = {},
+	["@lsp.type.operator"] = { fg = t.op },
+	["@lsp.type.property"] = { fg = t.prop },
+
+	-- Variables
+	["@variable.parameter"] = { fg = p.fg, italic = true },
+	["@variable.builtin"] = { fg = p.fg_alt, italic = true },
+	["@variable.member"] = { fg = t.prop },
+	["@property"] = { fg = t.prop },
+
+	-- Literals
+	["@boolean"] = { fg = p.fg },
+	["@constant.builtin"] = { fg = t.const },
+	["@string.escape"] = { fg = t.special },
+	["@string.special"] = { fg = t.special },
+
+	-- Punctuation and operators
+	["@punctuation"] = { fg = t.delim },
+	["@punctuation.bracket"] = { fg = t.bracket },
+	["@punctuation.delimiter"] = { fg = t.delim },
+	["@punctuation.special"] = { fg = t.special }, -- ${ } in template strings
+	["@operator"] = { fg = t.op },
+	["@keyword.operator"] = { fg = t.op }, -- and, or, not, in, instanceof
+
+	-- Tags
+	["@tag"] = { fg = p.fg_alt },
+	["@tag.delimiter"] = { fg = t.bracket },
+	["@tag.attribute"] = { fg = p.fg_alt, italic = true },
+
+	-- Generic markup
+	["@markup.heading"] = { fg = p.fg, bold = true },
+	["@markup.strong"] = { bold = true },
+	["@markup.italic"] = { italic = true },
+	["@markup.link"] = { fg = p.fg_alt, underline = true },
+	["@markup.raw"] = { fg = p.fg_alt },
+
+	-- Regex
+	["@string.regexp"] = { fg = p.regex.string },
+	["@character.special"] = { fg = t.special },
+	["@operator.regex"] = { fg = p.warn },
+	["@keyword.operator.regex"] = { fg = p.warn },
+	["@punctuation.bracket.regex"] = { fg = p.dim },
+	["@punctuation.delimiter.regex"] = { fg = p.regex.delimiter },
+	["@property.regex"] = { fg = p.regex.property, italic = true },
+	["@variable.builtin.regex"] = { fg = p.fg_alt },
+}
+
+-- Diagnostics and LSP
+local diagnostics = {
+	DiagnosticError = { fg = p.error },
+	DiagnosticWarn = { fg = p.warn },
+	DiagnosticInfo = { fg = p.fg_alt },
+	DiagnosticHint = { fg = p.comment },
+	DiagnosticOk = { fg = p.ok },
+	DiagnosticUnnecessary = { fg = p.comment },
+
+	DiagnosticUnderlineError = { sp = p.error, undercurl = true },
+	DiagnosticUnderlineWarn = { sp = p.warn, undercurl = true },
+	DiagnosticUnderlineInfo = { sp = p.fg_alt, undercurl = true },
+	DiagnosticUnderlineHint = { sp = p.comment, undercurl = true },
+
+	LspInlayHint = { fg = p.comment, bg = p.inlay_bg, italic = true },
+	LspReferenceText = { bg = p.surface },
+	LspReferenceRead = { bg = p.surface },
+	LspReferenceWrite = { bg = p.surface, underline = true },
+}
+
+-- Diff
+local diff = {
+	-- Lines
+	DiffAdd = { fg = p.fg, bg = p.diff.add_bg },
+	DiffChange = { fg = p.fg, bg = p.diff.change_bg },
+	DiffDelete = { fg = p.diff.removed, bg = p.diff.delete_bg },
+
+	-- Text inside a line
+	DiffText = { fg = p.white, bg = p.diff.text_bg, bold = true },
+	DiffAddText = { fg = p.white, bg = p.diff.add_text_bg, bold = true },
+	DiffDeleteText = { fg = p.white, bg = p.diff.delete_text_bg, bold = true },
+
+	-- Signs and diff syntax
+	Added = { fg = p.diff.added },
+	Changed = { fg = p.diff.changed },
+	Removed = { fg = p.diff.removed },
+	diffFile = { fg = p.fg, bold = true },
+	diffLine = { fg = p.diff.line },
+}
+
+-- Markdown
+
+local markdown = {
+	-- Frontmatter fences (---)
+	["@keyword.directive.markdown"] = { fg = md.accent },
+
+	-- Structural punctuation
+	["@punctuation.special.markdown"] = { fg = p.fg },
+	["@punctuation.delimiter.markdown"] = { fg = p.fg },
+
+	-- Lists and task items
+	["@markup.list.markdown"] = { fg = md.accent, bold = true },
+	["@markup.list.checked.markdown"] = { fg = md.accent, bold = true },
+	["@markup.list.unchecked.markdown"] = { fg = md.accent, bold = true },
+
+	-- Blockquote
+	["@markup.quote.markdown"] = { fg = md.italic, italic = true },
+
+	-- Code blocks
+	["@markup.raw.block.markdown"] = { fg = md.block },
+	["@markup.raw.delimiter.markdown"] = { fg = md.accent },
+	["@label.markdown"] = { fg = md.accent, italic = true },
+
+	-- Inline emphasis
+	["@markup.strong.markdown_inline"] = { fg = p.white, bold = true },
+	["@markup.italic.markdown_inline"] = { fg = md.italic, italic = true },
+	["@markup.strikethrough.markdown_inline"] = { fg = md.strike, strikethrough = true },
+
+	-- Inline code and math
+	["@markup.raw.markdown_inline"] = { fg = md.code },
+	["@markup.math.markdown_inline"] = { fg = md.code },
+	["@markup.math.markdown"] = { fg = md.code },
+	["@markup.math.latex"] = { fg = md.code }, -- injected latex inside math (also affects .tex)
+	["@punctuation.special.markdown_inline"] = { fg = md.code }, -- $ delimiters
+
+	-- Inline links
+	["@markup.link.markdown_inline"] = { fg = md.marker },
+	["@markup.link.label.markdown_inline"] = { fg = md.code, underline = true },
+	["@markup.link.url.markdown_inline"] = { fg = p.accent, underline = true },
+
+	-- Inline escapes and conceal
+	["@string.escape.markdown_inline"] = { fg = md.accent },
+	["@conceal.markdown_inline"] = { fg = md.marker },
+}
+
+-- Headings (generated from the gradient table)
+do
+	local levels = {
+		p.white,
+		p.fg,
+		p.fg_alt,
+		p.string,
+		p.string,
+		p.string,
+	}
+
+	markdown["@markup.heading.markdown"] = { fg = levels[1], bold = true }
+	markdown["@markup.heading.marker.markdown"] = { fg = levels[1] }
+
+	for i, color in ipairs(levels) do
+		markdown[("@markup.heading.%d.markdown"):format(i)] = { fg = color, bold = true }
+		markdown[("@markup.heading.%d.marker.markdown"):format(i)] = { fg = color }
+	end
+end
+
+-- Frontmatter (YAML injected into markdown), applied through its own namespace
+local frontmatter = {
+	["@property.yaml"] = { fg = md.accent }, -- keys
+	["@string.yaml"] = { fg = md.string }, -- string values
+	["@number.yaml"] = { fg = md.accent },
+	["@number.float.yaml"] = { fg = md.accent },
+	["@boolean.yaml"] = { fg = md.accent },
+	["@constant.builtin.yaml"] = { fg = md.accent }, -- null
+	["@label.yaml"] = { fg = md.accent }, -- anchors / aliases
+	["@type.yaml"] = { fg = md.accent }, -- tags
+	["@punctuation.delimiter.yaml"] = { fg = md.marker }, -- : - ,
+	["@punctuation.bracket.yaml"] = { fg = md.marker }, -- [ ] { }
+}
+
 -- Links (hi! link)
 local links = {
+	-- Vim syntax
 	Boolean = "Number",
 	Character = "Constant",
 	Conditional = "Statement",
@@ -94,24 +500,26 @@ local links = {
 	Keyword = "Statement",
 	Label = "Statement",
 	Macro = "PreProc",
-	MessageWindow = "Pmenu",
-	PopupNotification = "Todo",
 	PreCondit = "PreProc",
 	Repeat = "Statement",
 	SpecialChar = "Special",
 	SpecialComment = "Special",
-	StatusLineTerm = "StatusLine",
-	StatusLineTermNC = "StatusLineNC",
 	StorageClass = "Type",
 	Structure = "Type",
 	Tag = "Special",
-	Terminal = "Normal",
 	Typedef = "Type",
+
+	-- Editor
+	MessageWindow = "Pmenu",
+	PopupNotification = "Todo",
+	StatusLineTerm = "StatusLine",
+	StatusLineTermNC = "StatusLineNC",
+	TermCursor = "Cursor",
+	lCursor = "Cursor",
 	debugBreakpoint = "ModeMsg",
 	debugPC = "CursorLine",
-	lCursor = "Cursor",
-	TermCursor = "Cursor",
 
+	-- Diff
 	diffAdded = "Added",
 	diffRemoved = "Removed",
 	diffChanged = "Changed",
@@ -124,18 +532,24 @@ local links = {
 	["@diff.minus"] = "Removed",
 	["@diff.delta"] = "Changed",
 
+	-- gitsigns.nvim
 	GitSignsAdd = "Added",
 	GitSignsChange = "Changed",
 	GitSignsDelete = "Removed",
 	GitSignsAddNr = "Added",
 	GitSignsChangeNr = "Changed",
 	GitSignsDeleteNr = "Removed",
-	GitSignsAddInline = "DiffAdd",
-	GitSignsChangeInline = "DiffChange",
-	GitSignsDeleteInline = "DiffDelete",
+	GitSignsAddLn = "DiffAdd",
+	GitSignsChangeLn = "DiffChange",
+	GitSignsAddInline = "DiffAddText",
+	GitSignsChangeInline = "DiffText",
+	GitSignsDeleteInline = "DiffDeleteText",
 	GitSignsAddPreview = "DiffAdd",
 	GitSignsDeletePreview = "DiffDelete",
+	GitSignsDeleteVirtLn = "DiffDelete",
+	GitSignsDeleteVirtLnInLine = "DiffDeleteText",
 
+	-- blink.cmp
 	BlinkCmpMenu = "Pmenu",
 	BlinkCmpMenuBorder = "FloatBorder",
 	BlinkCmpMenuSelection = "PmenuSel",
@@ -151,330 +565,13 @@ local links = {
 	BlinkCmpSignatureHelp = "NormalFloat",
 	BlinkCmpSignatureHelpBorder = "FloatBorder",
 
+	-- nvim-cmp
 	CmpItemAbbrMatch = "PmenuMatch",
 	CmpItemAbbrMatchFuzzy = "PmenuMatch",
 	CmpItemKind = "PmenuKind",
 	CmpItemMenu = "PmenuExtra",
-}
 
-local function terminal_colors(list)
-	for i, c in ipairs(list) do
-		vim.g["terminal_color_" .. (i - 1)] = c
-	end
-end
-
-local dark = {
-	{ "Normal", fg0, "#000000", _, "NONE", 254, 16, "NONE" },
-	{ "ColorColumn", _, "#1c1c1c", _, "NONE", _, 234, "NONE" },
-	{ "Conceal", _, _, _, "NONE", _, _, "NONE" },
-	{ "Constant", fg0, _, _, "NONE", 254, _, "NONE" },
-	{ "Number", fg0, _, _, "NONE", 254, _, "NONE" },
-	{ "String", str, _, _, "NONE", 254, _, "NONE" },
-	{ "CurSearch", search_bg, search_fg, _, "bold", 53, 135, "bold" },
-	{ "CursorColumn", _, "#303030", _, "NONE", _, 236, "NONE" },
-	{ "CursorIM", "#000000", accent, _, "NONE", 16, 62, "NONE" },
-	{ "CursorLine", _, c.line, _, "NONE", _, 233, "NONE" },
-	{ "CursorLineNr", fg0, c.line, _, "bold", 254, 233, "bold" },
-
-	-- Diff backgrounds: very dark tints, close to the black background
-	{ "DiffAdd", fg0, "#070f07", _, "NONE", 254, 233, "NONE" },
-	{ "DiffChange", fg0, "#070b11", _, "NONE", 254, 233, "NONE" },
-	{ "DiffDelete", err, "#100707", _, "NONE", 131, 233, "NONE" },
-	{ "DiffText", fg0, "#120c1a", _, "NONE", 254, 234, "NONE" },
-
-	-- Diff signs / text (gitsigns, `diff` filetype, treesitter): muted tones
-	{ "Added", "#335533", _, _, "NONE", 22, _, "NONE" },
-	{ "Changed", "#334a60", _, _, "NONE", 60, _, "NONE" },
-	{ "Removed", "#7a4a4a", _, _, "NONE", 95, _, "NONE" },
-	{ "diffFile", fg0, _, _, "bold", 254, _, "bold" },
-	{ "diffLine", "#4a3560", _, _, "NONE", 60, _, "NONE" },
-
-	{ "Directory", fg0, _, _, "NONE", 254, _, "NONE" },
-	{ "EndOfBuffer", dim, _, _, "NONE", 242, _, "NONE" },
-	{ "Error", err, "#000000", _, "bold,reverse", 131, 16, "bold,reverse" },
-	{ "ErrorMsg", err, "#000000", _, "bold", 131, 16, "bold" },
-	{ "FoldColumn", dim, "#000000", _, "NONE", 242, 16, "NONE" },
-	{ "Folded", dim, "#000000", _, "NONE", 242, 16, "NONE" },
-	{ "Identifier", fg0, _, _, "NONE", 254, _, "NONE" },
-	{ "Ignore", fg0, _, _, "NONE", 254, _, "NONE" },
-	{ "IncSearch", search_bg, search_fg, _, "bold", 53, 135, "bold" },
-	{ "LineNr", "#585858", _, _, "NONE", 240, _, "NONE" },
-	{ "MatchParen", accent, _, _, "bold", 62, _, "bold" },
-	{ "ModeMsg", fg0, "#000000", _, "bold", 254, 16, "bold" },
-	{ "MoreMsg", fg0, "#000000", _, "NONE", 254, 16, "NONE" },
-	{ "MsgArea", fg0, "#000000", _, "NONE", 254, 16, "NONE" },
-	{ "MsgSeparator", "#444444", "#000000", _, "NONE", 238, 16, "NONE" },
-	{ "NonText", dim, _, _, "NONE", 242, _, "NONE" },
-	{ "PreProc", fg1, _, _, "NONE", 254, _, "NONE" },
-	{ "Question", fg0, "#000000", _, "NONE", 254, 16, "NONE" },
-	{ "QuickFixLine", _, c.line, _, "bold", _, 233, "bold" },
-	{ "Search", search_fg, search_bg, _, "NONE", 135, 53, "NONE" },
-	{ "SignColumn", fg0, "#000000", _, "NONE", 254, 16, "NONE" },
-	{ "Special", fg0, _, _, "NONE", 254, _, "NONE" },
-	{ "SpecialKey", dim, _, _, "bold", 242, _, "bold" },
-	{ "SpellBad", err, _, err, "undercurl", 131, _, "underline" },
-	{ "SpellCap", warn, _, warn, "undercurl", 137, _, "underline" },
-	{ "SpellLocal", dim, _, dim, "undercurl", 242, _, "underline" },
-	{ "SpellRare", dim, _, dim, "undercurl", 242, _, "underline" },
-	{ "StatusLine", c.fg, c.line, _, "NONE", 254, 233, "NONE" },
-	{ "StatusLineNC", c.comment, c.line, _, "NONE", 241, 233, "NONE" },
-	{ "TabLine", dim, "#000000", _, "NONE", 242, 16, "NONE" },
-	{ "TabLineFill", fg0, "#000000", _, "NONE", 254, 16, "NONE" },
-	{ "TabLineSel", fg0, "#000000", _, "bold", 254, 16, "bold" },
-	{ "TitleBar", fg0, "#000000", _, "NONE", 254, 16, "NONE" },
-	{ "TitleBarNC", dim, "#000000", _, "NONE", 242, 16, "NONE" },
-	{ "Todo", "#000000", warn, _, "bold", 16, 137, "bold" },
-	{ "ToolbarButton", fg0, "#000000", _, "bold", 254, 16, "bold" },
-	{ "ToolbarLine", _, "#000000", _, "NONE", _, 16, "NONE" },
-	{ "Underlined", fg0, _, _, "underline", 254, _, "underline" },
-	{ "VertSplit", dim, "#000000", _, "NONE", 242, 16, "NONE" },
-	{ "Visual", _, "#444444", _, "NONE", _, 238, "NONE" },
-	{ "VisualNOS", _, "#303030", _, "NONE", _, 236, "NONE" },
-	{ "WarningMsg", warn, "#000000", _, "NONE", 137, 16, "NONE" },
-}
-
-local popups = {
-	{ "NormalFloat", fg0, "#000000", _, "NONE", 254, 16, "NONE" },
-	{ "FloatBorder", "#444444", "#000000", _, "NONE", 238, 16, "NONE" },
-	{ "FloatTitle", fg0, "#000000", _, "NONE", 254, 16, "NONE" },
-	{ "FloatFooter", dim, "#000000", _, "NONE", 242, 16, "NONE" },
-	{ "Pmenu", fg0, "#000000", _, "NONE", 254, 16, "NONE" },
-	{ "PmenuExtra", dim, "#000000", _, "NONE", 242, 16, "NONE" },
-	{ "PmenuExtraSel", fg0, "#303030", _, "NONE", 254, 236, "NONE" },
-	{ "PmenuKind", dim, "#000000", _, "NONE", 242, 16, "NONE" },
-	{ "PmenuKindSel", fg0, "#303030", _, "NONE", 254, 236, "NONE" },
-	{ "PmenuMatch", "#ffffff", "#000000", _, "bold", 231, 16, "bold" },
-	{ "PmenuMatchSel", "#ffffff", "#303030", _, "bold", 231, 236, "bold" },
-	{ "PmenuSbar", _, "#000000", _, "NONE", _, 16, "NONE" },
-	{ "PmenuSel", fg0, c.line, _, "NONE", 254, 233, "NONE" },
-	{ "PmenuThumb", _, "#444444", _, "NONE", _, 238, "NONE" },
-	{ "WildMenu", fg0, "#303030", _, "NONE", 254, 236, "NONE" },
-}
-
--- Modern groups
-local modern = {
-	-- Comments
-	{ "Comment", cmt, _, _, "NONE", 241, _, "NONE" },
-	{ "@comment.documentation", doc, _, _, "NONE", 243, _, "NONE" },
-
-	-- Structure
-	{ "Statement", fg1, _, _, "NONE", 254, _, "NONE" },
-	{ "Type", fg1, _, _, "NONE", 254, _, "NONE" },
-	{ "@module", fg1, _, _, "NONE", 254, _, "NONE" },
-	{ "@attribute", doc, _, _, "italic", 243, _, "italic" },
-
-	-- Functions never bold
-	{ "Function", fg0, _, _, "NONE", 254, _, "NONE" },
-	{ "@function", fg0, _, _, "NONE", 254, _, "NONE" },
-	{ "@function.method", fg0, _, _, "NONE", 254, _, "NONE" },
-	{ "@function.call", fg0, _, _, "NONE", 254, _, "NONE" },
-	{ "@function.method.call", fg0, _, _, "NONE", 254, _, "NONE" },
-	{ "@function.builtin", fg0, _, _, "NONE", 254, _, "NONE" },
-	-- LSP semantic tokens
-	{ "@lsp.type.function", fg0, _, _, "NONE", 254, _, "NONE" },
-	{ "@lsp.type.method", fg0, _, _, "NONE", 254, _, "NONE" },
-	{ "@lsp.typemod.function.declaration", _, _, _, "NONE", _, _, "NONE" },
-	{ "@lsp.typemod.method.declaration", _, _, _, "NONE", _, _, "NONE" },
-
-	-- Variables
-	{ "@variable.parameter", fg0, _, _, "italic", 254, _, "italic" },
-	{ "@variable.builtin", fg1, _, _, "italic", 254, _, "italic" },
-
-	-- Literal values (no accent: everything shares the default fg)
-	{ "@constant.builtin", fg0, _, _, "NONE", 254, _, "NONE" },
-	{ "@string.escape", fg0, _, _, "NONE", 254, _, "NONE" },
-
-	-- Punctuation and operators: brackets and operators use the default text
-	-- color; only separators (, ; :) are dimmed
-	{ "Delimiter", punct, _, _, "NONE", 254, _, "NONE" },
-	{ "@punctuation", punct, _, _, "NONE", 254, _, "NONE" },
-	{ "@punctuation.bracket", fg0, _, _, "NONE", 254, _, "NONE" },
-	{ "@punctuation.delimiter", punct, _, _, "NONE", 254, _, "NONE" },
-	{ "Operator", fg0, _, _, "NONE", 254, _, "NONE" },
-	{ "@operator", fg0, _, _, "NONE", 254, _, "NONE" },
-
-	-- Tags
-	{ "@tag", fg1, _, _, "NONE", 254, _, "NONE" },
-	{ "@tag.delimiter", punct, _, _, "NONE", 254, _, "NONE" },
-	{ "@tag.attribute", fg1, _, _, "italic", 254, _, "italic" },
-
-	-- Diagnostics
-	{ "DiagnosticError", err, _, _, "NONE", 131, _, "NONE" },
-	{ "DiagnosticWarn", warn, _, _, "NONE", 137, _, "NONE" },
-	{ "DiagnosticInfo", fg1, _, _, "NONE", 254, _, "NONE" },
-	{ "DiagnosticHint", cmt, _, _, "NONE", 241, _, "NONE" },
-	{ "DiagnosticOk", ok, _, _, "NONE", 65, _, "NONE" },
-	{ "DiagnosticUnderlineError", _, _, err, "undercurl", _, _, "underline" },
-	{ "DiagnosticUnderlineWarn", _, _, warn, "undercurl", _, _, "underline" },
-	{ "DiagnosticUnderlineInfo", _, _, fg1, "undercurl", _, _, "underline" },
-	{ "DiagnosticUnderlineHint", _, _, cmt, "undercurl", _, _, "underline" },
-	{ "DiagnosticUnnecessary", cmt, _, _, "NONE", 241, _, "NONE" },
-
-	-- LSP
-	{ "LspInlayHint", cmt, "#0a0a0a", _, "italic", 241, 233, "italic" },
-	{ "LspReferenceText", _, "#1c1c1c", _, "NONE", _, 234, "NONE" },
-	{ "LspReferenceRead", _, "#1c1c1c", _, "NONE", _, 234, "NONE" },
-	{ "LspReferenceWrite", _, "#1c1c1c", _, "underline", _, 234, "underline" },
-
-	-- Markup, markdown (generic)
-	{ "Title", fg0, _, _, "bold", 254, _, "bold" },
-	{ "@markup.heading", fg0, _, _, "bold", 254, _, "bold" },
-	{ "@markup.strong", _, _, _, "bold", _, _, "bold" },
-	{ "@markup.italic", _, _, _, "italic", _, _, "italic" },
-	{ "@markup.link", fg1, _, _, "underline", 254, _, "underline" },
-	{ "@markup.raw", fg1, _, _, "NONE", 254, _, "NONE" },
-
-	-- Regex
-	{ "@string.regexp", "#8a94a0", _, _, "NONE", 245, _, "NONE" },
-	{ "@character.special", fg0, _, _, "NONE", 254, _, "NONE" },
-	{ "@operator.regex", warn, _, _, "NONE", 137, _, "NONE" },
-	{ "@keyword.operator.regex", warn, _, _, "NONE", 137, _, "NONE" },
-	{ "@punctuation.bracket.regex", dim, _, _, "NONE", 242, _, "NONE" },
-	{ "@punctuation.delimiter.regex", "#946060", _, _, "NONE", 95, _, "NONE" },
-	{ "@property.regex", "#5f7f5f", _, _, "italic", 65, _, "italic" },
-	{ "@variable.builtin.regex", fg1, _, _, "NONE", 254, _, "NONE" },
-}
-
--- JSX, TSX, React and Tailwind only
---
--- These groups are only produced by the treesitter queries in
--- after/queries/{tsx,javascript}/highlights.scm, so every other filetype is
--- unaffected. Without those query files they simply never match
-local jsx = {
-	{ "@tag.component", fg0, _, _, "NONE", 254, _, "NONE" },
-	{ "@tag.intrinsic", fg1, _, _, "NONE", 254, _, "NONE" },
-	{ "@function.call.hook", fg1, _, _, "NONE", 254, _, "NONE" },
-	{ "@string.tailwind", tw, _, _, "NONE", 254, _, "NONE" },
-}
-
--- Oil (stevearc/oil.nvim)
---
--- All entries share the default fg color (#e2e2e2). Only status indicators
--- (hidden, errors, warnings) keep their semantic colors.
-local oil = {
-	{ "OilDir", fg0, _, _, "bold", 254, _, "bold" },
-	{ "OilDirIcon", fg0, _, _, "NONE", 254, _, "NONE" },
-	{ "OilFile", fg1, _, _, "NONE", 254, _, "NONE" },
-	{ "OilLink", fg1, _, _, "italic", 254, _, "italic" },
-	{ "OilLinkTarget", dim, _, _, "italic", 242, _, "italic" },
-	{ "OilOrphanLink", err, _, _, "italic", 131, _, "italic" },
-	{ "OilOrphanLinkTarget", err, _, _, "italic", 131, _, "italic" },
-	{ "OilHidden", cmt, _, _, "NONE", 241, _, "NONE" },
-
-	{ "OilCreate", fg0, _, _, "bold", 254, _, "bold" },
-	{ "OilCopy", fg0, _, _, "bold", 254, _, "bold" },
-	{ "OilMove", warn, _, _, "NONE", 137, _, "NONE" },
-	{ "OilChange", warn, _, _, "NONE", 137, _, "NONE" },
-	{ "OilDelete", err, _, _, "NONE", 131, _, "NONE" },
-	{ "OilPurge", err, _, _, "bold", 131, _, "bold" },
-	{ "OilRestore", fg0, _, _, "bold", 254, _, "bold" },
-	{ "OilTrash", dim, _, _, "NONE", 242, _, "NONE" },
-	{ "OilTrashSourcePath", cmt, _, _, "NONE", 241, _, "NONE" },
-
-	{ "OilTypeDir", fg0, _, _, "bold", 254, _, "bold" },
-	{ "OilTypeFile", dim, _, _, "NONE", 242, _, "NONE" },
-	{ "OilTypeLink", fg1, _, _, "NONE", 254, _, "NONE" },
-	{ "OilTypeFifo", dim, _, _, "NONE", 242, _, "NONE" },
-	{ "OilTypeSocket", dim, _, _, "NONE", 242, _, "NONE" },
-	{ "OilTypeUnknown", dim, _, _, "NONE", 242, _, "NONE" },
-
-	{ "OilPermissionNone", cmt, _, _, "NONE", 241, _, "NONE" },
-	{ "OilPermissionRead", warn, _, _, "NONE", 137, _, "NONE" },
-	{ "OilPermissionWrite", err, _, _, "NONE", 131, _, "NONE" },
-	{ "OilPermissionExecute", "#5f9a5f", _, _, "NONE", 71, _, "NONE" },
-
-	{ "OilExecutable", "#9e9e9e", _, _, "bold", 247, _, "bold" },
-	{ "OilSocket", dim, _, _, "NONE", 242, _, "NONE" },
-	{ "OilDirHidden", cmt, _, _, "bold", 241, _, "bold" },
-	{ "OilFileHidden", cmt, _, _, "NONE", 241, _, "NONE" },
-	{ "OilLinkHidden", cmt, _, _, "italic", 241, _, "italic" },
-	{ "OilOrphanLinkHidden", err, _, _, "italic", 131, _, "italic" },
-}
-
--- Markdown only
-
--- Exact xterm-256 values, so cterm matches GUI
-local md = {
-	italic = "#a8a8a8", -- 248
-	strike = "#6c6c6c", -- 242
-	marker = "#585858", -- 240
-	block = "#b2b2b2", -- 249
-	string = "#cecece", -- 252 (yaml string values)
-	code = "#98a4f2", -- 111, light tint of the accent family
-	link_url = accent, -- 62
-	accent = "#af87af", -- 139, exclusive color for markup markers
-}
-
--- Heading gradient
-local heading_levels = {
-	{ "#ffffff", 231 },
-	{ fg0, 254 },
-	{ fg1, 254 },
-	{ str, 254 },
-	{ str, 254 },
-	{ str, 254 },
-}
-
-local markdown = {
-	-- Frontmatter fences (---)
-	{ "@keyword.directive.markdown", md.accent, _, _, "NONE", 139, _, "NONE" },
-
-	-- Structural punctuation
-	{ "@punctuation.special.markdown", fg0, _, _, "NONE", 254, _, "NONE" },
-	{ "@punctuation.delimiter.markdown", fg0, _, _, "NONE", 254, _, "NONE" },
-
-	-- Lists and task items
-	{ "@markup.list.markdown", md.accent, _, _, "bold", 139, _, "bold" },
-	{ "@markup.list.checked.markdown", md.accent, _, _, "bold", 139, _, "bold" },
-	{ "@markup.list.unchecked.markdown", md.accent, _, _, "bold", 139, _, "bold" },
-
-	-- Blockquote
-	{ "@markup.quote.markdown", md.italic, _, _, "italic", 248, _, "italic" },
-
-	-- Code blocks
-	{ "@markup.raw.block.markdown", md.block, _, _, "NONE", 249, _, "NONE" },
-	{ "@markup.raw.delimiter.markdown", md.accent, _, _, "NONE", 139, _, "NONE" },
-	{ "@label.markdown", md.accent, _, _, "italic", 139, _, "italic" },
-
-	-- Inline emphasis
-	{ "@markup.strong.markdown_inline", "#ffffff", _, _, "bold", 231, _, "bold" },
-	{ "@markup.italic.markdown_inline", md.italic, _, _, "italic", 248, _, "italic" },
-	{ "@markup.strikethrough.markdown_inline", md.strike, _, _, "strikethrough", 242, _, "NONE" },
-
-	-- Inline code and math
-	{ "@markup.raw.markdown_inline", md.code, _, _, "NONE", 111, _, "NONE" },
-	{ "@markup.math.markdown_inline", md.code, _, _, "NONE", 111, _, "NONE" },
-	{ "@markup.math.markdown", md.code, _, _, "NONE", 111, _, "NONE" },
-	{ "@markup.math.latex", md.code, _, _, "NONE", 111, _, "NONE" }, -- injected latex inside math (also affects .tex)
-	{ "@punctuation.special.markdown_inline", md.code, _, _, "NONE", 111, _, "NONE" }, -- $ delimiters
-
-	-- Inline links
-	{ "@markup.link.markdown_inline", md.marker, _, _, "NONE", 240, _, "NONE" },
-	{ "@markup.link.label.markdown_inline", md.code, _, _, "underline", 111, _, "underline" },
-	{ "@markup.link.url.markdown_inline", md.link_url, _, _, "underline", 62, _, "underline" },
-
-	-- Inline escapes and conceal
-	{ "@string.escape.markdown_inline", md.accent, _, _, "NONE", 139, _, "NONE" },
-	{ "@conceal.markdown_inline", md.marker, _, _, "NONE", 240, _, "NONE" },
-}
-
--- Headings (generated from the gradient table)
-do
-	local first = heading_levels[1]
-	table.insert(markdown, { "@markup.heading.markdown", first[1], _, _, "bold", first[2], _, "bold" })
-	table.insert(markdown, { "@markup.heading.marker.markdown", first[1], _, _, "NONE", first[2], _, "NONE" })
-	for i, h in ipairs(heading_levels) do
-		table.insert(markdown, { ("@markup.heading.%d.markdown"):format(i), h[1], _, _, "bold", h[2], _, "bold" })
-		table.insert(
-			markdown,
-			{ ("@markup.heading.%d.marker.markdown"):format(i), h[1], _, _, "NONE", h[2], _, "NONE" }
-		)
-	end
-end
-
--- Markdown-specific links
-local markdown_links = {
-	-- Legacy :syntax groups (regex highlighter)
+	-- Markdown legacy :syntax groups (regex highlighter)
 	markdownH1 = "@markup.heading.1.markdown",
 	markdownH2 = "@markup.heading.2.markdown",
 	markdownH3 = "@markup.heading.3.markdown",
@@ -502,63 +599,25 @@ local markdown_links = {
 	markdownEscape = "@string.escape.markdown_inline",
 }
 
--- Frontmatter (YAML injected into markdown)
-local frontmatter_ns = vim.api.nvim_create_namespace("hollow_markdown")
-
-local frontmatter = {
-	["@property.yaml"] = { fg = md.accent, ctermfg = 139 }, -- keys
-	["@string.yaml"] = { fg = md.string, ctermfg = 252 }, -- string values
-	["@number.yaml"] = { fg = md.accent, ctermfg = 139 },
-	["@number.float.yaml"] = { fg = md.accent, ctermfg = 139 },
-	["@boolean.yaml"] = { fg = md.accent, ctermfg = 139 },
-	["@constant.builtin.yaml"] = { fg = md.accent, ctermfg = 139 }, -- null
-	["@label.yaml"] = { fg = md.accent, ctermfg = 139 }, -- anchors / aliases
-	["@type.yaml"] = { fg = md.accent, ctermfg = 139 }, -- tags
-	["@punctuation.delimiter.yaml"] = { fg = md.marker, ctermfg = 240 }, -- : - ,
-	["@punctuation.bracket.yaml"] = { fg = md.marker, ctermfg = 240 }, -- [ ] { }
-}
-
-for name, o in pairs(frontmatter) do
-	set_hl(frontmatter_ns, name, o)
-end
-
-for from, to in pairs(links) do
-	set_hl(0, from, { link = to, force = true })
-end
-
-for from, to in pairs(markdown_links) do
-	set_hl(0, from, { link = to, force = true })
-end
+-- Apply
 
 vim.o.background = "dark"
 
-terminal_colors({
-	"#000000",
-	"#913939",
-	"#00af5f",
-	"#221cd6",
-	"#0087d7",
-	"#d787d7",
-	"#00afaf",
-	"#dadada",
-	"#707070",
-	"#9c3b3b",
-	"#00d75f",
-	"#221cd6",
-	"#5fafff",
-	"#ff87ff",
-	"#00d7d7",
-	"#ffffff",
-})
-
-apply(dark)
-apply(oil)
-apply(popups)
-apply(modern)
-apply(jsx)
+apply(links)
+apply(editor)
+apply(syntax)
+apply(popup)
+apply(treesitter)
+apply(diagnostics)
+apply(diff)
 apply(markdown)
 
--- Attach the frontmatter namespace only to windows showing markdown buffers
+-- Autocommands
+
+local frontmatter_ns = vim.api.nvim_create_namespace("hollow_markdown")
+
+apply(frontmatter, frontmatter_ns)
+
 local function sync_frontmatter_ns()
 	for _, win in ipairs(vim.api.nvim_list_wins()) do
 		local buf = vim.api.nvim_win_get_buf(win)
@@ -576,20 +635,5 @@ vim.api.nvim_create_autocmd({ "FileType", "BufWinEnter", "BufEnter", "WinEnter" 
 	group = vim.api.nvim_create_augroup("HollowMarkdown", { clear = true }),
 	callback = sync_frontmatter_ns,
 })
+
 sync_frontmatter_ns()
-
-set_hl(0, "Cursor", { fg = "#000000", bg = fg0, ctermfg = 16, ctermbg = 254 })
-
-vim.api.nvim_create_autocmd({ "FileType", "ColorScheme" }, {
-	group = vim.api.nvim_create_augroup("HollowOil", { clear = true }),
-	pattern = { "oil", "*" },
-	callback = function(ev)
-		if ev.event == "ColorScheme" and vim.g.colors_name ~= "hollow" then
-			return
-		end
-		if ev.event == "FileType" and ev.match ~= "oil" then
-			return
-		end
-		apply(oil)
-	end,
-})

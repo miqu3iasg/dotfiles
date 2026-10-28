@@ -6,7 +6,7 @@ set $mod Mod1
 set $mod2 Mod4
 
 # Font
-# font pango:JetBrainsMono Nerd Font Bold 9
+# font pango:JetBrainsMono Nerd Font 10
 font xft:URWGothic-Book 10
 
 # blue litht filter
@@ -80,14 +80,15 @@ title_align center
 # Ao trocar de workspace pela segunda vez, volta pra anterior (toggle)
 workspace_auto_back_and_forth yes
 
+# Colors: pure black, minimalist, low contrast
 # class                 border      background  text        indicator   child_border
-# client.focused          #101010     #080808     #d8d8d8     #101010     #d8d8d8
-# client.focused_inactive #101010     #000000     #666666     #101010     #101010
-# client.unfocused        #0a0a0a     #000000     #444444     #0a0a0a     #101010
-# client.urgent           #101010     #000000     #d8d8d8     #4d4d4d     #4d4d4d
-# client.placeholder      #000000     #000000     #2a2a2a     #000000     #000000
+client.focused          #2a2a2a     #242424     #a8a8a8     #2a2a2a     #1c1c1c
+client.focused_inactive #1e1e1e     #181818     #707070     #1e1e1e     #101010
+client.unfocused        #161616     #121212     #505050     #161616     #0a0a0a
+client.urgent           #333333     #2e2e2e     #c0c0c0     #333333     #2a2a2a
+client.placeholder      #000000     #000000     #222222     #000000     #000000
 
-# client.background        #000000
+client.background       #000000
 
 # Resize
 
@@ -113,6 +114,8 @@ mode "resize" {
 
 bindsym $mod+r mode "resize"
 
+# Toggle gaps
+bindsym $mod+g exec --no-startup-id ~/.config/i3/scripts/i3gaps.sh
 
 # Direct resize (mod+u/i/o/p)
 bindsym $mod+u exec --no-startup-id \
@@ -180,7 +183,8 @@ bindsym $mod+Ctrl+Shift+k move container to output up
 
 # Split / Layout
 
-workspace_layout tabbed
+workspace_layout default
+default_orientation vertical
 
 bindsym $mod+w split h
 bindsym $mod+v split v
@@ -195,9 +199,9 @@ bindsym $mod+t floating disable
 
 bindsym $mod+f fullscreen toggle
 
-bindsym $mod+Shift+s layout stacking
+bindsym $mod+Shift+y layout stacking
 bindsym $mod+Shift+w layout tabbed
-bindsym $mod+Shift+y layout toggle split
+bindsym $mod+Shift+s layout toggle split
 bindsym $mod+Shift+t layout toggle splith tabbed
 
 # Window management
@@ -309,7 +313,8 @@ for_window [instance="scratchmux"] \
     title_format "scratchmux", \
     move scratchpad, \
     sticky enable, \
-    resize set 900 520
+    resize set 80 ppt 80 ppt, \
+    move position center
 
 bindsym $mod+Ctrl+plus move scratchpad
 
@@ -435,6 +440,19 @@ bar {
     tray_output none
     separator_symbol "  "
     font pango:JetBrainsMono Nerd Font Bold 9
+
+    colors {
+        background #000000
+        statusline #d4d4d4
+        separator  #2a2a2a
+
+        # class            border   background text
+        focused_workspace  #2e2e2e  #242424    #c8c8c8
+        active_workspace   #222222  #181818    #9a9a9a
+        inactive_workspace #181818  #101010    #7a7a7a
+        urgent_workspace   #3a3a3a  #2e2e2e    #d8d8d8
+        binding_mode       #2e2e2e  #242424    #c8c8c8
+    }
 }
 
 bar {
@@ -445,6 +463,19 @@ bar {
     tray_output primary
     separator_symbol "  "
     font pango:JetBrainsMono Nerd Font Bold 9
+
+    colors {
+        background #000000
+        statusline #d4d4d4
+        separator  #2a2a2a
+
+        # class            border   background text
+        focused_workspace  #2e2e2e  #242424    #c8c8c8
+        active_workspace   #222222  #181818    #9a9a9a
+        inactive_workspace #181818  #101010    #7a7a7a
+        urgent_workspace   #3a3a3a  #2e2e2e    #d8d8d8
+        binding_mode       #2e2e2e  #242424    #c8c8c8
+    }
 }
 
 # Polybar
