@@ -1,34 +1,56 @@
-;; extends
+; inherits: ecma,jsx
 
-; after/queries/javascript/highlights.scm
+; Parameters
+(formal_parameters
+  (identifier) @variable.parameter)
 
-(jsx_opening_element name: (identifier) @tag.component (#lua-match? @tag.component "^[A-Z]"))
-(jsx_closing_element name: (identifier) @tag.component (#lua-match? @tag.component "^[A-Z]"))
-(jsx_self_closing_element name: (identifier) @tag.component (#lua-match? @tag.component "^[A-Z]"))
-(jsx_opening_element name: (member_expression) @tag.component)
-(jsx_closing_element name: (member_expression) @tag.component)
-(jsx_self_closing_element name: (member_expression) @tag.component)
+(formal_parameters
+  (rest_pattern
+    (identifier) @variable.parameter))
 
-(jsx_opening_element name: (identifier) @tag.intrinsic (#lua-match? @tag.intrinsic "^[a-z]"))
-(jsx_closing_element name: (identifier) @tag.intrinsic (#lua-match? @tag.intrinsic "^[a-z]"))
-(jsx_self_closing_element name: (identifier) @tag.intrinsic (#lua-match? @tag.intrinsic "^[a-z]"))
+; ({ a }) => null
+(formal_parameters
+  (object_pattern
+    (shorthand_property_identifier_pattern) @variable.parameter))
 
-((call_expression function: (identifier) @function.call.hook)
- (#lua-match? @function.call.hook "^use%u"))
-((call_expression function: (member_expression property: (property_identifier) @function.call.hook))
- (#lua-match? @function.call.hook "^use%u"))
+; ({ a = b }) => null
+(formal_parameters
+  (object_pattern
+    (object_assignment_pattern
+      (shorthand_property_identifier_pattern) @variable.parameter)))
 
-((jsx_attribute
-   (property_identifier) @_attr
-   (string (string_fragment) @string.tailwind))
- (#any-of? @_attr "className" "class"))
+; ({ a: b }) => null
+(formal_parameters
+  (object_pattern
+    (pair_pattern
+      value: (identifier) @variable.parameter)))
 
-((jsx_attribute
-   (property_identifier) @_attr
-   (jsx_expression (string (string_fragment) @string.tailwind)))
- (#any-of? @_attr "className" "class"))
+; ([ a ]) => null
+(formal_parameters
+  (array_pattern
+    (identifier) @variable.parameter))
 
-((call_expression
-   function: (identifier) @_fn
-   arguments: (arguments (string (string_fragment) @string.tailwind)))
- (#any-of? @_fn "cn" "clsx" "cva" "twMerge" "classNames" "tw"))
+; ({ a } = { a }) => null
+(formal_parameters
+  (assignment_pattern
+    (object_pattern
+      (shorthand_property_identifier_pattern) @variable.parameter)))
+
+; ({ a = b } = { a }) => null
+(formal_parameters
+  (assignment_pattern
+    (object_pattern
+      (object_assignment_pattern
+        (shorthand_property_identifier_pattern) @variable.parameter))))
+
+; a => null
+(arrow_function
+  parameter: (identifier) @variable.parameter)
+
+; optional parameters
+(formal_parameters
+  (assignment_pattern
+    left: (identifier) @variable.parameter))
+
+; punctuation
+(optional_chain) @punctuation.delimiter
