@@ -1,3 +1,6 @@
+" For this to work, you need to install the "vimrc support" plugin in Obsidian and
+" place this file in the root of your vault.
+
 " Leader Key
 unmap <Space>
 
