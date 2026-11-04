@@ -1,4 +1,4 @@
-scan_timeout = 200
+scan_timeout = 300
 command_timeout = 1000
 add_newline = false
 
@@ -10,8 +10,8 @@ $username\
 $hostname\
 $container\
 $directory\
-$git_branch\
 $git_commit\
+$git_branch\
 $git_state\
 ${custom.git_worktree}\
 ${custom.vpn}\
@@ -170,20 +170,21 @@ description = "virtualenv name"
 when = 'test -n "$VIRTUAL_ENV"'
 command = 'basename "$VIRTUAL_ENV"'
 style = "fg:subtle"
-format = '[\($output\) ]($style)'
+format = '\([\$output\) ]($style)'
 
 [git_branch]
 style = "fg:muted"
-truncation_length = 32
-truncation_symbol = "..."
-format = '[\($branch\)]($style) '
+truncation_length = 42
+truncation_symbol = "."
+format = '[$branch]($style) '
 
 [git_commit]
-only_detached = true
-tag_disabled = true
+only_detached = false
+tag_disabled = false
+tag_symbol = " tag "
 commit_hash_length = 8
-style = "fg:yellow"
-format = '[ \($hash\)]($style)'
+style = "fg:green"
+format = '[$hash]($style)#'
 
 [git_state]
 style = "fg:yellow"

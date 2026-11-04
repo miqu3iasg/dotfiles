@@ -28,6 +28,9 @@ exec --no-startup-id nm-applet
 # Notification daemon
 exec --no-startup-id dunst
 
+# Vicinae server
+exec --no-startup-id vicinae server
+
 # Disable screen blanking and DPMS.
 exec --no-startup-id xset s off -dpms s noblank
 
@@ -318,13 +321,23 @@ for_window [instance="scratchmux"] \
 
 bindsym $mod+Ctrl+plus move scratchpad
 
-bindsym $mod+Ctrl+minus [instance="^(?!scratchmux)"] scratchpad show
+bindsym $mod+Ctrl+minus [instance="^(?!scratchmux|scratchtodo)"] scratchpad show
 
 bindsym $mod+s [instance="scratchmux"] \
     scratchpad show, \
     move position center
 
 bindsym $mod+Ctrl+Shift+m exec --no-startup-id tmuxdd
+
+# Scratchpad for TODOs
+for_window [instance="scratchtodo"] \
+    title_format "scratchtodo", \
+    move scratchpad, \
+    sticky enable, \
+    resize set 60 ppt 70 ppt, \
+    move position center
+
+bindsym $mod+comma exec --no-startup-id /home/miqu3iasg/.local/bin/todo-toggle
 
 # Application assignments
 
@@ -375,6 +388,7 @@ bindsym $mod+m exec --no-startup-id rofi -show drun
 # Vicinae
 bindsym $mod2+m exec --no-startup-id vicinae toggle
 bindsym $mod2+f exec --no-startup-id vicinae vicinae://launch/files/search
+bindsym $mod2+period exec --no-startup-id vicinae vicinae://launch/core/search-emojis
 
 # Thunar
 bindsym $mod+e exec --no-startup-id thunar
@@ -443,7 +457,7 @@ bar {
 
     colors {
         background #000000
-        statusline #d4d4d4
+        statusline #E8E8E8
         separator  #2a2a2a
 
         # class            border   background text
@@ -466,7 +480,7 @@ bar {
 
     colors {
         background #000000
-        statusline #d4d4d4
+        statusline #E8E8E8
         separator  #2a2a2a
 
         # class            border   background text
