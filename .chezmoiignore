@@ -1,2 +1,5 @@
 system/
 .config/tmux/plugins
+.config/vifm/vifminfo*
+.config/vifm/Trash
+.config/vifm/*.log
