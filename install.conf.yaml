@@ -10,6 +10,8 @@
     ~/.zshrc: zsh/.zshrc
     ~/.zshenv: zsh/.zshenv
     ~/.zprofile: zsh/.zprofile
+    ~/.config/zsh/aliasrc: zsh/aliases/aliasrc
+    ~/.config/zsh/gitrc: zsh/aliases/gitrc
     ~/.bashrc: bash/.bashrc
     ~/.bash_profile: bash/.bash_profile
     ~/.bash_logout: bash/.bash_logout
