@@ -109,3 +109,4 @@ claude/ide/
 claude/history.jsonl
 opencode/auth.json
 opencode/*.db
+vifm/vifminfo.json
