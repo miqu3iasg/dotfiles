@@ -1,5 +1,5 @@
 -- colors/artifact.lua
---
+
 -- A relic of the old terminal. Simplicity is a feature and every visible
 -- character matters.
 --

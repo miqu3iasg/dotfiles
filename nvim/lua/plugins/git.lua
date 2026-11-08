@@ -25,7 +25,6 @@
 -- See: https://github.com/tpope/vim-rhubarb
 -- See: https://github.com/lewis6991/gitsigns.nvim
 -- See: https://github.com/ibhagwan/fzf-lua
--- See: https://github.com/bruhtus/dotfiles/blob/master/.vim/after/autoload/enable/fugitive_log.vim
 
 local map = vim.keymap.set
 
@@ -40,7 +39,8 @@ local function gmap(mode, lhs, rhs, desc)
 end
 
 ---Open the history of the current file, the repository or the function under
----the cursor. Ported from bruhtus' `enable#fugitive_log`.
+---the cursor. Ported from bruhtus <https://github.com/bruhtus>' `enable#fugitive_log`.
+---See: https://github.com/bruhtus/dotfiles/blob/master/.vim/after/autoload/enable/fugitive_log.vim
 local function git_log_normal()
 	local choice = vim.fn.confirm(
 		"Current file or All or Specific function git commit(s)?",

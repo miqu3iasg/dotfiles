@@ -1,5 +1,5 @@
 -- colors/enfocadomod.lua
---
+
 -- Lua port of enfocadomod.vim. Enfocado is more than a theme, it is a
 -- concept of 'how themes should be', focusing on what is really
 -- important to developers: the code and nothing else.

@@ -1,5 +1,5 @@
 -- colors/insanity.lua
---
+
 -- For those who are insane.
 --
 -- Copyright (c) Robertus Chris <diawan@pm.me>

@@ -1,5 +1,5 @@
 -- colors/hollow.lua
---
+
 -- A hollowed-out variant of the `quiet` colorscheme (Maxence Weynans).
 --
 -- Copyright (c) Maxence Weynans <neutaaaaan@gmail.com>

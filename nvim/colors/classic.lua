@@ -1,5 +1,5 @@
 -- colors/classic.lua
---
+
 -- For those who preserve tradition.
 --
 -- Copyright (c) Miquéias Alves Medeiros <https://github.com/miqu3iasg>
