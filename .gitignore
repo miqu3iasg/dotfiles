@@ -110,3 +110,4 @@ claude/history.jsonl
 opencode/auth.json
 opencode/*.db
 vifm/vifminfo.json
+nvim/nvim-pack-lock.json
