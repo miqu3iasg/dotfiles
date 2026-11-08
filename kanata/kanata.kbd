@@ -1,0 +1,178 @@
+#|
+Kanata configuration for a Brazilian ABNT2 keyboard on Linux. Ctrl also lives
+on Caps Lock and is remapped at the kernel level, so kanata sees it as a
+regular left Ctrl and passes it through untouched. Esc, Alt (the i3 mod key)
+and AltGr are not remapped at all.
+
+The home row carries the modifiers: ctrl on a and on the c-cedilla key, alt on
+s and l, and shift on f and j. The d and k keys are layer keys instead.
+Tapping either one types the letter as usual, holding d switches to the num
+layer (a numpad on the right hand and brackets on the left hand) and holding
+k switches to the sym layer (programming symbols).
+
+Kanata works with physical key codes, so every symbol below is defined by the
+physical key that types it on an ABNT2 layout. The operating system layout
+must therefore be br with the abnt2 variant, otherwise the symbols will come
+out wrong. Key names in the comments use US names, which describe the physical
+position, and a few of those keys print a different character on ABNT2.
+|#
+
+(defcfg
+  #|
+  Also process keys that are not listed in defsrc. Without this, the tap-hold
+  keys below would ignore unmapped keys, such as Shift, Space and the digits,
+  when deciding between tap and hold.
+  |#
+  process-unmapped-keys yes
+)
+
+#|
+The ABNT2 layout has two keys that a US keyboard does not have: the backslash
+and vertical bar key to the left of Z, and the slash and question mark key to
+the left of the right Shift. They are given custom names here, built from
+their Linux evdev key codes, which are 86 (KEY_102ND) and 89 (KEY_RO).
+|#
+(deflocalkeys-linux
+  abntbs    86
+  abntslash 89
+)
+
+#|
+Only the three letter rows, plus the key right of P, are remapped. Every other
+key passes through unchanged thanks to process-unmapped-keys.
+|#
+(defsrc
+  q    w    e    r    t    y    u    i    o    p    [
+  a    s    d    f    g    h    j    k    l    scln
+  z    x    c    v    b    n    m    ,    .    /
+)
+
+#|
+Timeouts in milliseconds. The first number of a tap-hold action is the
+tap-repress timeout (how soon a repeated press right after a tap still counts
+as a tap, which matters for double letters and for repeated keys such as j and
+k in vim). The second one is the hold timeout. The values are on the long side
+because of a heavy typing style: a key held longer than the hold timeout
+turns into its modifier or layer. Weaker and slower fingers (pinky and ring)
+get a longer hold timeout than the index fingers, and the layer keys have
+their own value. Because the home row mods use tap-hold-release, the hold
+also starts as soon as another key is pressed and released, so a longer
+timeout barely slows down shortcuts. If a letter still gets lost or a
+modifier fires by accident, adjust these in steps of 20.
+|#
+(defvar
+  tap        200
+  hold-pinky 350
+  hold-ring  330
+  hold-index 300
+  hold-layer 300
+)
+
+(defalias
+  ;; The home row mods use tap-hold-release, which resolves to the hold action
+  ;; when another key is pressed and released while this key is still down,
+  ;; or when the hold timeout expires. The scln key is the c-cedilla key on
+  ;; ABNT2.
+  a    (tap-hold-release $tap $hold-pinky a lctl)
+  s    (tap-hold-release $tap $hold-ring  s lalt)
+  f    (tap-hold-release $tap $hold-index f lsft)
+  j    (tap-hold-release $tap $hold-index j rsft)
+  l    (tap-hold-release $tap $hold-ring  l lalt)
+  scln (tap-hold-release $tap $hold-pinky scln rctl)
+
+  ;; The d and k keys are layer keys. A tap types the letter and a hold
+  ;; activates the layer for as long as the key stays down. They use
+  ;; tap-hold-release so that fast rolls such as "do" or "key" still type
+  ;; letters instead of switching layers.
+  d    (tap-hold-release $tap $hold-layer d (layer-while-held num))
+  k    (tap-hold-release $tap $hold-layer k (layer-while-held sym))
+
+  ;; From here on, every alias is named after the character it types on an
+  ;; ABNT2 layout. The first ones are shifted characters from the digit row.
+  ex   S-1       ;; !
+  at   S-2       ;; @
+  hsh  S-3       ;; hash sign
+  dol  S-4       ;; $
+  pct  S-5       ;; %
+  amp  S-7       ;; &
+  ast  S-8       ;; *
+  lpar S-9       ;; (
+  rpar S-0       ;; )
+  und  S--       ;; _
+  pls  S-=       ;; +
+  col  S-/       ;; colon, since the physical slash key prints a semicolon
+
+  ;; Brackets live on unusual keys on ABNT2: the physical ] key types [ and
+  ;; the physical backslash key types ].
+  lbkt ]         ;; [
+  rbkt bksl      ;; ]
+  lbrc S-]       ;; {
+  rbrc S-bksl    ;; }
+
+  ;; These four aliases use the custom key names defined in deflocalkeys-linux,
+  ;; for the keys that only exist on ABNT2.
+  bsl  abntbs            ;; backslash
+  pipe S-abntbs          ;; vertical bar
+  sl   abntslash         ;; slash
+  qst  S-abntslash       ;; question mark
+
+  ;; The key left of 1 types an apostrophe, and a double quote when shifted.
+  sq   grv       ;; apostrophe
+  dq   S-grv     ;; double quote
+
+  ;; Tilde, circumflex and backtick are dead keys on ABNT2, so they only
+  ;; appear after the next key press. Each macro types the dead key followed
+  ;; by a space, which produces the plain character on its own.
+  til  (macro apos 10 spc)      ;; tilde
+  car  (macro S-apos 10 spc)    ;; circumflex
+  bt   (macro S-[ 10 spc)       ;; backtick
+)
+
+(deflayer base
+  q    w    e    r    t    y    u    i    o    p    [
+  @a   @s   @d   @f   g    h    @j   @k   @l   @scln
+  z    x    c    v    b    n    m    ,    .    /
+)
+
+#|
+Hold d to get this layer, which puts a numpad on the right hand and brackets
+on the left hand. On the left hand the ring finger types the opening brackets
+and the index finger types the closing ones: w, s and x give [, ( and {, while
+r, f and v give ], ) and }. On the right hand, u, i and o give 7, 8 and 9, j, k
+and l give 4, 5 and 6, and m, comma and period give 1, 2 and 3, with 0 on n and
+the decimal point on h. The decimal comma, which is what Brazilian numbers use,
+is on g, right next to the decimal point. The remaining right hand keys carry
+the operators: y types =, p types *, the key right of p types /, the c-cedilla
+key types + and the physical slash key types -. The d key does nothing inside
+its own layer, which is why it is mapped to XX, a no-op.
+
+The z key reloads this configuration file (live reload), so holding d and
+pressing z applies any edit without restarting the service. If the new file
+has an error, kanata keeps running with the previous configuration and
+prints the error in its log.
+|#
+(deflayer num
+  _    @lbkt _   @rbkt _    =    7    8    9    @ast @sl
+  _    @lpar XX  @rpar ,    .    4    5    6    @pls
+  lrld @lbrc _   @rbrc _    0    1    2    3    -
+)
+
+#|
+Hold k to get this layer, which keeps programming symbols on the left hand and
+on the outer keys of the right hand, because the right middle finger is busy
+holding k and cannot reach i, k or comma. On the left hand, the top row types
+the shifted digits ! @ # $ and %, the home row types { ( ) } followed by a
+backtick on g, and the bottom row types a backslash, [, ], * and +. On the
+right hand, y, u, o and p type ^, &, a vertical bar and ?, the home row keys h,
+j and l and the c-cedilla key type -, =, _ and /, and n, m, period and the
+physical slash key type ~, an apostrophe, a colon and a double quote.
+
+The characters < > and ; are left out of this layer because they are already
+easy to reach on the base layer, with Shift and comma, Shift and period, and
+the semicolon key itself.
+|#
+(deflayer sym
+  @ex  @at  @hsh @dol @pct @car @amp XX   @pipe @qst XX
+  @lbrc @lpar @rpar @rbrc @bt -    =    XX   @und @sl
+  @bsl @lbkt @rbkt @ast @pls @til @sq  XX   @col @dq
+)

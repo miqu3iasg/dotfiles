@@ -26,3 +26,4 @@ export ANTHROPIC_DEFAULT_HAIKU_MODEL='z-ai/glm-5.3'
 
 # Go binary
 export PATH=$PATH:/usr/loca/go/bin
+export PATH="$HOME/.cargo/bin:$PATH"
