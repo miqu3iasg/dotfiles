@@ -1,0 +1,25 @@
+# pandoc/defaults.yaml
+#
+# Global Pandoc defaults, always loaded by lua/shared/pandoc.lua. This file
+# defines the conversion pipeline; document appearance (language, margins,
+# font size, etc.) belongs in metadata.yaml.
+#
+# A defaults.yaml found in the note's directory or one of its parent
+# directories (up to $HOME) is loaded after this file and can override it.
+# Relative paths in that project-level file are resolved from the note's
+# directory.
+#
+# See: https://pandoc.org/MANUAL.html#default-files
+#
+# Markdown extensions enabled for notes:
+#
+# - citations: "@john" remains ordinary text; citation processing is disabled.
+# - wikilinks_title_after_pipe: supports Obsidian [[Note]] and [[Note|alias]].
+# - lists_without_preceding_blankline: allows a list to follow a paragraph
+#   without an intervening blank line.
+# - autolink_bare_uris: turns bare URLs such as https://example.org into links.
+from: markdown-citations+wikilinks_title_after_pipe+lists_without_preceding_blankline+autolink_bare_uris
+# Produce a standalone document rather than a fragment.
+standalone: true
+# Use XeLaTeX as the PDF engine.
+pdf-engine: xelatex

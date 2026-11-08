@@ -1,0 +1,22 @@
+# pandoc/profiles/abnt.yaml
+#
+# ABNT-like page layout profile. Select it with:
+#
+# :Pandoc pdf abnt
+#
+# The profile is loaded after metadata.yaml, so its values override the
+# general metadata defaults. The note's own YAML front matter is applied
+# later and can still override this profile.
+fontsize: 12pt
+linestretch: 1.5
+geometry:
+  - top=3cm
+  - left=3cm
+  - bottom=2cm
+  - right=2cm
+numbersections: true
+
+# Optional settings. Uncomment only the options you want to enable.
+# toc: true
+# toc-title: Sumário
+# mainfont: TeX Gyre Termes # Requires this font to be installed on the system.

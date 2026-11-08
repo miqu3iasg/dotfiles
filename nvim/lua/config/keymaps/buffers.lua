@@ -1,0 +1,49 @@
+-- lua/config/keymaps/buffers.lua
+
+-- Buffer creation, saving, listing, switching and closing; the window/close
+-- logic below leans on lua/utils/buffers.lua.
+
+local utils = require("utils.buffers")
+
+---Mapping shorthand like `vim.keymap.set`, defaulting to `silent = true`.
+---@param mode string|string[] mode(s) in which the mapping applies
+---@param lhs string left-hand side of the map
+---@param rhs string|fun() right-hand side of the map
+---@param opts? table<string, any> extra mapping options
+local function km(mode, lhs, rhs, opts)
+	opts = vim.tbl_extend("keep", opts or {}, { silent = true })
+	vim.keymap.set(mode, lhs, rhs, opts)
+end
+
+km("n", "<leader>bn", "<cmd>enew<CR>", { desc = "New buffer" })
+km("n", "<leader>bw", "<cmd>write ++p<CR>", { desc = "Save buffer" })
+km("n", "<leader>bs", "<cmd>noautocmd write<CR>", { desc = "Save buffer without auto-formatting" })
+
+km("n", "<leader>bd", function()
+	local buf = vim.api.nvim_get_current_buf()
+
+	if utils.save_if_modified(buf) then
+		utils.delete_keep_layout(buf)
+	else
+		vim.notify("Could not save buffer, not deleted", vim.log.levels.WARN)
+	end
+end, { desc = "Save and delete buffer" })
+
+km("n", "<leader>bo", function()
+	local current_win = vim.api.nvim_get_current_win()
+	local current_buf = vim.api.nvim_get_current_buf()
+
+	for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+		if win ~= current_win and utils.is_normal_window(win) then
+			pcall(vim.api.nvim_win_close, win, true)
+		end
+	end
+
+	utils.delete_where(function(info)
+		return info.bufnr ~= current_buf
+	end)
+end, { desc = "Close other windows and buffers" })
+
+km("n", "]b", "<cmd>bnext<CR>", { desc = "Next buffer" })
+km("n", "[b", "<cmd>bprevious<CR>", { desc = "Previous buffer" })
+km("n", "<leader><Space>", "<C-^>", { desc = "Toggle between last two buffers" })
