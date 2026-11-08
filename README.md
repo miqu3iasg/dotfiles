@@ -1,22 +1,27 @@
 # Dotfiles
 
-This repository holds my personal configuration for Arch Linux. Everything is organized by application: each folder is named after the program it configures and contains that program's files under their real names, with no `dot_` prefixes, no templates and no nested `.config` hierarchy. Files that only make sense at the top level of the repository, such as this README, the license and the Dotbot configuration, live outside any folder.
+Personal configuration for Arch Linux. Each application has its own folder, named after the program it configures and containing that program's files under their real names. Files that only make sense at the top level of the repository, such as this README, the license and the link configuration `install.conf.yaml`, live outside any folder.
 
 ## How it works
 
-The real files live in this repository, and the places where programs expect to find them are symlinks pointing back here. For example, `~/.config/nvim` is a symlink to `~/dotfiles/nvim`, and `~/.gitconfig` is a symlink to `~/dotfiles/git/.gitconfig`. Editing a file through either path edits the same file, so there is nothing to sync: change a config, run `git commit`, and the change is versioned.
+The real files live in this repository. The locations where programs expect to find them are symlinks pointing back here. For example, `~/.config/nvim` points to `~/dotfiles/nvim` and `~/.gitconfig` points to `~/dotfiles/git/.gitconfig`. Editing a file through either path edits the same file, so there is no synchronization step: a change is made, committed and versioned.
 
-The mapping between the files in the repository and their destinations is declared in `install.conf.yaml` and applied by [Dotbot](https://github.com/anishathalye/dotbot). Each line in the `link` section reads as "destination: source", where the source is relative to the repository root. Some applications are linked as whole folders (nvim, tmux, i3, and so on), while others only have their config file linked because the application also writes state or cache into its own folder. The `scripts` folder is linked file by file into `~/.local/bin`, which keeps tools installed by pipx or uv from ending up in the repository. Dotbot is idempotent, so running it again is always safe. It never overwrites a real file, which means that if a destination already exists as a regular file or folder, it warns and leaves it alone.
+The mapping between repository files and their destinations is declared in `install.conf.yaml`. Each line in the `link` section follows the format `destination: source`, with the source relative to the repository root. Some applications are linked as whole folders (nvim, tmux, i3 and others). Others have only their configuration file linked, because the program also writes state or cache into its own folder. The `scripts` folder is linked file by file into `~/.local/bin`, which keeps tools installed by pipx or uv out of the repository. Applying the links is idempotent and can be repeated at any time. A real file or folder already present at a destination is never overwritten: the process emits a warning and leaves it untouched.
 
-Files that must exist for real, such as the Xorg configuration under `/etc`, are not symlinked. The `system` folder mirrors the layout of `/etc` and is copied into place with `sudo`, because those files are read early during boot and belong to root. A few files that are specific to one machine, like `fstab`, are kept in `system/reference` purely as documentation and are never installed automatically.
+Files that must exist for real, such as the Xorg configuration under `/etc`, are not symlinked. The `system` folder mirrors the layout of `/etc` and its contents are copied into place with `sudo`, because these files are read early during boot and belong to root. Files specific to a single machine, such as `fstab`, are kept in `system/reference` as documentation only and are never installed automatically.
 
 ## Repository layout
 
-Each application has its own folder, for instance `nvim`, `tmux`, `ghostty`, `kitty`, `i3`, `zsh`, `git` and `vim`. Alongside those there are a few special folders. `scripts` contains my personal executables, `skills` contains my saved Claude skills, `packages` contains the package lists described below, and `system` contains the files that belong outside the home directory.
+Each application has its own folder, for example `nvim`, `tmux`, `ghostty`, `kitty`, `i3`, `zsh`, `git` and `vim`. Four special folders sit alongside them:
+
+- `scripts`: personal executables, linked into `~/.local/bin`.
+- `skills`: saved Claude skills.
+- `packages`: package lists, described below.
+- `system`: files that belong outside the home directory.
 
 ## Setting up a new machine
 
-Start from a fresh Arch installation with network access and a regular user. First install the tools needed to fetch and apply everything else:
+Start from a fresh Arch Linux installation with network access and a regular user. First, install the tools required to fetch and apply the rest:
 
 ```bash
 sudo pacman -S --needed git base-devel python-pipx
@@ -24,26 +29,33 @@ pipx install dotbot
 pipx ensurepath
 ```
 
-Open a new terminal so the updated `PATH` takes effect, then clone the repository. It is expected to live in `~/dotfiles`, because the Dotbot configuration resolves sources relative to the repository itself.
+`pipx ensurepath` adds `~/.local/bin` to the `PATH`. Open a new terminal for the change to take effect and confirm that the command is available:
 
 ```bash
-git clone <your-repository-url> ~/dotfiles
+command -v dotbot
+```
+
+Then clone the repository. It must live in `~/dotfiles`, because the source paths in `install.conf.yaml` are resolved relative to the repository itself.
+
+```bash
+git clone https://github.com/miqu3iasg/dotfiles ~/dotfiles
 cd ~/dotfiles
 ```
 
 ### Installing packages
 
-The `packages` folder plays the role that a Brewfile plays on macOS. `pacman.txt` lists the packages from the official repositories that I installed explicitly, and `aur.txt` lists the ones from the AUR or installed by hand. Install the official ones first:
+The `packages` folder holds the lists of explicitly installed packages. `pacman.txt` contains the packages from the official repositories, and `aur.txt` contains the ones from the AUR or installed by hand. Install the official ones first. The `grep` filter removes blank lines and comments, and the trailing `-` makes `pacman` read the package names from standard input:
 
 ```bash
 grep -vE '^\s*(#|$)' packages/pacman.txt | sudo pacman -S --needed -
 ```
 
-The AUR helper `yay` is itself an AUR package, so it has to be built manually once:
+`yay` is itself an AUR package and has to be built manually once. `makepkg -si` builds the package and installs it, asking for the `sudo` password when needed:
 
 ```bash
 git clone https://aur.archlinux.org/yay-bin.git /tmp/yay-bin
-cd /tmp/yay-bin && makepkg -si
+cd /tmp/yay-bin
+makepkg -si
 cd ~/dotfiles
 ```
 
@@ -53,56 +65,138 @@ With `yay` available, install the AUR list the same way:
 grep -vE '^\s*(#|$)' packages/aur.txt | yay -S --needed -
 ```
 
-If the repository also contains `pipx.txt`, `npm.txt` or `cargo.txt`, those hold the tools installed through each of those package managers and can be reinstalled with a simple loop, for example `xargs -n1 pipx install < packages/pipx.txt`. SDKMAN is not tracked by a list: install it from its website and pick the Java versions you need.
+If the repository also contains `pipx.txt`, `npm.txt` or `cargo.txt`, those files list the tools installed through each package manager, one name per line. Each one is reinstalled with a simple loop:
+
+```bash
+xargs -n1 pipx install < packages/pipx.txt
+xargs -n1 npm install -g < packages/npm.txt
+xargs -n1 cargo install < packages/cargo.txt
+```
+
+SDKMAN has no list. Install it from the official script, open a new terminal, and install the Java versions you need:
+
+```bash
+curl -s "https://get.sdkman.io" | bash
+sdk list java
+sdk install java <version-identifier>
+```
 
 ### Linking the configuration
 
-Before running Dotbot, remember that it refuses to replace real files. A fresh installation usually has default versions of `~/.bashrc`, `~/.bash_profile`, `~/.bash_logout` and possibly `~/.zshrc`. Move them out of the way, keeping a backup in case you want to compare later:
+The linking step does not replace real files. A fresh installation usually ships default versions of `~/.bashrc`, `~/.bash_profile`, `~/.bash_logout` and possibly `~/.zshrc`. Before applying the configuration, move them out of the way, keeping a backup in case you want to compare later:
 
 ```bash
 mkdir -p ~/default-dotfiles-backup
-mv ~/.bashrc ~/.bash_profile ~/.bash_logout ~/default-dotfiles-backup/ 2>/dev/null
+mv ~/.bashrc ~/.bash_profile ~/.bash_logout ~/.zshrc ~/default-dotfiles-backup/ 2>/dev/null
 ```
 
-Then apply the configuration:
+Apply the configuration:
 
 ```bash
 cd ~/dotfiles
 dotbot -c install.conf.yaml
 ```
 
-Dotbot prints one line per link it creates. A "Nonexistent target" warning means a source listed in the configuration is missing from the repository, and a "link exists" or similar message means something real is already sitting at the destination. Fix those by moving the existing file aside and running the command again. Afterwards, check the result with `ls -l ~/.config | grep dotfiles`, and open a new terminal so the shell configuration is picked up.
+The command prints one line per link created. A `Nonexistent target` warning means a source listed in `install.conf.yaml` is missing from the repository. A `link exists` message, or similar, means a real file is already present at the destination. In both cases, fix the cause, either by moving the existing file aside or by correcting the corresponding line, and run the command again.
+
+Afterwards, verify the result. The first two commands list the links created in `~/.config` and `~/.local/bin`, and the third looks for broken symlinks in the home directory:
+
+```bash
+ls -l ~/.config | grep dotfiles
+ls -l ~/.local/bin | grep dotfiles
+find ~ -maxdepth 2 -xtype l
+```
+
+Open a new terminal so the shell configuration is loaded. If the login shell is still bash and zsh is the intended one, change it:
+
+```bash
+chsh -s /usr/bin/zsh
+```
 
 ### Installing system files
 
-The files under `system/etc` are copied into `/etc` rather than linked, and a small script, `system/install.sh`, does the copying with `sudo`. It is deliberately not part of the Dotbot configuration, so that it only runs when I choose to run it. Review the files first, since they may contain settings tied to specific hardware such as a touchpad or keyboard layout, and then run:
+The files under `system/etc` are copied into `/etc` rather than linked. The script `system/install.sh` performs the copy using `sudo`. It is deliberately not part of `install.conf.yaml`, so that it only runs when I choose to run it. Review the files first, since some contain settings tied to specific hardware such as a touchpad or keyboard layout:
+
+```bash
+find system/etc -type f
+less system/install.sh
+```
+
+Then run it:
 
 ```bash
 bash system/install.sh
 ```
 
-Do not copy `system/reference/fstab.archlinux` onto a new machine. Partition UUIDs differ between installations, so a borrowed `fstab` can leave the system unable to boot. Generate a fresh one with `genfstab -U /mnt >> /mnt/etc/fstab` during installation and use the reference file only to remember which mount options I prefer.
+Do not copy `system/reference/fstab.archlinux` onto a new machine. Partition UUIDs differ between installations, and a borrowed `fstab` can leave the system unable to boot. During the system installation, generate a fresh one with the command below and use the reference file only to check which mount options are preferred:
 
-### Things that are not in this repository
+```bash
+genfstab -U /mnt >> /mnt/etc/fstab
+```
 
-Secrets and machine-specific data are deliberately left out and have to be restored separately: SSH and GPG keys, tokens such as the GitHub CLI `hosts.yml`, browser profiles, password-manager databases, shell history and application caches. The `.gitignore` is written to keep the most common of these out of the repository, but it is only a safety net, so always read `git status` before committing.
+### What is not in this repository
+
+Secrets and machine-specific data are deliberately left out and must be restored separately: SSH and GPG keys, tokens such as the GitHub CLI `hosts.yml`, browser profiles, password manager databases, shell history and application caches. The `.gitignore` is written to keep the most common of these out of the repository, but it is only a safety net. Always read the output of `git status` before committing.
 
 ## Day-to-day use
 
-Editing an already linked file needs no extra step. Open it from either path, change it, and commit from the repository:
+Editing an already linked file requires no extra step. Open it through either path, change it, and commit from the repository:
 
 ```bash
 cd ~/dotfiles
 git status
-git add -A && git commit -m "Update nvim config"
+git diff
+git add -A
+git commit -m "Update nvim config"
 git push
 ```
 
-To add a new application, move its real config into a new folder in the repository, add one line to the `link` section of `install.conf.yaml`, run `dotbot -c install.conf.yaml`, and confirm with `ls -l` that the destination is now a symlink. When moving a whole folder, do not create the destination folder beforehand, since `mv` would then place the source inside it and produce a doubled path such as `nvim/nvim`. Create a folder first only when moving loose files into it.
+### Adding an application
 
-Files under `/etc` are copies, so editing them does not update the repository. After changing one, copy it back into `system/etc` and commit it. The same script installs any new file you add there, as long as it mirrors its path under `/etc`. `diff -r /etc/X11/xorg.conf.d system/etc/X11/xorg.conf.d` shows whether the repository has drifted from the system.
+Move the real configuration into a new folder in the repository, add one line to the `link` section of `install.conf.yaml`, and apply the configuration again. When moving a whole folder, do not create the destination folder beforehand: `mv` would place the source inside it and produce a doubled path such as `nvim/nvim`. Create the folder first only when moving loose files into it.
 
-Package lists do not update themselves either. Regenerate them with `pacman -Qqetn > packages/pacman.txt` and `pacman -Qqetm > packages/aur.txt`, review the diff, and commit. Because regenerating overwrites the files, any comments written by hand are lost, so if you prefer to keep comments, edit the lists manually and use `comm` to find packages that are installed but missing from them.
+```bash
+# whole folder: the destination must not exist
+mv ~/.config/nvim ~/dotfiles/nvim
+
+# loose files: create the folder first
+mkdir -p ~/dotfiles/kitty
+mv ~/.config/kitty/kitty.conf ~/dotfiles/kitty/
+```
+
+After adding the line to `install.conf.yaml`, apply it and confirm that the destination is now a symlink:
+
+```bash
+cd ~/dotfiles
+dotbot -c install.conf.yaml
+ls -l ~/.config/nvim
+```
+
+### System files
+
+Files under `/etc` are copies, so editing them does not update the repository. After changing one, copy it back into `system/etc`, preserving its path, and commit it. The same script installs any new file added there, as long as it mirrors its path under `/etc`. The `diff` below shows whether the repository has drifted from the system:
+
+```bash
+cp /etc/X11/xorg.conf.d/<file> system/etc/X11/xorg.conf.d/
+diff -r /etc/X11/xorg.conf.d system/etc/X11/xorg.conf.d
+```
+
+### Package lists
+
+Package lists do not update themselves. Regenerate them, review the diff and commit:
+
+```bash
+pacman -Qqetn > packages/pacman.txt
+pacman -Qqetm > packages/aur.txt
+git diff packages/
+```
+
+Regenerating overwrites the files, so any comments written by hand are lost. To keep comments, edit the lists manually and use `comm` to find packages that are installed but missing from them:
+
+```bash
+comm -23 <(pacman -Qqetn | sort) <(grep -vE '^\s*(#|$)' packages/pacman.txt | sort)
+comm -23 <(pacman -Qqetm | sort) <(grep -vE '^\s*(#|$)' packages/aur.txt | sort)
+```
 
 ## Useful links
 
