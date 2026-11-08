@@ -1,23 +1,24 @@
 -- lua/plugins/oil.lua
 
--- File explorer: the filesystem is edited as a normal buffer, and oil.nvim
--- replaces netrw as the default explorer.
+-- File explorer that edits the filesystem as a normal buffer, replacing netrw as
+-- the default explorer. Deletions go to the trash, and simple edits such as
+-- delete, move and rename are applied without confirmation.
 --
--- Deletions go to the trash and simple edits (delete, move, rename) are applied
--- without confirmation.
+-- Entries are opened with an extension-specific viewer, falling back to
+-- `xdg-open` for anything else. The viewers must be installed for their
+-- extensions to work: zathura for documents and ebooks, imv for images and mpv
+-- for audio and video. On Arch Linux:
 --
--- `gx` opens an entry with an extension-specific viewer (zathura, imv, mpv) and
--- falls back to `xdg-open` for anything else. The viewers must be installed for
--- their extensions to work.
+-- $ sudo pacman -S zathura zathura-pdf-mupdf zathura-djvu zathura-cb imv mpv xdg-utils
 --
 -- See: https://github.com/stevearc/oil.nvim
 
 local oil = require("oil")
 
----Builds the extra data oil keymaps use to hold a description and a callback.
----@param path_fn fun(): string returns the directory path to open
----@param desc string which-key description for the entry
----@return { desc: string, callback: fun() } oil keymap entry
+---Build an oil keymap entry that opens a directory.
+---@param path_fn fun(): string Returns the directory to open.
+---@param desc string
+---@return { desc: string, callback: fun() }
 local function goto_dir(path_fn, desc)
 	return {
 		desc = desc,
@@ -30,7 +31,6 @@ end
 oil.setup({
 	default_file_explorer = true,
 	columns = {
-		-- "type",
 		"permissions",
 		"user",
 		"group",
@@ -40,26 +40,28 @@ oil.setup({
 		{ "birthtime", format = "%d/%m %H:%M" },
 	},
 	keymaps = {
-		["<C-c>"] = false, -- disable default action
-		["<C-h>"] = false, -- disable default action
-		["<C-l>"] = false, -- disable default action
-		["-"] = "actions.parent", -- go up to parent directory
-		["<CR>"] = "actions.select", -- open file or enter directory
-		["H"] = "actions.parent", -- go up to parent directory (alt key)
-		["L"] = "actions.select", -- open file or enter directory (alt key)
-		["sh"] = "actions.select_split", -- open in horizontal split
-		["sv"] = "actions.select_vsplit", -- open in vertical split
+		-- Disabled to avoid conflicts with the tmux navigation keys.
+		["<C-c>"] = false,
+		["<C-h>"] = false,
+		["<C-l>"] = false,
+		["-"] = "actions.parent",
+		["<CR>"] = "actions.select",
+		["H"] = "actions.parent",
+		["L"] = "actions.select",
+		["sh"] = "actions.select_split",
+		["sv"] = "actions.select_vsplit",
 		["gp"] = {
-			"actions.preview", -- preview file contents
+			"actions.preview",
 			opts = {
 				vertical = true,
 				split = "botright",
 			},
 		},
-		["gR"] = "actions.refresh", -- refresh directory listing
-		["gs"] = "actions.change_sort", -- cycle sort order
+		["gR"] = "actions.refresh",
+		["gs"] = "actions.change_sort",
 		["gx"] = {
-			-- open with a specific app based on extension, or fall back to OS default
+			-- Opens with a specific app based on the extension, or falls back to
+			-- the OS default.
 			callback = function()
 				local entry = oil.get_cursor_entry()
 				local dir = oil.get_current_dir()
@@ -106,10 +108,10 @@ oil.setup({
 				end
 			end,
 		},
-		["gy"] = "actions.copy_entry_path", -- copy entry path to clipboard
-		["gh"] = "actions.toggle_hidden", -- toggle hidden files visibility
-		["cd"] = "actions.cd", -- Change CWD
-		["q"] = "actions.close", -- close oil buffer
+		["gy"] = "actions.copy_entry_path",
+		["gh"] = "actions.toggle_hidden",
+		["cd"] = "actions.cd",
+		["q"] = "actions.close",
 		["~"] = goto_dir(function()
 			return vim.fn.expand("~")
 		end, "Open home directory"),
@@ -122,8 +124,8 @@ oil.setup({
 		show_hidden = true,
 	},
 	skip_confirm_for_simple_edits = true,
-	skip_confirm_for_delete = true, -- don't ask before deleting
-	skip_confirm_for_move = true, -- don't ask before moving/renaming
+	skip_confirm_for_delete = true,
+	skip_confirm_for_move = true,
 	preview_win = {
 		border = "single",
 	},
@@ -134,23 +136,19 @@ oil.setup({
 		cursorline = true,
 	},
 })
--- require("oil-git-status").setup()
 
--- Open parent directory
 vim.keymap.set("n", "<leader>e", "<CMD>Oil<CR>", {
 	desc = "Open parent directory",
 })
--- Alternative
+
 vim.keymap.set("n", "go", "<CMD>Oil<CR>", {
 	desc = "Open parent directory",
 })
 
--- go straight to $HOME
 vim.keymap.set("n", "g~", function()
 	require("oil").open(vim.fn.expand("~"))
 end, { desc = "Open home directory" })
 
--- go straight to project cwd
 vim.keymap.set("n", "g.", function()
 	require("oil").open(vim.fn.getcwd())
 end, { desc = "Open cwd" })

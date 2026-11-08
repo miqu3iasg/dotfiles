@@ -1,11 +1,6 @@
 -- colors/hollow.lua
 --
--- A hollowed-out variant of the `quiet` colorscheme (Maxence Weynans),
--- reduced to near-monochrome: pale gray text on pure black, with a single
--- blue accent left for status signals. Meant for distraction-free,
--- high-contrast editing in true-color terminals or graphical clients
--- ('termguicolors' required). The original Vimscript scheme was ported
--- wholesale to Lua for Neovim.
+-- A hollowed-out variant of the `quiet` colorscheme (Maxence Weynans).
 --
 -- Copyright (c) Maxence Weynans <neutaaaaan@gmail.com>
 -- Copyright (c) Miquéias Alves Medeiros <https://github.com/miqu3iasg>

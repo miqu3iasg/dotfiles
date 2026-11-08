@@ -1,10 +1,13 @@
 -- lua/config/keymaps/inserts.lua
 
--- Insert and command-line shorthand for date/time stamps.
+-- Keymaps to insert dates, times, file names and UUIDs in insert and
+-- command-line mode.
+--
+-- `uuidgen` must be installed for the UUID keymap. On Arch Linux, it comes with
+-- util-linux, which is already part of the base system.
 
+-- The `!` mode applies to both insert and command-line mode.
 local km = vim.keymap.set
-
--- Insert current date/time via <C-r> register-insert combos. "!" mode stands for insert and command-line
 
 -- Date
 km("!", "<C-r><C-n>", "<C-r>=strftime('%F')<CR>", { desc = "Insert current date (YYYY-MM-DD)" })
@@ -14,7 +17,7 @@ km("!", "<C-r><C-b>", "<C-r>=strftime('%d/%m/%Y')<CR>", { desc = "Insert current
 -- Time
 km("!", "<C-r><C-t>", "<C-r>=strftime('%H:%M')<CR>", { desc = "Insert current time (HH:MM)" })
 
--- Date and Time
+-- Date and time
 km(
 	"!",
 	"<C-r><C-y>",
@@ -23,9 +26,9 @@ km(
 )
 km("!", "<C-r><C-g>", "<C-r>=strftime('%Y%m%d%H%M')<CR>", { desc = "Insert compact date+time (YYYYMMDDHHMM)" })
 
--- File Metadata
+-- File name
 km("!", "<C-r><C-k>", "<C-r>=expand('%:t:r')<CR>", { desc = "Insert current filename without extension" })
 km("!", "<C-r><C-e>", "<C-r>=expand('%:t')<CR>", { desc = "Insert current filename with extension" })
 
--- Generated Values
+-- UUID
 km("!", "<C-r><C-u>", "<C-r>=trim(system('uuidgen'))<CR>", { desc = "Insert UUID" })

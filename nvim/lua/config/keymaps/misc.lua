@@ -1,64 +1,71 @@
 -- lua/config/keymaps/misc.lua
 
--- This file holds miscellaneous normal-mode keymaps that do not belong to
--- a specific plugin or feature area, such as view toggles, shortcuts to
--- configuration files and directories, and reload, restart and run
--- commands.
+-- Miscellaneous normal-mode keymaps that do not belong to a specific plugin or
+-- feature area, such as view toggles, shortcuts to config files and
+-- directories, saving, quitting, reloading and running commands.
 --
--- For this file to work, oil.nvim must be installed. The directory mappings
--- use `require("oil").open()`.
+-- The directory shortcuts open directories through the file explorer, so it
+-- must be installed.
 --
--- See: :h restart
 -- See: lua/plugins/oil.lua
--- See: lua/plugins/fzf.lua
--- See: https://forge.barrettruth.com/barrettruth/canola.nvim
-
--- Helpers
+-- See: :help :restart
 
 local km = vim.keymap.set
 
--- Normal-mode mapping shorthand
+---Set a normal-mode keymap.
+---@param lhs string
+---@param rhs string|fun()
+---@param desc string
 local function map(lhs, rhs, desc)
 	km("n", lhs, rhs, { desc = desc })
 end
 
--- Toggles a boolean window option (vim.wo)
+---Map a key that toggles a boolean window option.
+---@param lhs string
+---@param opt string Name of the window option.
+---@param desc string
 local function toggle_wo(lhs, opt, desc)
 	map(lhs, function()
 		vim.wo[opt] = not vim.wo[opt]
 	end, desc)
 end
 
--- Opens a file for editing
+---Map a key that opens a file for editing.
+---@param lhs string
+---@param path string
+---@param desc string
 local function edit_file(lhs, path, desc)
 	map(lhs, "<cmd>e " .. path .. "<cr>", desc)
 end
 
--- Opens a directory with oil.nvim
+---Map a key that opens a directory in the file explorer.
+---@param lhs string
+---@param path string
+---@param desc string
 local function open_dir(lhs, path, desc)
 	map(lhs, function()
 		require("oil").open(vim.fn.expand(path))
 	end, desc)
 end
 
--- Run a shell command in the current file's directory
+---Prompt for a shell command and run it in the current file's directory.
 local function run_command_in_file_dir()
 	local dir = vim.fn.expand("%:p:h")
 	if vim.fn.isdirectory(dir) == 0 then
-		dir = vim.fn.getcwd() -- terminal/oil buffers etc.
+		-- Terminal and oil buffers have no real directory.
+		dir = vim.fn.getcwd()
 	end
 
 	vim.ui.input({ prompt = "Command: ", completion = "shellcmd" }, function(command)
 		if not command or command:match("^%s*$") then
 			return
 		end
-		-- escape % # ! so :! doesn't expand them
+		-- Escapes `%`, `#` and `!` so that `:!` does not expand them.
 		vim.cmd(("!cd %s && %s"):format(vim.fn.shellescape(dir, true), vim.fn.escape(command, "%#!")))
 	end)
 end
 
--- View and appearance toggles
-
+-- View toggles
 toggle_wo("<leader>vw", "wrap", "Toggle line wrap")
 toggle_wo("<leader>vl", "list", "Toggle whitespace characters")
 toggle_wo("<leader>vs", "spell", "Toggle spell check")
@@ -83,22 +90,17 @@ map("<leader>vh", function()
 end, "Toggle inlay hints (buffer)")
 
 -- Line numbers
-
--- Toggle absolute and relative numbers together
 map("<leader>vn", function()
 	vim.wo.number = not vim.wo.number
 	vim.wo.relativenumber = vim.wo.number
 end, "Toggle line numbers")
 
--- Keep absolute numbers on and toggle only relative numbers
 map("<leader>vr", function()
 	vim.wo.number = true
 	vim.wo.relativenumber = not vim.wo.relativenumber
 end, "Toggle relative numbers")
 
--- Config files and bookmarked directories
-
--- Files
+-- Config files
 edit_file("<leader>zg", "~/.gitconfig", "Edit .gitconfig")
 edit_file("<leader>zi", "~/.config/i3/config", "Edit i3 config")
 edit_file("<leader>zz", "~/.zshrc", "Edit .zshrc")
@@ -112,9 +114,7 @@ open_dir("<leader>zr", "~/repos", "Open repos dir (workspace)")
 open_dir("<leader>zc", "~/.config", "Open ~/.config directory")
 open_dir("<leader>zb", "~/.local/bin", "Open ~/.local/bin directory (scripts)")
 
--- Save and quit
-
--- Explicit mappings to remind me that they exist and to use them.
+-- Explicit mappings of the native commands, so they show up with a description.
 map("ZZ", "<cmd>x<cr>", "Save and quit")
 map("ZQ", "<cmd>q!<cr>", "Quit without saving")
 map("ZX", "<cmd>w<cr>", "Save file")

@@ -1,20 +1,23 @@
 -- lua/config/keymaps/files.lua
 
--- File, directory and path helpers: navigation around the working directory,
--- copying file paths/URIs, and editing files specific to this repository.
+-- Keymaps for managing files and directories.
+--
+-- See: lua/utils/system.lua
+-- See: lua/config/commands.lua
 
 local km = vim.keymap.set
 
----Normal-mode mapping shorthand: every mapping carried a description.
----@param lhs string left-hand side of the map
----@param desc string which-key description for the mapping
----@param opts? table<string, any> extra mapping options
+---Set a normal-mode keymap, always with a description.
+---@param lhs string
+---@param rhs string|fun()
+---@param desc string
+---@param opts? table<string, any> Extra mapping options.
 local function map(lhs, rhs, desc, opts)
 	km("n", lhs, rhs, vim.tbl_extend("force", { desc = desc }, opts or {}))
 end
 
--- Returns the absolute path of the current file, or nil (with a message) if none
----@return string? file absolute path of the buffer file, or nil
+---Absolute path of the current file, or `nil` with a message when there is none.
+---@return string?
 local function current_file()
 	local file = vim.fn.expand("%:p")
 	if file == "" then
@@ -24,8 +27,8 @@ local function current_file()
 	return file
 end
 
--- Copies a non-empty value to the system clipboard
----@param value string value to copy; empty values are ignored
+---Copy a value to the system clipboard. Empty values are ignored.
+---@param value string
 local function yank(value)
 	if value == "" then
 		return
@@ -33,29 +36,25 @@ local function yank(value)
 	vim.fn.setreg("+", value)
 end
 
--- Maps a key that yanks the result of a filename-modifier expression (see :help filename-modifiers)
----@param lhs string left-hand side of the map
----@param modifier string filename modifier expression (e.g. "%:p:~")
----@param desc string which-key description
+---Map a key that yanks the result of a filename-modifier expression.
+---@param lhs string
+---@param modifier string Filename modifier expression, such as `%:p:~`.
+---@param desc string
+---@see :help filename-modifiers
 local function yank_map(lhs, modifier, desc)
 	map(lhs, function()
 		yank(vim.fn.expand(modifier))
 	end, desc)
 end
 
--- Navigation and working directory
-
--- Set the working directory to the current file's directory
+-- Working directory
 map("<leader>nw", "<cmd>Setwd<CR>", "Set working directory to current file")
 
--- Print the current working directory
 map("<leader>.", function()
 	vim.notify("Current directory: " .. vim.fn.getcwd(), vim.log.levels.INFO)
 end, "Show current working directory", { silent = true })
 
 -- File operations
-
--- Prompt for a new file path, create missing parent directories, and open it
 map("<leader>nf", function()
 	local current_dir = vim.fn.expand("%:p:h")
 	if current_dir == "" or current_dir == "." then
@@ -74,7 +73,6 @@ map("<leader>nf", function()
 	vim.cmd("edit " .. vim.fn.fnameescape(file))
 end, "Create new file")
 
--- Prompt for a new path, save the buffer there, and delete the old file
 map("<leader>nr", function()
 	local old = vim.fn.expand("%:p")
 	local new = vim.fn.input("Rename to: ", old, "file")
@@ -87,7 +85,7 @@ map("<leader>nr", function()
 	vim.cmd("bd " .. vim.fn.bufnr(old))
 end, "Rename current file")
 
--- Permanently delete the current file after confirmation and close its buffer
+-- Deletes the file permanently, after confirmation.
 map("<leader>nk", function()
 	local file = current_file()
 	if not file then
@@ -106,7 +104,6 @@ map("<leader>nk", function()
 	print("Deleted: " .. file)
 end, "Delete current file")
 
--- Add or remove the executable permission of the current file
 map("<leader>nx", function()
 	local file = current_file()
 	if not file then
@@ -118,7 +115,6 @@ map("<leader>nx", function()
 	print((is_exec and "Removed" or "Added") .. " executable permission: " .. file)
 end, "Toggle executable permission on current file")
 
--- Reveal the current file in the operating system's file explorer
 map("<leader>ne", function()
 	local file = current_file()
 	if not file then
@@ -129,24 +125,22 @@ map("<leader>ne", function()
 	if os_name == "mac" then
 		vim.fn.system({ "open", "-R", file })
 	elseif os_name == "windows" then
-		-- explorer.exe parses the raw command line and needs backslashes,
-		-- so go through os.execute (cmd.exe) with a plain string instead of an argv list
+		-- explorer.exe parses the raw command line and needs backslashes, so
+		-- this goes through cmd.exe with a plain string instead of an argv list.
 		local win_path = file:gsub("/", "\\")
 		os.execute(string.format('start "" explorer.exe /select,"%s"', win_path))
 	else
-		-- xdg-open can't select a file, so open the containing folder
+		-- xdg-open cannot select a file, so it opens the containing folder.
 		vim.fn.system({ "xdg-open", vim.fn.fnamemodify(file, ":h") })
 	end
 end, "Reveal current file in file explorer")
 
 -- Yank paths
-
 yank_map("<leader>yp", "%:p", "Yank absolute file path")
 yank_map("<leader>yr", "%:.", "Yank relative file path")
 yank_map("<leader>yn", "%:t", "Yank file name")
 yank_map("<leader>yd", "%:p:h", "Yank containing directory path")
 
--- Copy the relative file path and cursor line number as file:line
 map("<leader>yl", function()
 	local path = vim.fn.expand("%:.")
 	if path == "" then

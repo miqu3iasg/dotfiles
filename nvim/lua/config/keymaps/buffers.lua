@@ -1,24 +1,27 @@
 -- lua/config/keymaps/buffers.lua
 
--- Buffer creation, saving, listing, switching and closing; the window/close
--- logic below leans on lua/utils/buffers.lua.
+-- Keymaps to manage buffers.
+--
+-- See: lua/utils/buffers.lua
 
 local utils = require("utils.buffers")
 
----Mapping shorthand like `vim.keymap.set`, defaulting to `silent = true`.
----@param mode string|string[] mode(s) in which the mapping applies
----@param lhs string left-hand side of the map
----@param rhs string|fun() right-hand side of the map
----@param opts? table<string, any> extra mapping options
+---Set a keymap, silent by default.
+---@param mode string|string[]
+---@param lhs string
+---@param rhs string|fun()
+---@param opts? table<string, any> Extra mapping options.
 local function km(mode, lhs, rhs, opts)
 	opts = vim.tbl_extend("keep", opts or {}, { silent = true })
 	vim.keymap.set(mode, lhs, rhs, opts)
 end
 
+-- Create and save
 km("n", "<leader>bn", "<cmd>enew<CR>", { desc = "New buffer" })
 km("n", "<leader>bw", "<cmd>write ++p<CR>", { desc = "Save buffer" })
 km("n", "<leader>bs", "<cmd>noautocmd write<CR>", { desc = "Save buffer without auto-formatting" })
 
+-- Close
 km("n", "<leader>bd", function()
 	local buf = vim.api.nvim_get_current_buf()
 
@@ -44,6 +47,7 @@ km("n", "<leader>bo", function()
 	end)
 end, { desc = "Close other windows and buffers" })
 
+-- Navigate
 km("n", "]b", "<cmd>bnext<CR>", { desc = "Next buffer" })
 km("n", "[b", "<cmd>bprevious<CR>", { desc = "Previous buffer" })
 km("n", "<leader><Space>", "<C-^>", { desc = "Toggle between last two buffers" })

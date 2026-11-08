@@ -1,14 +1,16 @@
 -- lua/config/autocmds.lua
 
--- Keep splits evenly sized after resizing the terminal
+-- Global autocmds for window layout, editing conveniences, big files, startup
+-- and session handling, and utility buffers.
+
 vim.api.nvim_create_autocmd("VimResized", {
 	group = vim.api.nvim_create_augroup("cg/vim_resized", { clear = true }),
+	desc = "Keep splits evenly sized after resizing the terminal",
 	callback = function()
 		vim.cmd("wincmd =")
 	end,
 })
 
--- Highlight yanked text
 vim.api.nvim_create_autocmd("TextYankPost", {
 	group = vim.api.nvim_create_augroup("cg/text_yank_post", { clear = true }),
 	desc = "Highlight yanked text",
@@ -17,17 +19,16 @@ vim.api.nvim_create_autocmd("TextYankPost", {
 	end,
 })
 
--- Don't auto continue comments in new line
 vim.api.nvim_create_autocmd("FileType", {
 	group = vim.api.nvim_create_augroup("no_auto_comment", {}),
+	desc = "Do not continue comments on new lines",
 	callback = function()
 		vim.opt_local.formatoptions:remove({ "c", "r", "o" })
 	end,
 })
 
--- Turn off heavy features on big/minified files
--- A buffer counts as "big" based on file size and indents; the threshold and
--- the full heuristic live in lua/utils/bigfile.lua
+-- A buffer is big based on file size and line length.
+-- See: lua/utils/bigfile.lua
 vim.api.nvim_create_autocmd("FileType", {
 	group = bigfile_group,
 	desc = "Disable heavy features on big files",
@@ -45,24 +46,24 @@ vim.api.nvim_create_autocmd("FileType", {
 	end,
 })
 
--- syntax highlighting for dotenv files
 vim.api.nvim_create_autocmd("BufRead", {
 	group = vim.api.nvim_create_augroup("dotenv_ft", { clear = true }),
+	desc = "Use dosini syntax highlighting for dotenv files",
 	pattern = { ".env", ".env.*" },
 	callback = function()
 		vim.bo.filetype = "dosini"
 	end,
 })
 
--- On startup without file args, restore the tmux session, or open Oil.
--- "Without file args" means no arguments, or a single directory argument.
--- Session persistence (enabled() checks for tmux; load/save by directory) is
--- implemented in lua/features/sessions.lua.
--- `nested` lets the restored session fire its own autocmds (filetype, etc.)
--- and the work is scheduled so it runs after startup has finished.
+-- Runs when Neovim starts with no arguments or with a single directory. It is
+-- `nested` so the restored session fires its own autocmds, such as filetype,
+-- and scheduled so it runs after startup has finished.
+-- See: lua/features/sessions.lua
+-- See: lua/plugins/oil.lua
 vim.api.nvim_create_augroup("StartupBehavior", { clear = true })
 vim.api.nvim_create_autocmd("VimEnter", {
 	group = "StartupBehavior",
+	desc = "Restore the tmux session of the directory, or open Oil",
 	nested = true,
 	callback = function()
 		local argc = vim.fn.argc()
@@ -73,13 +74,11 @@ vim.api.nvim_create_autocmd("VimEnter", {
 		end
 
 		vim.schedule(function()
-			-- Inside tmux, try to restore the session for this directory
 			local sessions = require("features.sessions")
 			if sessions.enabled() and sessions.load() then
 				return
 			end
 
-			-- No session (or outside tmux), open Oil as before
 			if argc == 0 then
 				require("oil").open()
 			else
@@ -89,11 +88,11 @@ vim.api.nvim_create_autocmd("VimEnter", {
 	end,
 })
 
--- Save the session of the current directory on exit (inside tmux only).
--- Oil buffers are removed by sessions.save() before writing the session.
--- `pcall` so a failing save never blocks quitting.
+-- The save is wrapped in `pcall` so a failure never blocks quitting.
+-- See: lua/features/sessions.lua
 vim.api.nvim_create_autocmd("VimLeavePre", {
 	group = vim.api.nvim_create_augroup("SessionSave", { clear = true }),
+	desc = "Save the session of the current directory on exit, inside tmux only",
 	callback = function()
 		local sessions = require("features.sessions")
 		if sessions.enabled() then
@@ -102,12 +101,13 @@ vim.api.nvim_create_autocmd("VimLeavePre", {
 	end,
 })
 
--- Auto-create parent directories on save (skips virtual buffers like oil://, fugitive://, term://, etc.)
 vim.api.nvim_create_augroup("CreateDirs", { clear = true })
 vim.api.nvim_create_autocmd("BufWritePre", {
 	group = "CreateDirs",
+	desc = "Create missing parent directories on save",
 	pattern = "*",
 	callback = function(event)
+		-- Virtual buffers such as oil:// and fugitive:// have no real directory.
 		if event.match:match("^%w+://") then
 			return
 		end
@@ -118,16 +118,14 @@ vim.api.nvim_create_autocmd("BufWritePre", {
 	end,
 })
 
--- Jump to last cursor position when opening a file
--- (only if the '" mark is inside the buffer, and not in a commit message)
--- The commit check uses the file name because on BufReadPost the FileType
--- event has not fired yet, so `vim.b.filetype` is still nil.
 vim.api.nvim_create_autocmd("BufReadPost", {
 	group = vim.api.nvim_create_augroup("LastCursorPos", { clear = true }),
-	desc = "Jump to last cursor position when opening a file",
+	desc = "Jump to the last cursor position when opening a file",
 	callback = function(args)
 		local valid_line = vim.fn.line([['"]]) >= 1 and vim.fn.line([['"]]) < vim.fn.line("$")
 		local name = vim.api.nvim_buf_get_name(args.buf)
+		-- The file name is used because the FileType event has not fired yet on
+		-- BufReadPost, so the filetype is still unset.
 		local is_commit = name:match("/(COMMIT_EDITMSG|MERGE_MSG|TAG_EDITMSG|NOTES_EDITMSG)$") ~= nil
 		if valid_line and not is_commit then
 			vim.cmd([[normal! g`"]])
@@ -135,12 +133,11 @@ vim.api.nvim_create_autocmd("BufReadPost", {
 	end,
 })
 
--- Strip trailing whitespace when a buffer is written
--- Skips unmodifiable buffers and special ones ("nofile", "terminal", etc.)
--- with a nonempty 'buftype'; the view is saved/restored so the cursor and
--- scroll position do not move.
+-- Special buffers, which have a nonempty 'buftype', are skipped. The view is
+-- restored so the cursor and scroll position do not move.
 vim.api.nvim_create_autocmd("BufWritePre", {
 	group = vim.api.nvim_create_augroup("cg/whitespace", {}),
+	desc = "Strip trailing whitespace on save",
 	pattern = "*",
 	callback = function(args)
 		if not vim.bo[args.buf].modifiable or vim.bo[args.buf].buftype ~= "" then
@@ -153,8 +150,9 @@ vim.api.nvim_create_autocmd("BufWritePre", {
 	end,
 })
 
--- Filetypes of utility buffers (scratch/help/tool windows). They share the
--- close behavior and the clean UI autocmds below.
+-- Utility buffers share the close behavior and the clean UI below.
+-- See: lua/features/compile.lua
+-- See: lua/features/close_view.lua
 ---@type string[]
 local utility_filetypes = {
 	"checkhealth",
@@ -169,11 +167,9 @@ local utility_filetypes = {
 	"qf",
 }
 
--- Close utility buffers with q or Esc
--- These filetypes become unfocused scratch/help windows: they get unlisted and
--- a buffer-local q/<Esc> mapping that closes the window.
 vim.api.nvim_create_autocmd("FileType", {
 	group = vim.api.nvim_create_augroup("cg/close_utility_buffers", { clear = true }),
+	desc = "Unlist utility buffers and map keys to close their window",
 	pattern = utility_filetypes,
 	callback = function(args)
 		vim.bo[args.buf].buflisted = false
@@ -188,9 +184,6 @@ vim.api.nvim_create_autocmd("FileType", {
 	end,
 })
 
--- Hide whitespace characters ('listchars') in utility buffers
--- Tabs, trailing spaces and the like are just noise in quickfix, help, undotree
--- and similar windows, so 'list' is turned off locally for them.
 vim.api.nvim_create_autocmd("FileType", {
 	group = vim.api.nvim_create_augroup("cg/utility_nolist", { clear = true }),
 	desc = "Disable listchars in utility buffers",
@@ -200,10 +193,9 @@ vim.api.nvim_create_autocmd("FileType", {
 	end,
 })
 
--- Auto-enter insert mode on terminal open, and clean up its UI
 vim.api.nvim_create_autocmd("TermOpen", {
 	group = vim.api.nvim_create_augroup("cg/term_open", { clear = true }),
-	desc = "Clean UI in terminal mode",
+	desc = "Clean the UI and enter insert mode when a terminal opens",
 	callback = function()
 		vim.opt_local.number = false
 		vim.opt_local.relativenumber = false
@@ -213,11 +205,11 @@ vim.api.nvim_create_autocmd("TermOpen", {
 	end,
 })
 
--- Configuration for builtin undotree
--- Open the undotree on the far left with a fixed width so the file window keeps
--- its layout.
+-- A fixed width keeps the file window's layout.
+-- See: :help undotree
 vim.api.nvim_create_autocmd("FileType", {
 	group = vim.api.nvim_create_augroup("cg/undotree_layout", { clear = true }),
+	desc = "Open the built-in undotree on the far left",
 	pattern = "nvim-undotree",
 	callback = function()
 		vim.cmd.wincmd("H")

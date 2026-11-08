@@ -1,8 +1,10 @@
 -- lua/config/keymaps/init.lua
 
--- Entry point for the keymaps: sets the leader keys (they must be set before
--- any `<leader>` mapping is created) and loads the keymap themes. Keymaps that
--- belong to a single plugin live in that plugin's file under lua/plugins/.
+-- Entry point for the keymaps. It sets the leader keys, which must be set before
+-- any `<leader>` mapping is created, and loads one module per group of keymaps.
+-- Keymaps that belong to a single plugin live in that plugin's file.
+--
+-- See: lua/plugins/
 
 local M = {}
 

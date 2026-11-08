@@ -1,6 +1,9 @@
 -- lua/config/keymaps/pack.lua
 
--- vim.pack updater and prune helpers.
+-- `vim.pack` updater and prune helpers.
+--
+-- See: :h vim.pack
+-- See: https://github.com/mason-org/mason.nvim
 
 local km = vim.keymap.set
 

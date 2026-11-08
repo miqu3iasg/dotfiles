@@ -1,29 +1,33 @@
 -- lua/plugins/formatting.lua
 
--- Conform.nvim runs external formatter executables, so they must be on PATH.
--- Mason can install many of them (stylua, ruff, rustfmt, google-java-format,
--- fourmolu, yamlfmt, ktlint, swiftformat, zigfmt, etc.), but the
--- ones below may need to be installed manually
+-- Formatting through conform.nvim, which runs external formatters on demand and
+-- on save, with a chain of formatters per filetype.
 --
--- On Arch Linux, most system-level formatters come from pacman: Node.js for
--- the web formatters, clang-format (C/C++), Go, a TeX distribution with
--- latexindent (LaTeX), typstyle (Typst), shfmt (shell), taplo (TOML), Elixir,
--- nixfmt, perltidy, scalafmt and buf (Protobuf):
+-- Conform runs external formatter executables, so they must be on PATH. Mason
+-- can install many of them, such as stylua, ruff, rustfmt, google-java-format,
+-- fourmolu, yamlfmt, ktlint, swiftformat and zigfmt, but the ones below may
+-- need to be installed manually.
+--
+-- On Arch Linux, most system-level formatters come from pacman: Node.js for the
+-- web formatters, clang-format for C and C++, Go, a TeX distribution with
+-- latexindent for LaTeX, typstyle for Typst, shfmt for shell, taplo for TOML,
+-- astyle for Java, nixfmt, perltidy, scalafmt and buf for Protobuf:
 --
 -- $ sudo pacman -S nodejs npm clang go texlive-basic texlive-bin texlive-latexextra texlive-fontsextra typstyle shfmt taplo-cli astyle nixfmt perltidy scalafmt buf
 --
 -- JavaScript, TypeScript, HTML, CSS, JSON, Markdown, GraphQL and Vue use
 -- Prettier. Prettierd is preferred when available, and Conform falls back to
--- Prettier through `stop_after_first = true`. Both can also come from Mason.
--- SQL and Elm formatting are Node-based too:
+-- Prettier through `stop_after_first = true`. Both can also come from Mason. SQL
+-- and Elm formatting are Node-based too:
 --
 -- $ npm install -g prettier prettierd sql-formatter elm-format
 --
--- Markdown uses `prettier` (not prettierd) so that --tab-width 4 can be passed.
--- The "*" and "+" bullets are preserved by extra steps (see `md_stash_bullets`).
+-- Markdown uses `prettier` instead of `prettierd` so that `--tab-width 4` can be
+-- passed. The `*` and `+` bullets are preserved by extra steps, which are
+-- explained next to `md_stash_bullets`.
 --
--- Astro formatting needs the Astro CLI, which should come from the project's
--- own dependencies rather than a global install:
+-- Astro formatting needs the Astro CLI, which should come from the project's own
+-- dependencies rather than a global install:
 --
 -- $ npm install astro
 --
@@ -35,11 +39,13 @@
 --
 -- $ R -e 'install.packages("styler")'
 --
--- Some formatters need no separate install because they ship with their
--- language tooling: `mix format` comes with Elixir and `terraform fmt` with
--- Terraform. Julia (runic), Clojure (cljfmt) and Dockerfile (dockerfmt) need
--- their binaries installed by hand or through Mason
+-- Some formatters need no separate install because they ship with their language
+-- tooling, such as `mix format` with Elixir and `terraform fmt` with Terraform.
+-- The binaries for Julia (runic), Clojure (cljfmt) and Dockerfile (dockerfmt)
+-- must be installed by hand or through Mason.
 --
+-- See: lua/shared/autoformat.lua
+-- See: lua/features/markdown_lists.lua
 -- See: https://github.com/stevearc/conform.nvim
 
 local autoformat = require("shared.autoformat")
@@ -63,7 +69,6 @@ require("conform").setup({
 		go = { "goimports-reviser", "golines" },
 		c = { "clang_format" },
 		cpp = { "clang_format" },
-		-- java = { "google-java-format" },
 		java = { "astyle" },
 		python = { "ruff_organize_imports", "ruff_format" },
 		sh = { "shfmt" },
@@ -88,7 +93,7 @@ require("conform").setup({
 		typst = { "typstyle" },
 		asm = { "asmfmt" },
 
-		-- fallback
+		-- Runs on filetypes that have no formatter of their own.
 		["_"] = { "trim_whitespace", "trim_newlines" },
 	},
 	formatters = {
@@ -101,8 +106,8 @@ require("conform").setup({
 		},
 
 		clang_format = {
-			-- this file must be located in `~/.clang-format`. We have an example
-			-- of this file in `resources/clang-format.example.yaml`
+			-- Reads the style from `~/.clang-format`.
+			-- See: resources/clang-format.example.yaml
 			prepend_args = { "--style=file" },
 		},
 
@@ -110,15 +115,16 @@ require("conform").setup({
 			prepend_args = { "--base-formatter=gofumpt", "--max-len=100" },
 		},
 
-		-- Prettier with 4 columns of indentation (nested lists get 4). It is `prettier`
-		-- and not `prettierd` because prettierd does not accept CLI flags.
+		-- Prettier with 4 columns of indentation, so nested lists get 4. It uses
+		-- `prettier` instead of `prettierd` because prettierd does not accept
+		-- command-line flags.
 		prettier_md = require("conform.util").merge_formatter_configs(require("conform.formatters.prettier"), {
 			prepend_args = { "--tab-width", "4" },
 		}),
 
-		-- Prettier rewrites the "*" and "+" bullets as "-" (or alternates "-" and "*"
-		-- between neighbouring lists). These two steps save the markers before
-		-- formatting and put them back afterwards, so "-", "*" and "+" stay as written.
+		-- Prettier rewrites the `*` and `+` bullets as `-`, or alternates `-` and
+		-- `*` between neighbouring lists. This step and `md_restore` save the
+		-- markers before formatting and put them back afterwards.
 		md_stash_bullets = {
 			format = function(_, ctx, lines, callback)
 				md_bullets[ctx.buf] = md_lists.bullet_markers(lines)
@@ -126,9 +132,9 @@ require("conform").setup({
 			end,
 		},
 
-		-- Prettier never writes tabs in lists, so each group of 4 leading spaces is
-		-- turned into a tab (the remainder stays as spaces). Disable it with
-		-- `vim.g.markdown_use_tabs = false`.
+		-- Prettier never writes tabs in lists, so each group of 4 leading spaces
+		-- becomes a tab. Setting `vim.g.markdown_use_tabs = false` turns that off.
+		-- See: after/ftplugin/markdown.lua
 		md_restore = {
 			format = function(_, ctx, lines, callback)
 				lines = md_lists.restore_bullets(lines, md_bullets[ctx.buf])

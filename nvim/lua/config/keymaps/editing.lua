@@ -1,13 +1,21 @@
 -- lua/config/keymaps/editing.lua
 
+-- Keymaps for editing code.
+--
+-- See: lua/utils/substitute.lua
+
 local km = vim.keymap.set
 local substitute = require("utils.substitute")
 
+---Clamp a destination line to the buffer range.
+---@param dest integer
+---@return integer
 local function clamp_dest(dest)
 	return math.max(0, math.min(dest, vim.fn.line("$")))
 end
 
--- Move the current line up/down by [count] lines (default 1)
+---Move the current line by `[count]` lines, which is 1 by default.
+---@param down boolean
 local function move_line(down)
 	local lnum, n = vim.fn.line("."), vim.v.count1
 	local dest = down and (lnum + n) or (lnum - n - 1)
@@ -16,17 +24,19 @@ local function move_line(down)
 	end
 end
 
--- Move the visual selection up/down by [count] lines (default 1)
+---Move the visual selection by `[count]` lines, which is 1 by default.
+---@param down boolean
 local function move_selection(down)
 	local n = vim.v.count1
-	vim.cmd("normal! " .. vim.keycode("<Esc>")) -- sets '< and '>
+	-- Leaving visual mode sets the '< and '> marks.
+	vim.cmd("normal! " .. vim.keycode("<Esc>"))
 	local first, last = vim.fn.line("'<"), vim.fn.line("'>")
 	local dest = down and (last + n) or (first - n - 1)
 	pcall(vim.cmd, ("%d,%dmove %d"):format(first, last, clamp_dest(dest)))
 	vim.cmd("normal! gv=gv")
 end
 
--- Line and Selection Movement
+-- Move lines and selections
 km("n", "ZK", function()
 	move_line(false)
 end, { desc = "Move line up" })
@@ -40,13 +50,13 @@ km("x", "J", function()
 	move_selection(true)
 end, { desc = "Move selection down" })
 
--- Line and Selection Duplication
+-- Duplicate lines and selections
 km("n", "zk", ":t .-1<CR>", { desc = "Duplicate line above" })
 km("n", "zj", ":t .<CR>", { desc = "Duplicate line below" })
 km("x", "zk", ":t '<-1<CR>gv", { desc = "Duplicate selection above" })
 km("x", "zj", ":t '>+0<CR>gv", { desc = "Duplicate selection below" })
 
--- Blank Lines
+-- Blank lines
 km("n", "ZH", function()
 	vim.cmd("put!=repeat(nr2char(10), " .. vim.v.count1 .. ")")
 end, { desc = "Insert blank line(s) above" })
@@ -72,7 +82,7 @@ km("x", "<leader>=", function()
 	vim.cmd("normal! gv")
 end, { desc = "Indent selection" })
 
--- Editing and Replacement
+-- Edit and replace
 km("n", "J", "mzJ`z", { desc = "Join lines, keep cursor position" })
 
 km("n", "S", '"_cc', { desc = "Replace line without yanking" })
@@ -85,13 +95,14 @@ km("n", "x", '"_x', { desc = "Delete char without yanking" })
 km("n", "X", '"_X', { desc = "Delete char before cursor without yanking" })
 km("x", "x", '"_x', { desc = "Delete selection without yanking" })
 
--- P in visual mode keeps the unnamed register intact; p (native) yanks the replaced text
+-- In visual mode, `P` keeps the unnamed register intact, while the native `p`
+-- yanks the replaced text.
 km("x", "p", "P", { desc = "Paste over selection without yanking" })
 km("x", "<leader>p", "p", { desc = "Paste over selection (yanks replaced text)" })
 
 km("n", "U", "<C-r>", { desc = "Redo" })
 
--- Substitution
+-- Substitute
 km("n", "cu", function()
 	substitute.prompt("%", vim.fn.expand("<cword>"), true)
 end, { desc = "Substitute word in buffer" })
@@ -124,7 +135,7 @@ km("x", "<leader>cp", function()
 	substitute.project(substitute.get_visual(), false)
 end, { desc = "Substitute selection in project" })
 
--- Repeatable Change
+-- Repeatable change
 km("n", "<leader>cn", [[*``"_cgn]], {
 	desc = "Change next occurrence of word under cursor (repeat with .)",
 })
@@ -135,11 +146,11 @@ km({ "n", "x", "o" }, "<Tab>", "%", {
 	desc = "Jump to matching pair",
 })
 
--- Open native undotree
+-- Undotree
 km("n", "<leader>U", function()
 	vim.cmd.packadd("nvim.undotree")
 	vim.cmd.Undotree()
-end, { desc = "undotree" })
+end, { desc = "Open undotree" })
 
 -- Insert mode
 km("i", "<C-a>", "<Home>", { desc = "Beginning of line" })

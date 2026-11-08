@@ -1,17 +1,24 @@
 -- lua/plugins/unnecessary-shit.lua
 
--- Miscellaneous quality-of-life mini.nvim modules (and other small plugins)
--- that are not essential, but make editing feel nicer.
+-- Plugins I install instead of actually coding, the newbie version. A dumping
+-- ground for small plugins and modules that nobody needs but I refuse to live
+-- without. None of it is essential, all of it makes editing less miserable.
+--
+-- Everything here must already be installed, so `lua/config/pack.lua` must run
+-- before this file. The tmux navigation only works if the tmux side has the
+-- matching plugin installed as well.
+--
+-- See: lua/config/pack.lua
 
 local ai = require("mini.ai")
 local ts = ai.gen_spec.treesitter
 
--- One liners
 require("mini.align").setup({})
 
--- Split Join
 local split_join = require("mini.splitjoin")
 
+-- The default toggle mapping is disabled, since one key doing two opposite
+-- things is how you end up undoing your own work.
 split_join.setup({
 	mappings = {
 		toggle = "",
@@ -26,7 +33,9 @@ vim.keymap.set({ "n", "x" }, "<leader>sk", function()
 	split_join.split()
 end, { desc = "Split arguments" })
 
--- Text Objects
+-- The treesitter-based objects need the textobjects queries to exist, or they
+-- silently select nothing.
+-- See: lua/plugins/treesitter.lua
 local ai_opts = {
 	n_lines = 500,
 	custom_textobjects = {
@@ -35,7 +44,7 @@ local ai_opts = {
 		k = ts({ a = "@code_block.outer", i = "@code_block.inner" }),
 		m = ts({ a = "@comment.outer", i = "@comment.inner" }),
 
-		-- Entire file
+		-- The whole buffer, because selecting everything by hand is for peasants.
 		e = function()
 			return {
 				from = { line = 1, col = 1 },
@@ -49,49 +58,48 @@ local ai_opts = {
 }
 ai.setup(ai_opts)
 
--- Tmux Navigator
+-- Without the matching tmux plugin these just sit there doing nothing.
 vim.keymap.set("n", "<c-h>", "<cmd>TmuxNavigateLeft<cr>")
 vim.keymap.set("n", "<c-j>", "<cmd>TmuxNavigateDown<cr>")
 vim.keymap.set("n", "<c-k>", "<cmd>TmuxNavigateUp<cr>")
 vim.keymap.set("n", "<c-l>", "<cmd>TmuxNavigateRight<cr>")
 vim.keymap.set("n", "<c-\\>", "<cmd>TmuxNavigatePrevious<cr>")
 
--- Colorizer
+-- The LSP color provider fights with this plugin, so it loses.
+if vim.lsp.document_color then
+	vim.lsp.document_color.enable(false)
+end
+
 require("colorizer").setup({
-	event = { "BufReadPre", "BufNewFile" },
-	init = function()
-		if vim.lsp.document_color then
-			vim.lsp.document_color.enable(false)
-		end
-	end,
-	opts = {
-		filetypes = {
-			"css",
-			"scss",
-			"lua",
-			"vue",
-			"svelte",
-			"astro",
-			"html",
-			"javascript",
-			"javascriptreact",
-			"typescript",
-			"typescriptreact",
-		},
-		user_default_options = {
-			names = false,
-			tailwind = false,
-		},
+	filetypes = {
+		"css",
+		"scss",
+		"lua",
+		"vue",
+		"svelte",
+		"astro",
+		"html",
+		"javascript",
+		"javascriptreact",
+		"typescript",
+		"typescriptreact",
+	},
+	-- Color names and Tailwind classes turn every buffer into a circus.
+	user_default_options = {
+		names = false,
+		tailwind = false,
 	},
 })
 
--- Register the ]t/[t jumps and :Todos (search/navigation of
--- TODO|FIXME|HACK|BUG|XXX comments); see lua/features/todos.lua.
--- <leader>ft (fzf grep) lives in lua/plugins/fzf.lua.
+-- Registers the task comment jumps and the command that digs up every TODO I
+-- swore I would fix someday.
+-- See: lua/features/todos.lua
+-- See: lua/plugins/fzf.lua
 require("features.todos").setup()
 
--- Flash
 local flash = require("flash")
+-- The backdrop is off because dimming the whole screen just to jump two words
+-- is dramatic and unnecessary.
 flash.setup({
 	prompt = {
 		prefix = { { ">", "FlashPromptIcon" } },

@@ -1,18 +1,16 @@
 -- lua/plugins/colorschemes.lua
 
--- Configuration of the extra colorschemes and their highlight overrides. This
--- file only configures them; the theme itself is applied with `:colorscheme`.
+-- Configures the extra colorschemes and the highlight overrides applied on top
+-- of them. This file only configures them, and a theme is applied with
+-- `:colorscheme`.
 --
--- The plugins must already be installed, so `lua/config/pack.lua` must have
--- run before this file.
+-- The plugins must already be installed, so `lua/config/pack.lua` must run
+-- before this file.
 --
--- See: colors/ (self-maintained schemes)
--- See: https://github.com/metalelf0/black-metal-theme-neovim
+-- See: lua/config/pack.lua
+-- See: colors/
 
--- Color palettes used for colorscheme overrides
-
--- Palette used for the black-metal overrides below, keyed by its role in
--- the scheme (line background, foreground levels, comments and accents).
+---Palette for the black-metal overrides, keyed by role in the scheme.
 ---@type table<string, string>
 local black_metal_palette = {
 	line = "#111111",
@@ -23,17 +21,14 @@ local black_metal_palette = {
 	teal = "#5f8787",
 }
 
--- Colorscheme configurations
-
--- Black Metal
+-- See: https://github.com/metalelf0/black-metal-theme-neovim
 require("black-metal").setup({
 	transparent = true,
-	trve = true, -- switch this to false if you want light variants
+	-- Set to false for the light variants.
+	trve = true,
 
-	-- Custom highlights, override default colors
 	colors = {},
 
-	-- Override highlight groups
 	highlights = {
 		StatusLine = { fg = "#a8a8a8", bg = "#121212" },
 		StatusLineNC = { fg = "#5f5f5f", bg = "#050505" },
@@ -41,7 +36,6 @@ require("black-metal").setup({
 		CurSearch = { fg = "#3D3525", bg = "#D6C17A", fmt = "bold" },
 		IncSearch = { fg = "#3D3525", bg = "#D6C17A", fmt = "bold" },
 
-		-- Markdown
 		["@markup.strong"] = { fg = black_metal_palette.bright, fmt = "bold" },
 		["@markup.italic"] = { fg = black_metal_palette.fg, fmt = "italic" },
 		["@markup.strikethrough"] = { fg = black_metal_palette.comment, fmt = "strikethrough" },
@@ -78,7 +72,7 @@ require("black-metal").setup({
 	},
 })
 
--- Gruber Darker
+-- See: https://github.com/kryptamine/gruber-darker-renaissance
 require("gruber-darker-renaissance").setup({
 	bold = true,
 	italic = {
@@ -89,10 +83,13 @@ require("gruber-darker-renaissance").setup({
 	},
 	undercurl = false,
 	underline = false,
-	transparent = true, -- leave the window background to the terminal; floats stay opaque
-	terminal_colors = true, -- set `g:terminal_color_*`
-	sidebars = { "qf", "help" }, -- filetypes with the darker sidebar background
-	plugins = {}, -- every integration is on; set one to false, e.g. `snacks = false`
+	-- Leaves the window background to the terminal. Floating windows stay opaque.
+	transparent = true,
+	terminal_colors = true,
+	-- Filetypes that get the darker sidebar background.
+	sidebars = { "qf", "help" },
+	-- Every integration is on. Set one to false to turn it off, such as `snacks = false`.
+	plugins = {},
 	on_colors = function(c)
 		c.syntax.func = "#b0b0b0"
 	end,

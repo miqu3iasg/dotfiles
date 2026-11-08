@@ -1,9 +1,6 @@
 -- colors/insanity.lua
 --
--- A dense, characterful dark scheme: many subdued hues running through the
--- syntax groups, with stronger accents reserved for search/diagnostics UI
--- chrome. Port of an early theme from the bruhtus dotfiles. Built for a
--- dark background in a true-color terminal ('termguicolors' required).
+-- For those who are insane.
 --
 -- Copyright (c) Robertus Chris <diawan@pm.me>
 -- Copyright (c) Miquéias Medeiros <contatomiqueiasalvesdev@gmail.com>
