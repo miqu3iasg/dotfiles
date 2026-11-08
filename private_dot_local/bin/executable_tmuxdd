@@ -1,7 +1,0 @@
-#!/bin/sh
-
-name=scratchmux
-
-xwininfo -name "$name" >/dev/null 2>&1 || \
-  kitty --class "$name" --title "$name" \
-    tmux -L "$name" new-session -A -s OwO
