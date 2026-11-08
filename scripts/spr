@@ -1,0 +1,786 @@
+#!/usr/bin/env bash
+# CLI for scaffolding Spring Boot projects via start.spring.io
+set -euo pipefail
+
+SPR_VERSION="1.2.0"
+INITIALIZR_URL="${SPR_URL:-https://start.spring.io}"
+CONFIG_FILE="${SPR_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/spr/config}"
+
+# Terminal colors. Disabled when stdout is not a TTY or NO_COLOR is set.
+if [[ -t 1 && -z "${NO_COLOR:-}" ]]; then
+  B=$'\033[1m'
+  D=$'\033[2m'
+  G=$'\033[32m'
+  Y=$'\033[33m'
+  R=$'\033[31m'
+  C=$'\033[36m'
+  N=$'\033[0m'
+else
+  B=""
+  D=""
+  G=""
+  Y=""
+  R=""
+  C=""
+  N=""
+fi
+
+# Exit codes
+E_OK=0
+E_GENERIC=1
+E_NETWORK=3
+E_MISSING_DEP=4
+
+# Temp file path used by cmd_new. Global so the EXIT trap can always clean up.
+tmp=""
+trap '[ -n "$tmp" ] && rm -f "$tmp"' EXIT
+
+info() { echo "${C}==>${N} $*"; }
+ok() { echo "${G}✔${N} $*"; }
+warn() { echo "${Y}!${N} $*" >&2; }
+die() {
+  echo "${R}✘ error:${N} $*" >&2
+  echo "  Run ${B}spr help${N} for available commands." >&2
+  exit "$E_GENERIC"
+}
+die_network() {
+  echo "${R}✘ network:${N} $*" >&2
+  exit "$E_NETWORK"
+}
+die_missing() {
+  echo "${R}✘ missing:${N} $*" >&2
+  exit "$E_MISSING_DEP"
+}
+
+# Defaults. Override via the config file.
+BUILD="maven"   # maven | gradle | gradle-kotlin
+LANGUAGE="java" # java | kotlin | groovy
+JAVA_VERSION="21"
+PACKAGING="jar" # jar | war
+GROUP_ID="com.example"
+PROJECT_VERSION="0.0.1-SNAPSHOT"
+BOOT_VERSION=""     # empty = current Initializr default
+CONFIG_YAML="false" # true = application.yaml
+GIT_INIT="false"
+OPEN_WITH="" # code | idea | cursor ...
+
+# Built-in presets. Add your own in the config file: PRESET_name="dep1,dep2"
+PRESET_minimal="web"
+PRESET_web="web,validation,actuator"
+PRESET_api="web,validation,actuator,data-jpa,postgresql"
+
+if [[ -f "$CONFIG_FILE" ]]; then
+  # shellcheck disable=SC1090
+  source "$CONFIG_FILE"
+fi
+
+help_main() {
+  cat <<EOF
+${B}spr${N} ${D}v${SPR_VERSION}${N} - Scaffold Spring Boot projects from the terminal
+
+${B}USAGE${N}
+  spr <command> [options]
+  spr <artifactId> [options]          Shortcut for ${C}spr new <artifactId>${N}
+
+${B}COMMANDS${N}
+  ${C}new${N},      n      Create a new project (interactive if artifactId is missing)
+  ${C}deps${N},     d      List and search dependencies available on Initializr
+  ${C}versions${N}, v      List supported Spring Boot and Java versions
+  ${C}presets${N},  p      List configured dependency presets
+  ${C}config${N},   c      Manage the config file (init, path, show, edit)
+  ${C}help${N}             Show this page, or help for a command: spr help <command>
+  ${C}version${N}          Show spr version
+
+${B}GLOBAL OPTIONS${N}
+  -h, --help             Command help
+  -V, --version          spr version
+
+${B}EXAMPLES${N}
+  ${D}# Maven project with Java 21 and chosen dependencies${N}
+  spr new store -g com.acme -d web,validation,data-jpa,postgresql
+
+  ${D}# Using a preset, with description, git and opening in VS Code${N}
+  spr store -g com.acme -p api --desc "Store API" --git --open code
+
+  ${D}# Gradle with Kotlin, YAML and a specific Spring Boot version${N}
+  spr new billing -b gradle-kotlin -l kotlin --boot 4.1.2 --yaml -d web,actuator
+
+  ${D}# Show the equivalent curl command without creating anything${N}
+  spr new test -d web,lombok --dry-run
+
+  ${D}# Discover dependency ids${N}
+  spr deps postgres
+  spr deps --ids | grep -i kafka
+
+  ${D}# Interactive mode${N}
+  spr new
+
+${B}FILES${N}
+  ${CONFIG_FILE}
+      Default values and personal presets. Create with: ${C}spr config init${N}
+
+${B}ENVIRONMENT${N}
+  SPR_URL        Initializr URL (default: https://start.spring.io)
+  SPR_CONFIG     Alternative path to the config file
+  NO_COLOR       Disable colored output
+
+${B}EXIT CODES${N}
+  0   Success
+  1   Generic error (usage, validation, server response)
+  3   Network error
+  4   Missing required tool
+
+Per-command details: ${C}spr help new${N}, ${C}spr help deps${N}, ${C}spr help config${N}
+EOF
+}
+
+help_new() {
+  cat <<EOF
+${B}spr new${N} - Create a new Spring Boot project
+
+${B}USAGE${N}
+  spr new [artifactId] [options]
+  spr <artifactId> [options]
+
+  Without an artifactId in an interactive terminal, spr prompts for each value.
+
+${B}PROJECT${N}
+  -g, --group <id>          groupId                          ${D}(default: ${GROUP_ID})${N}
+  -a, --artifact <id>       artifactId (or 1st positional arg)
+  -n, --name <name>         Project name                     ${D}(default: artifactId)${N}
+      --desc <text>         Project description
+      --package <pkg>       Base package                     ${D}(default: groupId.artifactId)${N}
+      --project-version <v> Project version                  ${D}(default: ${PROJECT_VERSION})${N}
+      --version <v>         Alias for --project-version
+
+${B}BUILD AND LANGUAGE${N}
+  -b, --build <type>        maven | gradle | gradle-kotlin   ${D}(default: ${BUILD})${N}
+  -l, --lang <lang>         java | kotlin | groovy           ${D}(default: ${LANGUAGE})${N}
+  -j, --java <version>      Java version                     ${D}(default: ${JAVA_VERSION})${N}
+      --boot <version>      Spring Boot version, e.g. 4.1.2  ${D}(default: current)${N}
+      --packaging <type>    jar | war                        ${D}(default: ${PACKAGING})${N}
+      --yaml                Generate application.yaml instead of application.properties
+
+${B}DEPENDENCIES${N}
+  -d, --deps <a,b,c>        Comma-separated ids (option may be repeated)
+  -p, --preset <name[,..]>  Apply one or more presets (see: spr presets)
+
+${B}POST-CREATION${N}
+      --dir <path>          Destination directory            ${D}(default: ./<artifactId>)${N}
+      --git / --no-git      Run (or skip) git init + initial commit
+      --open <editor>       Open project in editor (code, idea, cursor, ...)
+  -r, --run                 Start the application when done
+
+${B}OTHER${N}
+      --dry-run             Print the equivalent curl command and exit
+  -i, --interactive         Force interactive mode
+  -h, --help                Show this help
+
+${B}EXAMPLES${N}
+  spr new nexus -g com.nexus -d web,validation,actuator,data-jpa,postgresql -r
+  spr new nexus -g com.nexus -p api --desc "My project" --git
+  spr new app -b gradle -l kotlin -j 17 -d web
+  spr new app --dry-run -d web,lombok
+
+${B}NOTES${N}
+  - Dependencies, bootVersion, javaVersion, language and packaging are
+    validated against the Initializr metadata before download (requires jq).
+  - Use ${C}spr deps <filter>${N} to discover valid dependency ids.
+EOF
+}
+
+help_deps() {
+  cat <<EOF
+${B}spr deps${N} - List dependencies available on Initializr
+
+${B}USAGE${N}
+  spr deps [filter] [--ids]
+
+${B}OPTIONS${N}
+  --ids          Print only ids (one per line), useful for scripting
+  -h, --help     Show this help
+
+${B}EXAMPLES${N}
+  spr deps               ${D}# list everything${N}
+  spr deps postgres      ${D}# filter by id, name or group (case-insensitive)${N}
+  spr deps --ids
+
+${B}REQUIRES${N}
+  jq, curl and network access.
+EOF
+}
+
+help_versions() {
+  cat <<EOF
+${B}spr versions${N} - List supported Spring Boot and Java versions
+
+${B}USAGE${N}
+  spr versions
+
+${B}REQUIRES${N}
+  jq, curl and network access.
+EOF
+}
+
+help_presets() {
+  cat <<EOF
+${B}spr presets${N} - List dependency presets
+
+${B}USAGE${N}
+  spr presets
+
+Presets are shortcuts for sets of dependencies. Built-in ones are
+minimal, web and api. To create your own, edit the config file
+(${C}spr config edit${N}) and add lines like:
+
+  PRESET_my_stack="web,validation,data-jpa,postgresql,lombok"
+
+Usage: ${C}spr new app -p my_stack${N}   ${D}(hyphen and underscore are equivalent)${N}
+EOF
+}
+
+help_config() {
+  cat <<EOF
+${B}spr config${N} - Manage the config file
+
+${B}USAGE${N}
+  spr config <subcommand>
+
+${B}SUBCOMMANDS${N}
+  init     Create the config file with sample values
+  path     Print the config file path
+  show     Print the current contents
+  edit     Open in editor (\$EDITOR, \$VISUAL, nano, vim, vi)
+
+${B}FILE${N}
+  ${CONFIG_FILE}
+
+A bash file. Accepted variables:
+  GROUP_ID  JAVA_VERSION  BUILD  LANGUAGE  PACKAGING  PROJECT_VERSION
+  BOOT_VERSION  CONFIG_YAML  GIT_INIT  OPEN_WITH  PRESET_<name>
+EOF
+}
+
+# Require an option value: need_val <flag> <value>
+need_val() { [[ $# -ge 2 && -n "${2:-}" ]] || die "option $1 requires a value"; }
+
+require_jq() { command -v jq >/dev/null || die_missing "this command requires jq (apt install jq / brew install jq)"; }
+
+# In-process metadata cache. Avoids redundant fetches within a single run.
+_META_CACHE=""
+
+# Fetch Initializr metadata as JSON (cached per process).
+fetch_metadata() {
+  require_jq
+  if [[ -z "$_META_CACHE" ]]; then
+    _META_CACHE="$(curl -fsS -H 'Accept: application/vnd.initializr.v2.2+json' "$INITIALIZR_URL")" ||
+      die_network "could not reach $INITIALIZR_URL"
+  fi
+  printf '%s' "$_META_CACHE"
+}
+
+# Validate a value against a metadata field. Returns nonzero on invalid.
+# Args: <field> <value>
+validate_field() {
+  local field="$1" value="$2"
+  local valid
+  valid="$(fetch_metadata | jq -r --arg f "$field" '.[$f].values[].id')" || return 0
+  [[ -n "$valid" ]] || return 0
+  grep -qx -- "$value" <<<"$valid"
+}
+
+# Validate comma-separated dependency ids. Dies on the first invalid id.
+# Args: <deps>
+validate_deps() {
+  local deps="$1"
+  [[ -n "$deps" ]] || return 0
+  local valid d bad=()
+  valid="$(fetch_metadata | jq -r '.dependencies.values[].values[].id')" || return 0
+  [[ -n "$valid" ]] || return 0
+  local arr
+  IFS=',' read -ra arr <<<"$deps"
+  for d in "${arr[@]}"; do
+    grep -qx -- "$d" <<<"$valid" || bad+=("$d")
+  done
+  ((${#bad[@]} == 0)) || die "unknown dependency(s): ${bad[*]} (search with: spr deps <filter>)"
+}
+
+# List all PRESET_* variable names defined in the current shell.
+all_presets() { compgen -v | grep '^PRESET_' | sort || true; }
+
+# Prompt for input with a default. Args: <prompt> <default>
+ask() {
+  local ans
+  read -rp "$1 [$2]: " ans </dev/tty
+  echo "${ans:-$2}"
+}
+
+cmd_deps() {
+  local filter="" ids_only="false"
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      -h | --help)
+        help_deps
+        return 0
+        ;;
+      --ids)
+        ids_only="true"
+        shift
+        ;;
+      -*) die "unknown option for 'deps': $1" ;;
+      *)
+        filter="$1"
+        shift
+        ;;
+    esac
+  done
+
+  local rows
+  rows="$(fetch_metadata | jq -r '.dependencies.values[] | .name as $g | .values[] | [.id, .name, $g] | @tsv')"
+  if [[ -n "$filter" ]]; then
+    rows="$(grep -i -- "$filter" <<<"$rows" || true)"
+  fi
+  [[ -n "$rows" ]] || {
+    warn "no dependency found"
+    return 0
+  }
+
+  if [[ "$ids_only" == "true" ]]; then
+    cut -f1 <<<"$rows"
+  else
+    {
+      printf 'ID\tNAME\tGROUP\n'
+      echo "$rows"
+    } | column -t -s $'\t'
+  fi
+}
+
+cmd_versions() {
+  [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]] && {
+    help_versions
+    return 0
+  }
+  local meta
+  meta="$(fetch_metadata)"
+  echo "${B}Spring Boot${N}"
+  jq -r '.bootVersion.values[] | "  \(.id)\t\(.name)"' <<<"$meta" | column -t -s $'\t'
+  echo
+  echo "${B}Java${N}"
+  jq -r '.javaVersion.values[] | "  \(.id)"' <<<"$meta"
+}
+
+cmd_presets() {
+  [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]] && {
+    help_presets
+    return 0
+  }
+  local v name
+  echo "${B}Available presets${N}"
+  while IFS= read -r v; do
+    [[ -n "$v" ]] || continue
+    name="${v#PRESET_}"
+    printf "  ${C}%-14s${N} %s\n" "$name" "${!v}"
+  done <<<"$(all_presets)"
+}
+
+cmd_config() {
+  local sub="${1:-}"
+  case "$sub" in
+    "" | -h | --help) help_config ;;
+    path) echo "$CONFIG_FILE" ;;
+    show) [[ -f "$CONFIG_FILE" ]] && cat "$CONFIG_FILE" || warn "no config file (create with: spr config init)" ;;
+    edit)
+      [[ -f "$CONFIG_FILE" ]] || config_init
+      open_in_editor "$CONFIG_FILE"
+      ;;
+    init) config_init ;;
+    *) die "unknown subcommand: config $sub" ;;
+  esac
+}
+
+config_init() {
+  if [[ -f "$CONFIG_FILE" ]]; then
+    warn "config already exists at $CONFIG_FILE"
+    return 0
+  fi
+  mkdir -p "$(dirname "$CONFIG_FILE")"
+  cat >"$CONFIG_FILE" <<'EOF'
+# spr configuration (bash source)
+GROUP_ID="com.example"
+JAVA_VERSION="21"
+BUILD="maven"            # maven | gradle | gradle-kotlin
+LANGUAGE="java"          # java | kotlin | groovy
+PACKAGING="jar"
+PROJECT_VERSION="0.0.1-SNAPSHOT"
+BOOT_VERSION=""          # empty = current Initializr default
+CONFIG_YAML="false"      # true = application.yaml
+GIT_INIT="false"
+OPEN_WITH=""             # code | idea | cursor
+
+# Personal presets: PRESET_<name>="dep1,dep2"
+PRESET_my_stack="web,validation,actuator,data-jpa,postgresql,lombok"
+EOF
+  ok "config created at $CONFIG_FILE"
+}
+
+# Open a file in the user's preferred editor.
+# Tries $EDITOR, $VISUAL, then nano, vim, vi in order.
+open_in_editor() {
+  local file="$1"
+  local editor="${EDITOR:-${VISUAL:-}}"
+  if [[ -z "$editor" ]] || ! command -v "$editor" >/dev/null; then
+    for candidate in nano vim vi; do
+      if command -v "$candidate" >/dev/null; then
+        editor="$candidate"
+        break
+      fi
+    done
+  fi
+  [[ -n "$editor" ]] || die_missing "no editor found (set \$EDITOR)"
+  "$editor" "$file"
+}
+
+cmd_new() {
+  local ARTIFACT="" NAME="" DESCRIPTION="" PACKAGE_NAME="" PACKAGE_EXPLICIT="false"
+  local DEPS="" PRESETS="" TARGET_DIR=""
+  local RUN_AFTER="false" INTERACTIVE="auto" DRY_RUN="false"
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      -h | --help)
+        help_new
+        return 0
+        ;;
+      -g | --group)
+        need_val "$@"
+        GROUP_ID="$2"
+        shift 2
+        ;;
+      -a | --artifact)
+        need_val "$@"
+        ARTIFACT="$2"
+        shift 2
+        ;;
+      -n | --name)
+        need_val "$@"
+        NAME="$2"
+        shift 2
+        ;;
+      --desc)
+        need_val "$@"
+        DESCRIPTION="$2"
+        shift 2
+        ;;
+      --package)
+        need_val "$@"
+        PACKAGE_NAME="$2"
+        PACKAGE_EXPLICIT="true"
+        shift 2
+        ;;
+      --project-version | --version)
+        need_val "$@"
+        PROJECT_VERSION="$2"
+        shift 2
+        ;;
+      -b | --build)
+        need_val "$@"
+        BUILD="$2"
+        shift 2
+        ;;
+      -l | --lang)
+        need_val "$@"
+        LANGUAGE="$2"
+        shift 2
+        ;;
+      -j | --java)
+        need_val "$@"
+        JAVA_VERSION="$2"
+        shift 2
+        ;;
+      --boot)
+        need_val "$@"
+        BOOT_VERSION="$2"
+        shift 2
+        ;;
+      --packaging)
+        need_val "$@"
+        PACKAGING="$2"
+        shift 2
+        ;;
+      --yaml)
+        CONFIG_YAML="true"
+        shift
+        ;;
+      -d | --deps)
+        need_val "$@"
+        DEPS="${DEPS:+$DEPS,}$2"
+        shift 2
+        ;;
+      -p | --preset)
+        need_val "$@"
+        PRESETS="${PRESETS:+$PRESETS,}$2"
+        shift 2
+        ;;
+      --dir)
+        need_val "$@"
+        TARGET_DIR="$2"
+        shift 2
+        ;;
+      --git)
+        GIT_INIT="true"
+        shift
+        ;;
+      --no-git)
+        GIT_INIT="false"
+        shift
+        ;;
+      --open)
+        need_val "$@"
+        OPEN_WITH="$2"
+        shift 2
+        ;;
+      -r | --run)
+        RUN_AFTER="true"
+        shift
+        ;;
+      --dry-run)
+        DRY_RUN="true"
+        shift
+        ;;
+      -i | --interactive)
+        INTERACTIVE="yes"
+        shift
+        ;;
+      -*) die "unknown option: $1 (see: spr help new)" ;;
+      *)
+        [[ -z "$ARTIFACT" ]] && ARTIFACT="$1" || die "unexpected argument: $1"
+        shift
+        ;;
+    esac
+  done
+
+  # Interactive mode: prompted when forced or when artifactId is missing in a TTY.
+  if [[ "$INTERACTIVE" == "yes" || (-z "$ARTIFACT" && -t 0) ]]; then
+    echo "${B}New Spring Boot project${N}"
+    ARTIFACT="$(ask "artifactId" "${ARTIFACT:-demo}")"
+    GROUP_ID="$(ask "groupId" "$GROUP_ID")"
+    DESCRIPTION="$(ask "description" "${DESCRIPTION:-}")"
+    BUILD="$(ask "build (maven/gradle/gradle-kotlin)" "$BUILD")"
+    JAVA_VERSION="$(ask "Java version" "$JAVA_VERSION")"
+    local hint
+    hint="$(all_presets | sed 's/^PRESET_//' | paste -sd, -)"
+    PRESETS="$(ask "presets ($hint)" "${PRESETS:-}")"
+    DEPS="$(ask "dependencies (comma-separated ids)" "${DEPS:-}")"
+    # Default matches the Initializr's natural default; only override if changed.
+    local default_pkg="${GROUP_ID}.${ARTIFACT}"
+    local pkg_input
+    pkg_input="$(ask "package" "$default_pkg")"
+    if [[ "$pkg_input" != "$default_pkg" ]]; then
+      PACKAGE_NAME="$pkg_input"
+      PACKAGE_EXPLICIT="true"
+    fi
+    if [[ "$(ask "run after creating? (y/N)" "N")" =~ ^[yY] ]]; then RUN_AFTER="true"; fi
+  fi
+
+  [[ -n "$ARTIFACT" ]] || die "artifactId is required (e.g.: spr new my-app)"
+
+  # Expand presets into dependencies.
+  if [[ -n "$PRESETS" ]]; then
+    local plist p var
+    IFS=',' read -ra plist <<<"$PRESETS"
+    for p in "${plist[@]}"; do
+      var="PRESET_${p//-/_}"
+      [[ -n "${!var:-}" ]] || die "unknown preset: $p (see: spr presets)"
+      DEPS="${DEPS:+$DEPS,}${!var}"
+    done
+  fi
+  # Deduplicate dependencies, preserving order.
+  DEPS="$(tr ',' '\n' <<<"$DEPS" | awk 'NF && !seen[$0]++' | paste -sd, -)"
+
+  # Map build type to Initializr project type id.
+  local TYPE
+  case "$BUILD" in
+    maven) TYPE="maven-project" ;;
+    gradle) TYPE="gradle-project" ;;
+    gradle-kotlin) TYPE="gradle-project-kotlin" ;;
+    *) die "invalid build: $BUILD (use maven, gradle or gradle-kotlin)" ;;
+  esac
+  NAME="${NAME:-$ARTIFACT}"
+  TARGET_DIR="${TARGET_DIR:-$ARTIFACT}"
+
+  # Build request parameters. Only send packageName when explicitly provided,
+  # so the Initializr can default to groupId.artifactId (the conventional layout).
+  local params=(
+    --data-urlencode "type=$TYPE"
+    --data-urlencode "language=$LANGUAGE"
+    --data-urlencode "javaVersion=$JAVA_VERSION"
+    --data-urlencode "packaging=$PACKAGING"
+    --data-urlencode "groupId=$GROUP_ID"
+    --data-urlencode "artifactId=$ARTIFACT"
+    --data-urlencode "name=$NAME"
+    --data-urlencode "version=$PROJECT_VERSION"
+    --data-urlencode "description=$DESCRIPTION"
+    --data-urlencode "dependencies=$DEPS"
+    --data-urlencode "configurationFileFormat=$([[ $CONFIG_YAML == true ]] && echo yaml || echo properties)"
+  )
+  [[ "$PACKAGE_EXPLICIT" == "true" ]] && params+=(--data-urlencode "packageName=$PACKAGE_NAME")
+  [[ -n "$BOOT_VERSION" ]] && params+=(--data-urlencode "bootVersion=$BOOT_VERSION")
+
+  # Dry-run: print a copy-paste-able curl command and exit.
+  if [[ "$DRY_RUN" == "true" ]]; then
+    printf 'curl -sSL -G'
+    printf ' %q' "${params[@]}"
+    printf ' %q/starter.zip' "$INITIALIZR_URL"
+    printf ' -o %q.zip\n' "$ARTIFACT"
+    return 0
+  fi
+
+  [[ -e "$TARGET_DIR" ]] && die "'$TARGET_DIR' already exists"
+  command -v unzip >/dev/null || die_missing "unzip not found"
+
+  # Validate inputs against the Initializr metadata (best-effort, requires jq).
+  if command -v jq >/dev/null; then
+    if [[ -n "$BOOT_VERSION" ]]; then
+      validate_field bootVersion "$BOOT_VERSION" ||
+        die "Spring Boot version '$BOOT_VERSION' is not supported. Run: spr versions"
+    fi
+    validate_field javaVersion "$JAVA_VERSION" ||
+      die "Java version '$JAVA_VERSION' is not supported. Run: spr versions"
+    validate_field language "$LANGUAGE" ||
+      die "language '$LANGUAGE' is not supported (use java, kotlin or groovy)"
+    validate_field packaging "$PACKAGING" ||
+      die "packaging '$PACKAGING' is not supported (use jar or war)"
+    validate_deps "$DEPS"
+  fi
+
+  # Display resolved package for the summary.
+  local pkg_display
+  if [[ "$PACKAGE_EXPLICIT" == "true" ]]; then
+    pkg_display="$PACKAGE_NAME"
+  else
+    pkg_display="${GROUP_ID}.${ARTIFACT}"
+  fi
+
+  # Summary
+  echo
+  echo "${B}Summary${N}"
+  printf "  %-10s %s\n" \
+    "artifact:" "$ARTIFACT" \
+    "group:" "$GROUP_ID" \
+    "package:" "$pkg_display" \
+    "build:" "$BUILD ($LANGUAGE, Java $JAVA_VERSION)" \
+    "boot:" "${BOOT_VERSION:-default}" \
+    "deps:" "${DEPS:-none}" \
+    "target:" "$TARGET_DIR"
+  echo
+
+  # Download the project zip.
+  local http msg
+  tmp="$(mktemp -t spr.XXXXXX)"
+
+  info "downloading from $INITIALIZR_URL ..."
+  http="$(curl -sS -G "${params[@]}" -w '%{http_code}' -o "$tmp" "$INITIALIZR_URL/starter.zip")" ||
+    die_network "network error contacting the Initializr"
+  if [[ "$http" != "200" ]]; then
+    msg="$(cat "$tmp" 2>/dev/null || true)"
+    die "Initializr responded HTTP $http: ${msg:0:400}"
+  fi
+
+  # Extract. Clean up the destination on failure to avoid leaving an empty dir.
+  mkdir -p "$TARGET_DIR"
+  if ! unzip -q "$tmp" -d "$TARGET_DIR"; then
+    rm -rf "$TARGET_DIR"
+    die "failed to extract project (corrupt zip?)"
+  fi
+  chmod +x "$TARGET_DIR"/mvnw "$TARGET_DIR"/gradlew 2>/dev/null || true
+  ok "project created at ${B}$TARGET_DIR${N}"
+
+  # Optional git init.
+  if [[ "$GIT_INIT" == "true" ]]; then
+    if ! command -v git >/dev/null; then
+      warn "git not found, skipping git init"
+    elif (cd "$TARGET_DIR" && git init -q && git add -A && git commit -q -m "chore: initial commit"); then
+      ok "git initialized"
+    else
+      warn "could not initialize git"
+    fi
+  fi
+
+  # Optional editor launch.
+  if [[ -n "$OPEN_WITH" ]]; then
+    if command -v "$OPEN_WITH" >/dev/null; then
+      "$OPEN_WITH" "$TARGET_DIR"
+    else
+      warn "editor '$OPEN_WITH' not found in PATH"
+    fi
+  fi
+
+  # Optional: start the application. Clean up the temp file explicitly because
+  # the EXIT trap does not fire when the shell is replaced by exec.
+  if [[ "$RUN_AFTER" == "true" ]]; then
+    rm -f "$tmp"
+    tmp=""
+    local run_cmd
+    if [[ "$BUILD" == "maven" ]]; then
+      run_cmd="./mvnw spring-boot:run"
+    else
+      run_cmd="./gradlew bootRun"
+    fi
+    info "starting application ($run_cmd)"
+    cd "$TARGET_DIR"
+    # shellcheck disable=SC2086
+    exec $run_cmd
+  fi
+
+  echo
+  echo "Next steps:"
+  echo "  cd $TARGET_DIR"
+  if [[ "$BUILD" == "maven" ]]; then
+    echo "  ./mvnw spring-boot:run"
+  else
+    echo "  ./gradlew bootRun"
+  fi
+}
+
+main() {
+  local cmd="${1:-help}"
+  case "$cmd" in
+    new | n | create)
+      shift
+      cmd_new "$@"
+      ;;
+    deps | d)
+      shift
+      cmd_deps "$@"
+      ;;
+    versions | v)
+      shift
+      cmd_versions "$@"
+      ;;
+    presets | p)
+      shift
+      cmd_presets "$@"
+      ;;
+    config | c)
+      shift
+      cmd_config "$@"
+      ;;
+    help | -h | --help)
+      shift || true
+      case "${1:-}" in
+        new | n | create) help_new ;;
+        deps | d) help_deps ;;
+        versions | v) help_versions ;;
+        presets | p) help_presets ;;
+        config | c) help_config ;;
+        "") help_main ;;
+        *) die "no help for: $1" ;;
+      esac
+      ;;
+    version | -V | --version) echo "spr $SPR_VERSION" ;;
+    -*) cmd_new "$@" ;; # e.g.: spr -g com.x -a app
+    *) cmd_new "$@" ;;  # e.g.: spr my-app -d web
+  esac
+}
+
+main "$@"

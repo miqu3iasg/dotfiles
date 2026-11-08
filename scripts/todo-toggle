@@ -1,0 +1,14 @@
+#!/bin/sh
+has_win() {
+    i3-msg -t get_tree | grep -q '"instance":"scratchtodo"'
+}
+
+if ! has_win; then
+    kitty --class scratchtodo --name scratchtodo -e /home/miqu3iasg/.local/bin/todo &
+    for _ in $(seq 50); do
+        has_win && break
+        sleep 0.1
+    done
+fi
+
+i3-msg '[instance="scratchtodo"] scratchpad show, move position center'

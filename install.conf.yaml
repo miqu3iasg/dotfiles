@@ -2,5 +2,32 @@
     link:
       create: true
       relink: true
-- clean: ['~', '~/.config']
+- clean: ['~', '~/.config', '~/.local/bin']
 - link:
+    ~/.local/bin/:
+      glob: true
+      path: scripts/*
+    ~/.zshrc: zsh/.zshrc
+    ~/.zshenv: zsh/.zshenv
+    ~/.zprofile: zsh/.zprofile
+    ~/.bashrc: bash/.bashrc
+    ~/.bash_profile: bash/.bash_profile
+    ~/.bash_logout: bash/.bash_logout
+    ~/.config/starship.toml: starship/starship.toml
+    ~/.gitconfig: git/.gitconfig
+    ~/.gitignore_global: git/.gitignore_global
+    ~/.vimrc: vim/.vimrc
+    ~/.clang-format: clang/.clang-format
+    ~/.obsidian.vimrc: obsidian/.obsidian.vimrc
+    ~/.config/nvim: nvim
+    ~/.config/tmux: tmux
+    ~/.config/ghostty: ghostty
+    ~/.config/i3: i3
+    ~/.config/i3status: i3status
+    ~/.config/rofi: rofi
+    ~/.config/dunst: dunst
+    ~/.config/zathura: zathura
+    ~/.config/qutebrowser: qutebrowser
+    ~/.config/lazygit: lazygit
+    ~/.config/kitty: kitty
+    ~/.config/vifm: vifm

@@ -1,0 +1,8 @@
+#!/bin/sh
+export PATH="$HOME/.local/bin:/usr/local/bin:/usr/bin:$PATH"
+f="$HOME/TODO.md"
+[ -f "$f" ] || printf '# TODO\n\n- [ ] \n' > "$f"
+exec nvim \
+    -c 'set nolist laststatus=0 noruler noshowmode noshowcmd' \
+    -c 'set fillchars+=eob:\ ' \
+    + "$f"

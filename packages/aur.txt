@@ -1,0 +1,6 @@
+python313
+spotify
+ttf-google-fonts-typewolf
+ttf-iosevka
+yay
+yay-debug

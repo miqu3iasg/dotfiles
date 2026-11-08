@@ -1,0 +1,17 @@
+theme = Terminal Basic
+
+window-decoration = false
+
+gtk-tabs-location = hidden
+window-show-tab-bar = never
+
+macos-titlebar-style = hidden
+
+window-padding-x = 0
+window-padding-y = 0
+window-padding-balance = false
+
+confirm-close-surface = false
+
+font-family = JetBrains Mono Nerd Font
+font-size = 11
