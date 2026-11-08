@@ -15,7 +15,7 @@ Files that must exist for real, such as the Xorg configuration under `/etc`, are
 Each application has its own folder, for example `nvim`, `tmux`, `ghostty`, `kitty`, `i3`, `zsh`, `git` and `vim`. Four special folders sit alongside them:
 
 - `scripts`: personal executables, linked into `~/.local/bin`.
-- `skills`: saved Claude skills.
+- `skills`: saved skills.
 - `packages`: package lists, described below.
 - `system`: files that belong outside the home directory.
 
