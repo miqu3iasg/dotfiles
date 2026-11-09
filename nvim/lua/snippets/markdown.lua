@@ -1,5 +1,10 @@
 -- lua/snippets/markdown.lua
 
+-- Markdown snippets for tables, code blocks, comments, formatting, links,
+-- callouts, front matter, and mathematical notation. Dynamic snippets generate
+-- tables from trigger dimensions and timestamps from the current time, while
+-- helpers provide reusable heading and language-specific code block templates.
+
 local ls = require("luasnip")
 local s = ls.snippet
 local sn = ls.snippet_node
@@ -9,25 +14,23 @@ local f = ls.function_node
 local d = ls.dynamic_node
 local c = ls.choice_node
 
--- Helpers
-
--- Date in ISO format (used in front matter and "date")
+-- Current date in ISO format, used in front matter and date snippets.
 local function today()
 	return os.date("%Y-%m-%d")
 end
 
--- Current date and time (used in front matter timestamps)
+-- Current date and time, used in front matter timestamps.
 local function now()
 	return os.date("%Y-%m-%d %H:%M")
 end
 
--- Name of the current file, including extension
+-- Current file name, including its extension.
 local function get_filename()
 	local name = vim.fn.expand("%:t")
 	return name ~= "" and name or "Untitled"
 end
 
--- Generates a heading snippet: h1 -> "# ", h2 -> "## ", etc.
+-- Creates a heading snippet for the given level.
 local function heading(level)
 	return s("h" .. level, {
 		t(string.rep("#", level) .. " "),
@@ -36,7 +39,7 @@ local function heading(level)
 	})
 end
 
--- Generates a fenced code block with a fixed language
+-- Creates a fenced code block with a fixed language identifier.
 local function codeblock(trig, lang)
 	return s(trig, {
 		t("```" .. lang),
@@ -47,8 +50,8 @@ local function codeblock(trig, lang)
 	})
 end
 
--- Dynamic table: typing `tbl3x2` expands to a table with 3 columns
--- and 2 body rows. Placeholders are numbered so <Tab> walks the cells
+-- Creates a table from dimensions captured by the tbl<cols>x<rows> trigger.
+-- Insert nodes are numbered sequentially so Tab moves through every cell.
 local function dynamic_table(_, snip)
 	local cols = tonumber(snip.captures[1])
 	local rows = tonumber(snip.captures[2])
@@ -64,17 +67,17 @@ local function dynamic_table(_, snip)
 		end
 	end
 
-	-- Header
+	-- Header row.
 	add_row("Header")
 
-	-- Separator
+	-- Column separator.
 	local sep = { "", "|" }
 	for _ = 1, cols do
 		sep[2] = sep[2] .. " --- |"
 	end
 	nodes[#nodes + 1] = t(sep)
 
-	-- Body rows
+	-- Body rows.
 	for _ = 1, rows do
 		nodes[#nodes + 1] = t({ "", "" })
 		add_row("Cell")
@@ -84,13 +87,8 @@ local function dynamic_table(_, snip)
 	return sn(nil, nodes)
 end
 
--- Snippets
-
 local snippets = {
-
-	-- Tables
-
-	-- Default 3x2 table
+	-- Default table with three columns and two body rows.
 	s("tbl", {
 		t("| "),
 		i(1, "Header 1"),
@@ -117,14 +115,12 @@ local snippets = {
 		i(0),
 	}),
 
-	-- Custom size: tbl<cols>x<rows>, e.g. tbl4x5.
+	-- Custom table size, e.g. tbl4x5 for four columns and five body rows.
 	s({ trig = "tbl(%d+)x(%d+)", regTrig = true, hidden = true }, {
 		d(1, dynamic_table, {}),
 	}),
 
-	-- Code blocks
-
-	-- Generic fenced block with a language placeholder
+	-- Generic fenced code block with an editable language identifier.
 	s("cb", {
 		t("```"),
 		i(1, "lang"),
@@ -134,10 +130,10 @@ local snippets = {
 		i(0),
 	}),
 
-	-- Inline code
+	-- Inline code.
 	s("ic", { t("`"), i(1, "code"), t("`"), i(0) }),
 
-	-- Language-specific blocks
+	-- Fenced code blocks for common languages and formats.
 	codeblock("cbbash", "bash"),
 	codeblock("cbsh", "sh"),
 	codeblock("cblua", "lua"),
@@ -152,8 +148,6 @@ local snippets = {
 	codeblock("cbcss", "css"),
 	codeblock("cbdiff", "diff"),
 
-	-- Comments
-
 	-- Single-line HTML comment.
 	s("cm", { t("<!-- "), i(1, "comment"), t(" -->"), i(0) }),
 
@@ -165,25 +159,26 @@ local snippets = {
 		i(0),
 	}),
 
-	-- Reference-style comment, never makes it into the rendered output,
-	-- not even as an HTML comment in the source
+	-- Reference-style comment that is ignored by Markdown renderers.
 	s("cmr", { t("[//]: # ("), i(1, "comment"), t(")"), i(0) }),
 
-	-- Common annotation markers
+	-- TODO marker inside an HTML comment.
 	s("todoc", { t("<!-- TODO: "), i(1, "description"), t(" -->"), i(0) }),
 
-	-- Text formatting
+	-- Common inline text formatting.
 	s("bd", { t("**"), i(1, "text"), t("**"), i(0) }),
 	s("it", { t("*"), i(1, "text"), t("*"), i(0) }),
 	s("bi", { t("***"), i(1, "text"), t("***"), i(0) }),
 	s("st", { t("~~"), i(1, "text"), t("~~"), i(0) }),
 	s("kbd", { t("<kbd>"), i(1, "Ctrl"), t("</kbd>"), i(0) }),
 
-	-- Links, images, references
+	-- Inline links, images, reference links, and reference definitions.
 	s("link", { t("["), i(1, "text"), t("]("), i(2, "https://"), t(")"), i(0) }),
-	s("img", { t("!["), i(1, "alt text"), t("]("), i(2, "path/to/image.png"), t(")"), i(0) }),
+	s("img", { t("!["), i(1, "alt text"), t("]( "), i(2, "path/to/image.png"), t(")"), i(0) }),
 	s("ref", { t("["), i(1, "text"), t("]["), i(2, "id"), t("]"), i(0) }),
 	s("refdef", { t("["), i(1, "id"), t("]: "), i(2, "https://"), i(0) }),
+
+	-- Footnote reference with its matching definition.
 	s("fn", {
 		t("[^"),
 		i(1, "1"),
@@ -197,45 +192,11 @@ local snippets = {
 		i(0),
 	}),
 
-	-- Lists and quotes
-
-	-- Task list with three items
-	s("task", {
-		t("- [ ] "),
-		i(1, "Task"),
-		t({ "", "- [ ] " }),
-		i(2, "Task"),
-		t({ "", "- [ ] " }),
-		i(3, "Task"),
-		i(0),
-	}),
-
-	-- Numbered list with three items
-	s("ol", {
-		t("1. "),
-		i(1, "Item"),
-		t({ "", "2. " }),
-		i(2, "Item"),
-		t({ "", "3. " }),
-		i(3, "Item"),
-		i(0),
-	}),
-
-	-- Bullet list with one nested level
-	s("ul", {
-		t("- "),
-		i(1, "Item"),
-		t({ "", "  - " }),
-		i(2, "Sub-item"),
-		t({ "", "- " }),
-		i(3, "Item"),
-		i(0),
-	}),
-
+	-- Quote and horizontal rule.
 	s("qt", { t("> "), i(1, "Quote"), i(0) }),
 	s("hr", { t({ "---", "" }), i(0) }),
 
-	-- GitHub-style callouts
+	-- Blockquote callout with an editable callout type.
 	s("callout", {
 		t("> [!"),
 		c(1, {
@@ -250,12 +211,7 @@ local snippets = {
 		i(0),
 	}),
 
-	-- Misc
-
-	-- Note front matter
-	-- lang is commented out by default (the language comes from
-	-- metadata.yaml); uncomment it in notes written in another language, so
-	-- the labels of the metadata block in the PDF change too
+	-- Note metadata with file information, references, and timestamps.
 	s("front", {
 		t({ "---", "file_name: " }),
 		f(get_filename, {}),
@@ -276,7 +232,7 @@ local snippets = {
 		t({ "", "# lang: en-US            # switch language" }),
 		t({ "", "" }),
 		d(8, function()
-			local ts = os.date("%Y-%m-%dT%H:%M")
+			local ts = now()
 			return sn(nil, {
 				t({ "created_at: " .. ts, "modified_at: " .. ts, "---", "", "" }),
 			})
@@ -284,35 +240,10 @@ local snippets = {
 		i(0),
 	}),
 
-	-- Academic note front matter
-	--   date:         pick \today (resolved by XeLaTeX) or today's ISO date
-	--   bibliography: explicit file, or commented out — Pandoc then walks
-	--                 up the tree looking for refs.bib / references.bib / etc.
-	s("afront", {
-		t({ "---", "title: " }),
-		i(1, "Paper title"),
-		t({ "", "author: " }),
-		i(2, "Your Name"),
-		t({ "", "date: " }),
-		c(3, {
-			t("\\today"),
-			f(today, {}),
-		}),
-		t({ "", "bibliography: " }),
-		c(4, {
-			i(nil, "refs.bib"),
-			t("# bibliography: refs.bib  # picked up from a parent folder"),
-		}),
-		t({ "", "toc: true" }),
-		t({ "", "numbersections: true" }),
-		t({ "", "# lang: en-US            # switch language" }),
-		t({ "", "# reference-section-title: References" }),
-		t({ "", "---", "", "" }),
-		i(0),
-	}),
-
-	-- Math blocks (KaTeX / MathJax)
+	-- Inline mathematical expression.
 	s("math", { t("$"), i(1, "x"), t("$"), i(0) }),
+
+	-- Display mathematical expression for KaTeX and MathJax.
 	s("mathb", {
 		t({ "$$", "" }),
 		i(1, "E = mc^2"),
@@ -320,11 +251,11 @@ local snippets = {
 		i(0),
 	}),
 
-	-- Insert today's date
+	-- Inserts the current date in ISO format.
 	s("date", { f(today, {}) }),
 }
 
--- Headings h1..h6
+-- Heading snippets from h1 through h6.
 for level = 1, 6 do
 	table.insert(snippets, heading(level))
 end

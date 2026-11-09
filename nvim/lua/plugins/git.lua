@@ -95,10 +95,8 @@ gmap("n", "<leader>ga", "<cmd>silent Gwrite<cr>", "Stage current file")
 gmap("n", "<leader>gu", "<cmd>Gread<cr>", "Restore file from index (undoable)")
 
 gmap("n", "<leader>gc", "<cmd>Git commit<cr>", "Commit")
-gmap("n", "<leader>gC", "<cmd>Git commit --amend<cr>", "Amend last commit")
 
 gmap("n", "<leader>gp", "<cmd>Git push<cr>", "Push")
-gmap("n", "<leader>gS", "<cmd>Git stash push --include-untracked<cr>", "Stash push (incl. untracked)")
 
 gmap("n", "<leader>gl", "<cmd>-tab Git log --color=never --oneline --graph --decorate<cr>", "Git log (oneline)")
 gmap("n", "<leader>gL", "<cmd>-tab Git log --color=never --stat -p --decorate --date=short<cr>", "Git log (expanded)")
@@ -121,21 +119,11 @@ gmap({ "n", "x" }, "gh", "<cmd>diffget //3<cr>", "Conflict: take theirs (merge)"
 
 local diff_overlay = false
 
-local signs = {
-	add = { text = "+" },
-	change = { text = "~" },
-	delete = { text = "_" },
-	topdelete = { text = "‾" },
-	changedelete = { text = "~" },
-}
-
 require("gitsigns").setup({
 	signcolumn = false,
 	numhl = false,
 	word_diff = false,
 	current_line_blame = false,
-	signs = vim.tbl_extend("force", signs, { untracked = { text = "+" } }),
-	signs_staged = signs,
 
 	-- The keymaps are buffer-local so the native `]c` and `[c` keep working
 	-- outside tracked buffers and in diff mode, such as `Gvdiffsplit`.
@@ -173,7 +161,6 @@ require("gitsigns").setup({
 
 		bmap("n", "<leader>hp", gs.preview_hunk_inline, "Preview hunk")
 		bmap("n", "<leader>hb", gs.toggle_current_line_blame, "Toggle current line blame")
-		bmap("n", "<leader>hg", gs.toggle_signs, "Toggle git signs")
 		bmap("n", "<leader>hd", function()
 			diff_overlay = not diff_overlay
 			gs.toggle_deleted(diff_overlay)

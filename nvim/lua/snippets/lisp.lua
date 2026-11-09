@@ -1,10 +1,11 @@
 -- lua/snippets/lisp.lua
 
--- Scheme snippets for LuaSnip: comment headers at the three R7RS comment
--- levels (;;; section, ;; block, #|...|# multi-line), datum comments (#;)
--- with visual-selection wrapping, and the `; => result` evaluation
--- convention used when studying a REPL.
--- Indentation assumes two spaces.
+-- Scheme snippets. Comment headers at the three R7RS comment levels (;;;
+-- section, ;; block, #|...|# multi-line), datum comments (#;) with
+-- visual-selection wrapping, and the `; => result` evaluation convention used
+-- when studying a REPL. Indentation assumes two spaces.
+--
+-- See: https://docs.scheme.org/guide/r7rs-portable/
 
 local ls = require("luasnip")
 local s = ls.snippet
@@ -13,50 +14,50 @@ local i = ls.insert_node
 local f = ls.function_node
 
 return {
-  -- Top-level section header (3 semicolons).
-  s("sec", {
-    t(";;; "),
-    i(1, "Section Name"),
-    i(0),
-  }),
+	-- Top-level section header (3 semicolons).
+	s("sec", {
+		t(";;; "),
+		i(1, "Section Name"),
+		i(0),
+	}),
 
-  -- Code block documentation (2 semicolons).
-  s("cm", {
-    t(";; "),
-    i(1, "Explanation of the block below"),
-    i(0),
-  }),
+	-- Code block documentation (2 semicolons).
+	s("cm", {
+		t(";; "),
+		i(1, "Explanation of the block below"),
+		i(0),
+	}),
 
-  -- Multi-line block comment using Scheme syntax (#| ... |#).
-  s("cmm", {
-    t({ "#|", "" }),
-    i(1, "Long explanation or pseudocode"),
-    t({ "", "|#" }),
-    i(0),
-  }),
+	-- Multi-line block comment using Scheme syntax (#| ... |#).
+	s("cmm", {
+		t({ "#|", "" }),
+		i(1, "Long explanation or pseudocode"),
+		t({ "", "|#" }),
+		i(0),
+	}),
 
-  -- Datum comment - Manual typing.
-  s("dat", {
-    t("#; "),
-    i(1, "expression-to-ignore"),
-    i(0),
-  }),
+	-- Datum comment - Manual typing.
+	s("dat", {
+		t("#; "),
+		i(1, "expression-to-ignore"),
+		i(0),
+	}),
 
-  -- Datum comment (#;).
-  -- Smart selection: If triggered with a visual selection, it wraps it.
-  -- If triggered without, it provides an insert node to type the expression.
-  s("wdat", {
-    t("#; "),
-    f(function(_, parent)
-      return parent.env.LS_SELECT_RAW or { "" }
-    end, {}),
-    i(0),
-  }),
+	-- Datum comment (#;).
+	-- Smart selection: If triggered with a visual selection, it wraps it.
+	-- If triggered without, it provides an insert node to type the expression.
+	s("wdat", {
+		t("#; "),
+		f(function(_, parent)
+			return parent.env.LS_SELECT_RAW or { "" }
+		end, {}),
+		i(0),
+	}),
 
-  -- Evaluation convention (=>).
-  s("eval", {
-    t(" ; => "),
-    i(1, "result"),
-    i(0),
-  }),
+	-- Evaluation convention (=>).
+	s("eval", {
+		t(" ; => "),
+		i(1, "result"),
+		i(0),
+	}),
 }

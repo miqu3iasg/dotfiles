@@ -16,7 +16,6 @@ for _, mod in ipairs({
 	"git",
 	"unnecessary-shit",
 	"oil",
-	"colorschemes",
 	"latex",
 	"lisp",
 	"markdown",

@@ -1,10 +1,5 @@
 -- lua/snippets/latex.lua
 
--- LaTeX snippets for LuaSnip. Most snippets are autosnippets that fire only
--- inside or only outside math, depending on the zone they were registered
--- for. Snippets registered for "any" zone are regular snippets, expanded
--- manually with the completion or expand key.
-
 local ls = require("luasnip")
 local s = ls.snippet
 local sn = ls.snippet_node
@@ -16,7 +11,7 @@ local rep = require("luasnip.extras").rep
 local fmta = require("luasnip.extras.fmt").fmta
 
 -- Math zone detection. Treesitter is tried first, then a text check for
--- \[ \] and \( \) delimiters, then vimtex when no parser is available.
+-- LaTeX math delimiters, then vimtex when no parser is available.
 
 -- Treesitter node types that count as math.
 local MATH_NODES = {
@@ -27,7 +22,6 @@ local MATH_NODES = {
 }
 
 ---Checks whether the character before the cursor is inside a math node.
----
 ---Returns nil when no latex parser is available, so the caller can fall
 ---back to another method. The second return value is true when the cursor
 ---is inside `\text{...}` within math, which the caller treats as text.

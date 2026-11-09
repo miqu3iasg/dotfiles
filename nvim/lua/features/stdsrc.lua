@@ -19,6 +19,7 @@
 -- See: https://github.com/ibhagwan/fzf-lua
 -- See: man:rg
 
+---@deprecated This module has been discontinued and is no longer used.
 local M = {}
 
 local JAVA_TYPE_MODS = [=[(?:(?:abstract|final|sealed|non-sealed|static|strictfp)\s+)*]=]
@@ -295,6 +296,8 @@ end
 ---Pick a declaration category and grep it in the source repository of the
 ---current language, from wherever the current file lives.
 ---
+---@deprecated Discontinued module.
+---
 ---When the language cannot be detected, it asks which one to explore. The menu
 ---lists "Any", a plain live grep, followed by the language's patterns. Opening a
 ---result edits the file in the source repository, and `<C-o>` or `<C-^>` goes
@@ -316,6 +319,7 @@ function M.search_source()
 end
 
 ---Register the `:StdSrc` command.
+---@deprecated Discontinued module.
 function M.setup()
 	-- Wrapped so the command's argument table is not forwarded to the function.
 	vim.api.nvim_create_user_command("StdSrc", function()

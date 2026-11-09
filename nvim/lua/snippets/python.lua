@@ -1,5 +1,10 @@
 -- lua/snippets/python.lua
 
+-- Python snippets for practice problem scaffolding and Google-style docstrings.
+-- The solution template creates a Solution class with a solve method and a
+-- runnable main block, while mirrored function nodes keep the method call
+-- synchronized with its name.
+
 local ls = require("luasnip")
 local s = ls.snippet
 local t = ls.text_node
@@ -7,7 +12,9 @@ local i = ls.insert_node
 local f = ls.function_node
 
 return {
-	-- Solution scaffolding for practice problems (LeetCode, etc.).
+	-- Solution scaffold for practice problems (LeetCode, etc.).
+	-- Creates a Solution class with a solve method and a main block that calls
+	-- the method and prints its result.
 	s("sol", {
 		t({ "class Solution:", "    def " }),
 		i(1, "solve"),
@@ -28,6 +35,8 @@ return {
 		i(0),
 	}),
 
+	-- Google-style docstring with argument and return sections.
+	-- Remove unused parameter lines or the Returns section as needed.
 	s("doc", {
 		t('"""'),
 		i(1, "Short description."),

@@ -1,23 +1,13 @@
 -- lua/plugins/fzf.lua
 
 -- Fuzzy finder for files, buffers, text, diagnostics and help, built on
--- fzf-lua. It gives a single interface for navigating a project and for
--- exploring the source code of a language's standard library through the
--- declaration search of the stdsrc feature.
+-- fzf-lua. It gives a single interface for navigating a project.
 --
 -- fzf-lua must be installed through the plugin manager. The external tools must
 -- be installed on the system, since fzf-lua only wraps them. On Arch Linux:
 --
 -- $ sudo pacman -S fzf grep ripgrep fd
 --
--- The `:StdSrc` command is registered here, and the directories it searches are
--- defined in the stdsrc feature.
---
--- The shell aliases in `~/.config/zsh/aliasesrc` that open language source
--- directories, such as `stdc`, `stdjava` and `stdpython`, are optional and
--- specific to this machine.
---
--- See: lua/features/stdsrc.lua
 -- See: lua/features/todos.lua
 -- See: https://github.com/ibhagwan/fzf-lua
 -- See: https://github.com/bruhtus/dotfiles/blob/master/.vim/after/autoload/enable/fzf.vim
@@ -25,9 +15,6 @@
 -- See: https://github.com/james-orcales/james-orcales/blob/main/home/.config/nvim/init.lua
 
 local fzf = require("fzf-lua")
-local stdsrc = require("features.stdsrc")
-
-stdsrc.setup()
 
 -- Skipped by the file and grep pickers to keep them fast.
 ---@type string[]
@@ -210,7 +197,6 @@ km("n", "<leader>fw", "<cmd>FzfLua grep_cword<cr>", { desc = "Fzf: grep the word
 km("v", "<leader>fw", fzf.grep_visual, { desc = "Fzf: grep the visual selection" })
 km("n", "<leader>fl", "<cmd>FzfLua blines<cr>", { desc = "Fzf: search lines in the current buffer" })
 
-km("n", "<leader>fa", stdsrc.search_source, { desc = "Fzf: search declarations in the language's source repository" })
 km("n", "<leader>fh", "<cmd>FzfLua help_tags<cr>", { desc = "Fzf: search Neovim help tags" })
 km("n", "<leader>fm", "<cmd>FzfLua man_pages<cr>", { desc = "Fzf: search man pages" })
 

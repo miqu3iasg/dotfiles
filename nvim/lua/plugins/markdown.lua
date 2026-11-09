@@ -15,6 +15,12 @@
 -- file. obsidian.nvim, img-clip.nvim and plenary.nvim must be installed through
 -- the plugin manager.
 --
+-- Markdown preview in the browser comes from markdown-preview.nvim. It is
+-- configured through `vim.g.mkdp_*` globals, which must be set before the
+-- plugin loads, and it is toggled with `<leader>op`. The plugin needs Node.js
+-- and a one-time install step, which the plugin manager must run as its
+-- build hook (`:call mkdp#util#install()`).
+--
 -- Pasted images are saved in `<vault>/attachments`. Inside the vault they use
 -- the wikilink template, and anywhere else they use the standard Markdown
 -- link.
@@ -37,7 +43,7 @@
 -- See: https://github.com/obsidian-nvim/obsidian.nvim
 -- See: https://github.com/nvim-lua/plenary.nvim
 -- See: https://github.com/ibhagwan/fzf-lua
--- See: https://github.com/artempyanykh/marksman
+-- See: https://github.com/iamcco/markdown-preview.nvim
 
 local notes = require("features.notes")
 
@@ -86,12 +92,33 @@ require("img-clip").setup({
 	},
 })
 
-km("n", "<leader>oi", notes.new_draft, { desc = "Arcanum: quick draft" })
-km("n", "<leader>ot", notes.new_note, { desc = "Arcanum: new note (pick type and title)" })
-km("n", "<leader>on", notes.template, { desc = "Arcanum: insert template or promote draft" })
-km("n", "<leader>of", notes.find_files, { desc = "Arcanum: find notes by name" })
-km("n", "<leader>og", notes.grep, { desc = "Arcanum: search note contents" })
-km("n", "<leader>ol", notes.last, { desc = "Arcanum: reopen the last note" })
+vim.g.mkdp_auto_start = 0
+vim.g.mkdp_auto_close = 1
+vim.g.mkdp_refresh_slow = 0
+vim.g.mkdp_theme = "dark"
+vim.g.mkdp_filetypes = { "markdown" }
+vim.g.mkdp_echo_preview_url = 1
+vim.g.mkdp_page_title = "${name}"
+
+vim.api.nvim_create_autocmd("FileType", {
+	group = vim.api.nvim_create_augroup("markdown_preview_keymap", { clear = true }),
+	pattern = "markdown",
+	callback = function()
+		km("n", "<leader>op", "<cmd>MarkdownPreviewToggle<cr>", {
+			buffer = true,
+			silent = true,
+			desc = "Toggle browser preview",
+		})
+	end,
+})
+
+km("n", "<leader>od", notes.new_draft, { desc = "Quick draft" })
+km("n", "<leader>on", notes.new_note, { desc = "New note (pick type and title)" })
+km("n", "<leader>ot", notes.template, { desc = "Insert template" })
+km("n", "<leader>of", notes.find_files, { desc = "Find notes by name" })
+km("n", "<leader>og", notes.grep, { desc = "Search note contents" })
+km("n", "<leader>ol", notes.last, { desc = "Reopen the last note" })
+km("n", "<leader>ov", notes.open_vault, { desc = "Open the vault folder" })
 
 local opts = {
 	legacy_commands = false,
@@ -157,6 +184,14 @@ vim.api.nvim_create_autocmd("User", {
 		end
 
 		map("<leader>oo", "<cmd>Obsidian open<cr>", "Open this note in the Obsidian app")
-		map("<leader>or", notes.rename, "Rename note by title")
+		map("<leader>or", "<cmd>Obsidian rename<cr>", "Rename note by title")
+		map("<leader>ob", "<cmd>Obsidian backlinks<cr>", "Backlinks of this note")
+		map("<leader>oi", "<cmd>Obsidian links<cr>", "Links in this note")
+
+		km("v", "<leader>ok", "<cmd>Obsidian link<cr>", {
+			buffer = true,
+			silent = true,
+			desc = "Link selection to existing note",
+		})
 	end,
 })

@@ -1,9 +1,12 @@
 -- lua/snippets/common.lua
 
--- Language-agnostic LuaSnip snippets, such as file headers, license headers,
--- function doc comments, marker comments (TODO, FIXME, ...) and small
--- one-line helpers. Every snippet is a dynamic node that reads the current
--- filetype and adapts its comment syntax to it.
+-- Common snippets and helpers shared across filetypes. Provides file headers,
+-- SPDX notices, shebangs, references, paths, and personal contact information.
+-- Dynamic snippets adapt their output to the current buffer's filetype and use
+-- language-specific comment styles for line, block, and docstring comments.
+--
+-- Headers can include source metadata and compile/run instructions, while
+-- inline snippets use the appropriate comment form for the current language.
 
 local ls = require("luasnip")
 local s = ls.snippet
@@ -432,174 +435,6 @@ local function add_usage(add, style, ft, idx)
 	return idx + 1
 end
 
--- Doc comments for `fnhead`, in each language's idiomatic format. These
--- build their own delimiters because the doc format dictates the syntax.
-local doc_by_ft = {}
-
-doc_by_ft.javascript = function()
-	return {
-		t({ "/**", " * " }),
-		i(1, "Short description."),
-		t({ "", " *", " * @param {" }),
-		i(2, "type"),
-		t("} "),
-		i(3, "name"),
-		t(" - "),
-		i(4, "description"),
-		t({ "", " * @returns {" }),
-		i(5, "type"),
-		t("} "),
-		i(6, "description"),
-		t({ "", " */" }),
-	}
-end
-doc_by_ft.typescript = doc_by_ft.javascript
-
-doc_by_ft.python = function()
-	return {
-		t('"""'),
-		i(1, "Short description."),
-		t({ "", "", "Args:" }),
-		t({ "", "    " }),
-		i(2, "name"),
-		t(" ("),
-		i(3, "type"),
-		t("): "),
-		i(4, "description."),
-		t({ "", "", "Returns:" }),
-		t({ "", "    " }),
-		i(5, "type"),
-		t(": "),
-		i(6, "description."),
-		t({ "", '"""' }),
-	}
-end
-
-doc_by_ft.java = function()
-	return {
-		t({ "/**", " * " }),
-		i(1, "Short description."),
-		t({ "", " *", " * @param " }),
-		i(2, "name"),
-		t(" "),
-		i(3, "description"),
-		t({ "", " * @return " }),
-		i(4, "description"),
-		t({ "", " */" }),
-	}
-end
-doc_by_ft.kotlin = doc_by_ft.java
-
-doc_by_ft.c = function()
-	return {
-		t({ "/**", " * @brief " }),
-		i(1, "Short description."),
-		t({ "", " *", " * @param " }),
-		i(2, "name"),
-		t(" "),
-		i(3, "description"),
-		t({ "", " * @return " }),
-		i(4, "description"),
-		t({ "", " */" }),
-	}
-end
-doc_by_ft.cpp = doc_by_ft.c
-
-doc_by_ft.go = function()
-	return {
-		t("// "),
-		i(1, "FuncName"),
-		t(" "),
-		i(2, "does X."),
-		t({ "", "//", "// Parameters:" }),
-		t({ "", "//   - " }),
-		i(3, "name"),
-		t(": "),
-		i(4, "description"),
-		t({ "", "//", "// Returns " }),
-		i(5, "description."),
-	}
-end
-
-doc_by_ft.rust = function()
-	return {
-		t("/// "),
-		i(1, "Short description."),
-		t({ "", "///", "/// # Arguments", "///", "/// * `" }),
-		i(2, "name"),
-		t("` - "),
-		i(3, "description"),
-		t({ "", "///", "/// # Returns", "///", "/// " }),
-		i(4, "description"),
-	}
-end
-
-doc_by_ft.php = function()
-	return {
-		t({ "/**", " * " }),
-		i(1, "Short description."),
-		t({ "", " *", " * @param " }),
-		i(2, "type"),
-		t(" $"),
-		i(3, "name"),
-		t(" "),
-		i(4, "description"),
-		t({ "", " * @return " }),
-		i(5, "type"),
-		t(" "),
-		i(6, "description"),
-		t({ "", " */" }),
-	}
-end
-
-doc_by_ft.cs = function()
-	return {
-		t({ "/// <summary>", "/// " }),
-		i(1, "Short description."),
-		t({ "", "/// </summary>", '/// <param name="' }),
-		i(2, "name"),
-		t('">'),
-		i(3, "description"),
-		t("</param>"),
-		t({ "", "/// <returns>" }),
-		i(4, "description"),
-		t("</returns>"),
-	}
-end
-
-doc_by_ft.ruby = function()
-	return {
-		t("# "),
-		i(1, "Short description."),
-		t({ "", "#", "# @param " }),
-		i(2, "name"),
-		t(" ["),
-		i(3, "Type"),
-		t("] "),
-		i(4, "description"),
-		t({ "", "# @return [" }),
-		i(5, "Type"),
-		t("] "),
-		i(6, "description"),
-	}
-end
-
--- `fnhead`: doc comment in the idiomatic format of the current filetype.
--- Falls back to a one-line comment for filetypes without a doc format.
-local function build_fnhead(_, _)
-	local doc = doc_by_ft[vim.bo.filetype]
-	if doc then
-		local nodes = doc()
-		table.insert(nodes, i(0))
-		return sn(nil, nodes)
-	end
-	return sn(nil, {
-		t(line_comment_sym(vim.bo.filetype) .. " "),
-		i(1, "Short description."),
-		i(0),
-	})
-end
-
 -- Block and docstring styles need a line break after the opener.
 ---@param add fun(...: table) Appends nodes to the snippet being built.
 ---@param style CommentStyle
@@ -699,56 +534,6 @@ local function build_study(_, _)
 	add(i(0))
 
 	return sn(nil, nodes)
-end
-
--- Trigger prefix -> SPDX identifier, for the `<prefix>head` snippets.
-local licenses = {
-	agpl = "AGPL-3.0-only",
-	gpl3 = "GPL-3.0-only",
-	mit = "MIT",
-	apache2 = "Apache-2.0",
-	bsd3 = "BSD-3-Clause",
-	isc = "ISC",
-	mpl2 = "MPL-2.0",
-}
-
----Returns a dynamic node function for a `<prefix>head` snippet: the same
----fields as `head`, plus an SPDX line and a copyright notice.
----@param spdx string SPDX license identifier.
----@return fun(args: table, parent: table): table
-local function build_licensed_head(spdx)
-	return function(_, _)
-		local ft = vim.bo.filetype
-		local style = comment_styles[ft] or DEFAULT_STYLE
-		local nodes = {}
-		local function add(...)
-			for _, n in ipairs({ ... }) do
-				table.insert(nodes, n)
-			end
-		end
-
-		open_and_first_line(add, style, label("File:"))
-		add(f(get_filename, {}))
-		add(t({ "", wrap(style, label("Author:")) }))
-		add(i(1, "Miquéias Alves Medeiros <https://github.com/miqu3iasg>"))
-		add(t({ "", wrap(style, label("Created:")) }))
-		add(f(get_date, {}))
-		add(t({ "", wrap(style, label("Modified:")) }))
-		add(f(get_date, {}))
-		add(t({ "", wrap(style, ""), line_prefix(style) }))
-		add(i(2, "add description here"))
-		add(t({ "", wrap(style, ""), wrap(style, "SPDX-License-Identifier: " .. spdx) }))
-		add(t({ "", wrap(style, label("Copyright:")) }))
-		add(t("(c) "))
-		add(f(get_year, {}))
-		add(t(" "))
-		add(rep(1))
-		add(t("."))
-		close_header(add, style)
-		add(i(0))
-
-		return sn(nil, nodes)
-	end
 end
 
 -- `ahead`: proprietary header with an "All rights reserved." notice.
@@ -877,22 +662,6 @@ local function oneline_delims(ft)
 	return DEFAULT_LINE_COMMENT .. " ", ""
 end
 
----Returns a dynamic node function for a bare marker comment such as
----`// TODO: `, with the cursor after the colon.
----@param text string Marker keyword, for example "TODO".
----@return fun(args: table, parent: table): table
-local function build_marker(text)
-	return function(_, _)
-		local pre, post = oneline_delims(vim.bo.filetype)
-		local nodes = { t(pre .. text .. ": "), i(1) }
-		if post ~= "" then
-			table.insert(nodes, t(post))
-		end
-		table.insert(nodes, i(0))
-		return sn(nil, nodes)
-	end
-end
-
 -- `spdx`: standalone SPDX line, without a full header.
 local function build_spdx(_, _)
 	local pre, post = oneline_delims(vim.bo.filetype)
@@ -902,29 +671,6 @@ local function build_spdx(_, _)
 		t(post),
 		i(0),
 	})
-end
-
--- `chead`: smallest header (File, Created, Description) for scratch files.
-local function build_scratch(_, _)
-	local ft = vim.bo.filetype
-	local style = comment_styles[ft] or DEFAULT_STYLE
-	local nodes = {}
-	local function add(...)
-		for _, n in ipairs({ ... }) do
-			table.insert(nodes, n)
-		end
-	end
-
-	open_and_first_line(add, style, label("File:"))
-	add(f(get_filename, {}))
-	add(t({ "", wrap(style, label("Created:")) }))
-	add(f(get_date, {}))
-	add(t({ "", wrap(style, ""), line_prefix(style) }))
-	add(i(1, "quick scratch / throwaway notes"))
-	close_header(add, style)
-	add(i(0))
-
-	return sn(nil, nodes)
 end
 
 -- `shebang`: interpreter line for the current filetype, `sh` by default.
@@ -957,8 +703,7 @@ local function get_clipboard()
 end
 
 -- `seec`: like `see`, but pastes the clipboard (usually a link or a path)
--- right after "See: ". The pasted text is an insert node, so it is
--- selected and can be edited or replaced with a single keystroke.
+-- right after "See: ".
 local function build_see_clip(_, _)
 	local sym = line_comment_sym(vim.bo.filetype)
 	return sn(nil, {
@@ -967,7 +712,7 @@ local function build_see_clip(_, _)
 	})
 end
 
--- `file`: one-line comment with the file path relative to the cwd,
+-- `path`: one-line comment with the file path relative to the cwd,
 -- e.g. `-- lua/options.lua`.
 local function build_filepath(_, _)
 	local pre, post = oneline_delims(vim.bo.filetype)
@@ -979,10 +724,12 @@ local function build_filepath(_, _)
 	return sn(nil, nodes)
 end
 
+-- `mail`: e-mail address.
 local function build_mail(_, _)
 	return sn(nil, { i(1, "contatomiqueiasalvesdev@gmail.com") })
 end
 
+-- `gh`: GitHub profile URL.
 local function build_gh(_, _)
 	return sn(nil, { i(1, "https://github.com/miqu3iasg") })
 end
@@ -1029,17 +776,15 @@ local function build_snip(_, _)
 	return sn(nil, nodes)
 end
 
-local snippets = {
+return {
 	s("head", { d(1, build_head, {}) }),
 	s("shead", { d(1, build_study, {}) }),
 	s("ahead", { d(1, build_allhead, {}) }),
-	s("chead", { d(1, build_scratch, {}) }),
 	s("ehead", { d(1, build_exs, {}) }),
-	s("fnhead", { d(1, build_fnhead, {}) }),
-	s("shebang", { d(1, build_shebang, {}) }),
+	s("shb", { d(1, build_shebang, {}) }),
 	s("see", { d(1, build_see, {}) }),
 	s("seec", { d(1, build_see_clip, {}) }),
-	s("file", { d(1, build_filepath, {}) }),
+	s("path", { d(1, build_filepath, {}) }),
 	s("refs", { d(1, build_refs, {}) }),
 	s("drefs", { d(1, build_snip, {}) }),
 	s("spdx", { d(1, build_spdx, {}) }),
@@ -1047,26 +792,3 @@ local snippets = {
 	s("gh", { d(1, build_gh, {}) }),
 	s("author", { i(1, "Miquéias Alves Medeiros <https://github.com/miqu3iasg>") }),
 }
-
--- Trigger -> keyword for the marker comment snippets.
-local markers = {
-	todo = "TODO",
-	fixme = "FIXME",
-	note = "NOTE",
-	hack = "HACK",
-	xxx = "XXX",
-	bug = "BUG",
-	warn = "WARNING",
-	perf = "PERF",
-	depr = "DEPRECATED",
-}
-
-for trigger, text in pairs(markers) do
-	table.insert(snippets, s(trigger, { d(1, build_marker(text), {}) }))
-end
-
-for key, spdx in pairs(licenses) do
-	table.insert(snippets, s(key .. "head", { d(1, build_licensed_head(spdx), {}) }))
-end
-
-return snippets

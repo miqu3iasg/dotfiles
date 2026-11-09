@@ -144,6 +144,10 @@ vim.pack.add({
 	-- Label-based navigation that jumps to any visible match, with Tree-sitter selection.
 	{ src = "https://github.com/folke/flash.nvim" },
 
+	-- markdown-preview.nvim
+	-- Render markdown notes in the browser, needed to read documentations with mermaid diagrams.
+	{ src = "https://github.com/iamcco/markdown-preview.nvim" },
+
 	-- Extra colorschemes, configured in lua/plugins/colorschemes.lua.
 	"https://github.com/jaredgorski/fogbell.vim",
 	"https://github.com/amedoeyes/eyes.nvim",

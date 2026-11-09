@@ -1,22 +1,20 @@
 -- lua/features/notes.lua
 
 -- Arcanum notes workflow: a flat vault of software-development notes managed
--- from Neovim. It creates drafts and typed notes from user-maintained
--- templates, promotes drafts, renames and retypes notes, keeps `updated_at`
--- current, searches by name and by content, and reopens the last note.
+-- from Neovim. It creates quick drafts and typed notes from user-maintained
+-- templates, inserts a template into an existing note, searches by name and by
+-- content, and reopens the last note.
 --
--- This module follows the same contract as the `nt` command line, documented
--- in the vault's `README.md`: the seven note types, the file name
--- `TYPE-YYYYMMDD-HHmmss[-SLUG].md`, the slug and collision rules, the
--- frontmatter fields and the `{{title}}`, `{{type}}`, `{{created_at}}` and
--- `{{updated_at}}` placeholders. It neither calls `nt` nor shares state with
--- it. The history of notes lives in Neovim's state directory.
+-- Note types, the file name `TYPE-YYYYMMDD-HHmmss[-SLUG].md`, and the slug and
+-- collision rules follow the vault's `README.md`. The only frontmatter field
+-- written here is `date` (creation time), and the only template placeholders
+-- are `{{title}}`, `{{date}}` and `{{adr_number}}`. Renaming a note is left to
+-- obsidian.nvim (`:Obsidian rename`), which also fixes the backlinks.
 --
--- The vault is `$ARCANUM_DIR`, or `~/documents/arcanum` when unset. Notes live
+-- The vault is `$ARCANUM_DIR`, or `~/dev/arcanum` when unset. Notes live
 -- directly in its root. `_templates/` holds the templates and `attachments/`
--- the pasted images. Nothing here needs `obsidian.nvim`, which only adds
--- wikilink navigation and completion on top of the same files. The pickers use
--- `fzf-lua` when it is installed and fall back to `vim.ui.select`.
+-- the pasted images. The pickers use `fzf-lua` when it is installed and fall
+-- back to `vim.ui.select`.
 --
 -- `setup()` must be called once to register the commands and autocmds. The
 -- keymaps are defined in `lua/plugins/markdown.lua`.
@@ -50,26 +48,41 @@ local SLUG_MAX = 80
 ---@type integer
 local MAX_COLLISIONS = 99
 
----Accent folding for slugs. The same table lives in the `nt` script.
+---Accent folding for slugs: single characters map one to one (`tr`), the
+---ligatures are handled apart.
 ---@type table<string, string>
-local ACCENTS = {}
-for letter, chars in pairs({
-	a = { "á", "à", "â", "ã", "ä", "å", "Á", "À", "Â", "Ã", "Ä", "Å" },
-	e = { "é", "è", "ê", "ë", "É", "È", "Ê", "Ë" },
-	i = { "í", "ì", "î", "ï", "Í", "Ì", "Î", "Ï" },
-	o = { "ó", "ò", "ô", "õ", "ö", "Ó", "Ò", "Ô", "Õ", "Ö" },
-	u = { "ú", "ù", "û", "ü", "Ú", "Ù", "Û", "Ü" },
-	c = { "ç", "Ç" },
-	n = { "ñ", "Ñ" },
-	y = { "ý", "ÿ", "Ý" },
-	ae = { "æ", "Æ" },
-	oe = { "œ", "Œ" },
-	ss = { "ß" },
-}) do
-	for _, char in ipairs(chars) do
-		ACCENTS[char] = letter
-	end
-end
+local ACCENTS = {
+	["á"] = "a",
+	["à"] = "a",
+	["â"] = "a",
+	["ã"] = "a",
+	["ä"] = "a",
+	["å"] = "a",
+	["é"] = "e",
+	["è"] = "e",
+	["ê"] = "e",
+	["ë"] = "e",
+	["í"] = "i",
+	["ì"] = "i",
+	["î"] = "i",
+	["ï"] = "i",
+	["ó"] = "o",
+	["ò"] = "o",
+	["ô"] = "o",
+	["õ"] = "o",
+	["ö"] = "o",
+	["ú"] = "u",
+	["ù"] = "u",
+	["û"] = "u",
+	["ü"] = "u",
+	["ç"] = "c",
+	["ñ"] = "n",
+	["ý"] = "y",
+	["ÿ"] = "y",
+	["æ"] = "ae",
+	["œ"] = "oe",
+	["ß"] = "ss",
+}
 
 ---Where the history of opened notes is kept. It holds two lines: the note
 ---that was current and the one before it.
@@ -92,14 +105,7 @@ end
 
 -- Vault and paths
 
----@param path string
----@return string?
-local function realpath(path)
-	return uv.fs_realpath(path)
-end
-
----Resolve the vault directory the same way the CLI does. It does not check
----that the directory exists.
+---Resolve the vault directory. It does not check that the directory exists.
 ---@return string
 local function vault_dir()
 	local dir = vim.env.ARCANUM_DIR
@@ -107,7 +113,7 @@ local function vault_dir()
 		dir = DEFAULT_VAULT
 	end
 	dir = vim.fs.normalize(dir)
-	return realpath(dir) or dir
+	return uv.fs_realpath(dir) or dir
 end
 
 ---Return the vault directory, or notify and return nil when it is missing.
@@ -138,7 +144,7 @@ function M.is_note_path(path)
 	if vim.fs.basename(path) == "README.md" then
 		return false
 	end
-	local dir = realpath(vim.fs.dirname(path))
+	local dir = uv.fs_realpath(vim.fs.dirname(path))
 	return dir ~= nil and dir == vault_dir()
 end
 
@@ -150,19 +156,6 @@ local function now()
 	local t = os.time()
 	return os.date("%Y%m%d-%H%M%S", t), --[[@as string]]
 		os.date("%Y-%m-%dT%H:%M:%S", t) --[[@as string]]
-end
-
----@param date string `YYYYMMDD`
----@param time string `HHmmss`
----@return boolean
-local function valid_ts(date, time)
-	local y, m, d = tonumber(date:sub(1, 4)), tonumber(date:sub(5, 6)), tonumber(date:sub(7, 8))
-	local h, mi, s = tonumber(time:sub(1, 2)), tonumber(time:sub(3, 4)), tonumber(time:sub(5, 6))
-	local days = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 }
-	if y % 4 == 0 and (y % 100 ~= 0 or y % 400 == 0) then
-		days[2] = 29
-	end
-	return m >= 1 and m <= 12 and d >= 1 and d <= days[m] and h < 24 and mi < 60 and s < 60
 end
 
 ---Collapse control characters and trim.
@@ -179,10 +172,11 @@ end
 ---@param title string
 ---@return string
 function M.slugify(title)
-	local s = title:gsub("[\xC2-\xF4][\x80-\xBF]*", function(char)
-		return ACCENTS[char] or char
+	local s = vim.fn.tolower(title)
+	s = s:gsub("[%z\1-\127\194-\244][\128-\191]*", function(ch)
+		return ACCENTS[ch]
 	end)
-	s = s:lower():gsub("%s+", "-"):gsub("[^a-z0-9%-]", ""):gsub("%-+", "-"):gsub("^%-", ""):gsub("%-$", "")
+	s = s:gsub("%s+", "-"):gsub("[^a-z0-9%-]", ""):gsub("%-+", "-"):gsub("^%-", ""):gsub("%-$", "")
 	if #s > SLUG_MAX then
 		s = s:sub(1, SLUG_MAX):gsub("%-+$", "")
 	end
@@ -191,7 +185,7 @@ end
 
 ---Parse a note file name. Returns nil when it does not follow the convention.
 ---@param name string
----@return { type: string, date: string, time: string, ts: string, slug: string }?
+---@return { type: string, ts: string, slug: string }?
 function M.parse_name(name)
 	local type_, date, time, rest = name:match("^(%a+)%-(%d%d%d%d%d%d%d%d)%-(%d%d%d%d%d%d)(.*)%.md$")
 	if not type_ or (type_ ~= "draft" and not TYPE_SET[type_]) then
@@ -204,7 +198,7 @@ function M.parse_name(name)
 			return nil
 		end
 	end
-	return { type = type_, date = date, time = time, ts = date .. "-" .. time, slug = slug }
+	return { type = type_, ts = date .. "-" .. time, slug = slug }
 end
 
 ---File name for the n-th attempt. On collision the counter goes to the end of
@@ -220,22 +214,6 @@ function M.build_name(type_, ts, slug, n)
 		slug = slug ~= "" and (slug .. "-" .. n) or tostring(n)
 	end
 	return type_ .. "-" .. ts .. (slug ~= "" and ("-" .. slug) or "") .. ".md"
-end
-
----@param ts string `YYYYMMDD-HHmmss`
----@return string?
-local function iso_from_ts(ts)
-	local y, mo, d, h, mi, s = ts:match("^(%d%d%d%d)(%d%d)(%d%d)%-(%d%d)(%d%d)(%d%d)$")
-	if not y or not valid_ts(y .. mo .. d, h .. mi .. s) then
-		return nil
-	end
-	return ("%s-%s-%sT%s:%s:%s"):format(y, mo, d, h, mi, s)
-end
-
----@param value string
----@return string
-local function yaml_quote(value)
-	return '"' .. value:gsub("\\", "\\\\"):gsub('"', '\\"') .. '"'
 end
 
 -- File access
@@ -273,52 +251,6 @@ local function write_exclusive(path, content)
 	return true
 end
 
----Move a file without ever replacing the destination. A hard link is atomic
----and refuses to overwrite; a plain rename is the fallback for filesystems
----without hard links.
----@param src string
----@param dst string
----@return boolean? ok
----@return string? err
-local function move_noclobber(src, dst)
-	if uv.fs_link(src, dst) then
-		local ok, err = uv.fs_unlink(src)
-		if not ok then
-			uv.fs_unlink(dst)
-			return nil, err
-		end
-		return true
-	end
-	if uv.fs_lstat(dst) then
-		return nil, "EEXIST: destination already exists"
-	end
-	return uv.fs_rename(src, dst)
-end
-
----Replace an existing file atomically through a temporary file in the same
----directory, keeping its permissions.
----@param path string
----@param content string
----@return boolean? ok
----@return string? err
-local function replace_file(path, content)
-	local tmp = ("%s/.nvim-notes.%d.%d"):format(vim.fs.dirname(path), uv.os_getpid(), uv.hrtime() % 1e9)
-	local ok, err = write_exclusive(tmp, content)
-	if not ok then
-		return nil, err
-	end
-	local stat = uv.fs_stat(path)
-	if stat then
-		uv.fs_chmod(tmp, bit.band(stat.mode, 4095))
-	end
-	local rok, rerr = uv.fs_rename(tmp, path)
-	if not rok then
-		uv.fs_unlink(tmp)
-		return nil, rerr
-	end
-	return true
-end
-
 ---Names of the `.md` files of a directory, without sorting.
 ---@param dir string
 ---@return string[]
@@ -341,9 +273,8 @@ end
 ---break the convention go last. Ties are broken by name, ascending.
 ---@return string[]
 function M.notes()
-	local dir = vault_dir()
 	local names = {}
-	for _, name in ipairs(list_md(dir)) do
+	for _, name in ipairs(list_md(vault_dir())) do
 		if name ~= "README.md" then
 			table.insert(names, name)
 		end
@@ -365,8 +296,8 @@ end
 -- Frontmatter
 --
 -- Only the initial block delimited by `---` is handled. This is deliberately
--- not a YAML parser: top-level `key: value` lines are located and rewritten in
--- place, and everything else is left byte for byte as it was.
+-- not a YAML parser: top-level `key: value` lines are located by prefix and
+-- everything else is left byte for byte as it was.
 
 ---Split content into the frontmatter text (the lines between the delimiters,
 ---ending with a newline) and the body. The frontmatter is nil when the
@@ -395,20 +326,11 @@ local function fm_split(content)
 	return nil, content
 end
 
----@param text string
----@return string[]
-local function fm_lines(text)
-	if text == "" then
-		return {}
-	end
-	return vim.split((text:gsub("\n$", "")), "\n", { plain = true })
-end
-
 ---@param fm? string
 ---@param key string
 ---@return string? value unquoted
 local function fm_get(fm, key)
-	for _, line in ipairs(fm_lines(fm or "")) do
+	for _, line in ipairs(vim.split(fm or "", "\n", { plain = true })) do
 		if line:sub(1, #key + 1) == key .. ":" then
 			local value = vim.trim(line:sub(#key + 2))
 			local first, last = value:sub(1, 1), value:sub(-1)
@@ -418,86 +340,6 @@ local function fm_get(fm, key)
 			return value
 		end
 	end
-end
-
----Rewrite only the value of an existing top-level field. With `keep` the
----quote style of the old value is preserved. Returns nil when the field does
----not exist, so a missing field is never created.
----@param fm string
----@param key string
----@param value string
----@param keep? boolean
----@return string?
-local function fm_set(fm, key, value, keep)
-	local lines = fm_lines(fm)
-	for i, line in ipairs(lines) do
-		if line:sub(1, #key + 1) == key .. ":" then
-			if keep then
-				local quote = vim.trim(line:sub(#key + 2)):sub(1, 1)
-				if quote == '"' or quote == "'" then
-					value = quote .. value .. quote
-				end
-			end
-			lines[i] = key .. ": " .. value
-			return table.concat(lines, "\n") .. "\n"
-		end
-	end
-end
-
----Rewrite one frontmatter field of a whole file's content.
----@param content string
----@param key string
----@param value string
----@param keep? boolean
----@return string?
-local function content_set_field(content, key, value, keep)
-	local fm, body = fm_split(content)
-	if not fm then
-		return nil
-	end
-	local new = fm_set(fm, key, value, keep)
-	if not new then
-		return nil
-	end
-	return "---\n" .. new .. "---\n" .. body
-end
-
----Group frontmatter lines by top-level key. Indented lines, list items,
----comments and blanks belong to the key above them.
----@param fm string
----@return { key: string?, lines: string[] }[]
-local function fm_blocks(fm)
-	local blocks = {}
-	for _, line in ipairs(fm_lines(fm)) do
-		local key = line:match("^([%w_][%w_%. %-]*):")
-		if key or #blocks == 0 then
-			table.insert(blocks, { key = key, lines = { line } })
-		else
-			table.insert(blocks[#blocks].lines, line)
-		end
-	end
-	return blocks
-end
-
----Frontmatter of the template plus the fields of the draft that the template
----does not define, so no unknown field of the draft is lost.
----@param template_fm string
----@param draft_fm string
----@return string
-local function fm_merge(template_fm, draft_fm)
-	local known = {}
-	for _, block in ipairs(fm_blocks(template_fm)) do
-		if block.key then
-			known[block.key] = true
-		end
-	end
-	local out = template_fm
-	for _, block in ipairs(fm_blocks(draft_fm)) do
-		if block.key and not known[block.key] then
-			out = out .. table.concat(block.lines, "\n") .. "\n"
-		end
-	end
-	return out
 end
 
 -- Templates
@@ -536,18 +378,63 @@ local function read_template(type_)
 	return content
 end
 
----Substitute the four known placeholders, literally, and leave any other
----double braces alone.
----@param content string
----@param vars { title: string, type: string, created_at: string, updated_at: string }
+---Zero-padded sequence number for the next note of a type (`007`).
+---@param type_ string
 ---@return string
-local function render(content, vars)
+local function next_number(type_)
+	local count = 0
+	for _, name in ipairs(M.notes()) do
+		local info = M.parse_name(name)
+		if info and info.type == type_ then
+			count = count + 1
+		end
+	end
+	return ("%03d"):format(count + 1)
+end
+
+---Substitute `{{title}}`, `{{date}}` and `{{adr_number}}`, literally, and leave
+---any other double braces alone. The ADR number is only computed when the
+---template actually uses it.
+---@param content string
+---@param title string
+---@param date string
+---@return string
+local function render(content, title, date)
+	content = content:gsub("(\ndate:[ \t]*)[\"']({{date}})[\"']", "%1%2")
+
+	local vars = {
+		title = title,
+		date = date,
+		adr_number = function()
+			return next_number("adr")
+		end,
+	}
 	for name, value in pairs(vars) do
-		content = content:gsub("{{" .. name .. "}}", function()
-			return value
-		end)
+		local token = "{{" .. name .. "}}"
+		if content:find(token, 1, true) then
+			local text = type(value) == "function" and value() or value
+			content = content:gsub(vim.pesc(token), function()
+				return text
+			end)
+		end
 	end
 	return content
+end
+
+---Guarantee that the frontmatter of `content` has a `date` field. An existing
+---one is left alone, a missing one is appended at the end of the frontmatter,
+---and a note without frontmatter gets one.
+---@param content string
+---@param date string
+---@return string
+local function ensure_date(content, date)
+	local fm, body = fm_split(content)
+	local fresh = fm == nil
+	fm = fm or ""
+	if fm_get(fm, "date") == nil then
+		fm = fm .. "date: " .. date .. "\n"
+	end
+	return "---\n" .. fm .. "---\n" .. (fresh and "\n" or "") .. body
 end
 
 -- Creation
@@ -586,15 +473,14 @@ function M.create(type_, title)
 	if not TYPE_SET[type_] then
 		return nil, "Invalid type: " .. tostring(type_)
 	end
-	local dir = vault_dir()
 	local template, err = read_template(type_)
 	if not template then
 		return nil, err
 	end
 	local ts, iso = now()
 	title = clean_title(title)
-	local content = render(template, { title = title, type = type_, created_at = iso, updated_at = iso })
-	return create_file(dir, type_, ts, M.slugify(title), content)
+	local content = ensure_date(render(template, title, iso), iso)
+	return create_file(vault_dir(), type_, ts, M.slugify(title), content)
 end
 
 ---@param path string
@@ -619,7 +505,14 @@ local function pick(items, prompt, on_choice)
 	end
 	fzf.fzf_exec(items, {
 		prompt = prompt .. "> ",
-		winopts = { height = 0.35, width = 0.35, row = 0.35 },
+		winopts = {
+			height = 0.15,
+			width = 1.0,
+			row = 1.0,
+			col = 0.0,
+			border = { "", "─", "", "", "", "", "", "" },
+			backdrop = false,
+		},
 		actions = {
 			["default"] = function(selected)
 				if selected and selected[1] then
@@ -638,8 +531,7 @@ function M.new_draft()
 		return
 	end
 	local ts, iso = now()
-	local content = ("---\ncreated_at: %s\nupdated_at: %s\n---\n\n"):format(iso, iso)
-	local path, err = create_file(dir, "draft", ts, "", content)
+	local path, err = create_file(dir, "draft", ts, "", ("---\ndate: %s\n---\n\n"):format(iso))
 	if not path then
 		notify(err --[[@as string]], vim.log.levels.ERROR)
 		return
@@ -677,243 +569,12 @@ function M.new_note()
 	end)
 end
 
--- Relinking, renaming and promotion
+-- Templates in existing notes
 
----Replace `[[old]]`, `[[old|...]]` and `[[old#...]]` with the new name.
----@param content string
----@param old string
----@param new string
----@return string
----@return boolean changed
-local function relink_content(content, old, new)
-	local out = content
-	for _, tail in ipairs({ "]]", "|", "#" }) do
-		local from, to = "[[" .. old .. tail, "[[" .. new .. tail
-		local pieces, start = {}, 1
-		while true do
-			local s, e = out:find(from, start, true)
-			if not s then
-				break
-			end
-			table.insert(pieces, out:sub(start, s - 1))
-			table.insert(pieces, to)
-			start = e + 1
-		end
-		table.insert(pieces, out:sub(start))
-		out = table.concat(pieces)
-	end
-	return out, out ~= content
-end
-
----Prepare the link fixes for the other notes of the vault. Nothing is written
----until `commit_relinks` runs, after the rename itself has succeeded.
----@param dir string
----@param old_name string
----@param new_name string
----@param iso string
----@return { path: string, content: string }[]
-local function plan_relinks(dir, old_name, new_name, iso)
-	local plan = {}
-	local old_stem, new_stem = old_name:gsub("%.md$", ""), new_name:gsub("%.md$", "")
-	for _, name in ipairs(list_md(dir)) do
-		if name ~= "README.md" and name ~= old_name then
-			local path = dir .. "/" .. name
-			local content = read_file(path)
-			if content then
-				local fixed, changed = relink_content(content, old_stem, new_stem)
-				if changed then
-					fixed = content_set_field(fixed, "updated_at", iso, true) or fixed
-					table.insert(plan, { path = path, content = fixed })
-				end
-			end
-		end
-	end
-	return plan
-end
-
----@param plan { path: string, content: string }[]
----@return integer fixed
-local function commit_relinks(plan)
-	local fixed = 0
-	for _, item in ipairs(plan) do
-		local ok, err = replace_file(item.path, item.content)
-		if ok then
-			fixed = fixed + 1
-		else
-			notify(("Could not update links in %s: %s"):format(vim.fs.basename(item.path), err), vim.log.levels.WARN)
-		end
-	end
-	if fixed > 0 then
-		vim.cmd("silent! checktime")
-	end
-	return fixed
-end
-
----Rename a note file, optionally syncing one frontmatter field, and fix the
----wikilinks that point to it. The new file exists before the old one is
----removed, so a failure leaves the original in place. Nothing is overwritten.
----@param old_path string
----@param new_name string
----@param field? string
----@param value? string
----@return string? new_path
----@return string? err
-local function rename_note(old_path, new_name, field, value)
-	local dir = vim.fs.dirname(old_path)
-	local old_name = vim.fs.basename(old_path)
-	local new_path = dir .. "/" .. new_name
-	local content, rerr = read_file(old_path)
-	if not content then
-		return nil, "Could not read " .. old_path .. ": " .. tostring(rerr)
-	end
-
-	local updated = content
-	if field then
-		updated = content_set_field(updated, field, value --[[@as string]]) or updated
-	end
-	updated = relink_content(updated, old_name:gsub("%.md$", ""), new_name:gsub("%.md$", ""))
-	local _, iso = now()
-	local plan = plan_relinks(dir, old_name, new_name, iso)
-
-	local ok, err
-	if updated == content then
-		-- A plain rename keeps the inode and the modification time.
-		ok, err = move_noclobber(old_path, new_path)
-	else
-		ok, err = write_exclusive(new_path, updated)
-		if ok and not uv.fs_unlink(old_path) then
-			uv.fs_unlink(new_path)
-			ok, err = nil, "could not remove the old file"
-		end
-	end
-	if not ok then
-		return nil, ("Could not rename %s: %s"):format(old_name, tostring(err))
-	end
-
-	commit_relinks(plan)
-	if history.current == old_path then
-		history.current = new_path
-	end
-	if history.previous == old_path then
-		history.previous = new_path
-	end
-	return new_path
-end
-
----Swap the current window to `new_path` and drop the buffer of the old file.
----@param old_buf integer
----@param new_path string
-local function switch_buffer(old_buf, new_path)
-	local cursor = vim.api.nvim_win_get_cursor(0)
-	open(new_path)
-	pcall(vim.api.nvim_win_set_cursor, 0, cursor)
-	if vim.api.nvim_buf_is_valid(old_buf) and old_buf ~= vim.api.nvim_get_current_buf() then
-		vim.api.nvim_buf_delete(old_buf, { force = true })
-	end
-end
-
----Title suggested when a draft is promoted: its own `title` field, else the
----first useful line of the body.
----@param fm? string
----@param body string
----@return string
-local function suggest_title(fm, body)
-	local title = fm_get(fm, "title")
-	if title and title ~= "" then
-		return title
-	end
-	for line in vim.gsplit(body, "\n", { plain = true }) do
-		local text = vim.trim(line:gsub("^%s*#+%s*", ""):gsub("^%s*[%-%*>]%s+", ""))
-		if text ~= "" and text ~= "---" then
-			return vim.fn.strcharpart(text, 0, SLUG_MAX)
-		end
-	end
-	return ""
-end
-
----@param s string
----@return boolean
-local function is_blank(s)
-	return s:match("^%s*$") ~= nil
-end
-
----Promote the draft in `buf` to a classified note. The template supplies the
----frontmatter and the skeleton, the draft's fields that the template lacks
----are carried over, `created_at` is preserved, and the original body is kept
----whole after the template body. The draft is only removed once the new note
----has been written.
----@param buf integer
----@param type_ string
----@param title string
-local function promote(buf, type_, title)
-	local dir = require_vault()
-	if not dir then
-		return
-	end
-	local old_path = vim.api.nvim_buf_get_name(buf)
-	local info = M.parse_name(vim.fs.basename(old_path))
-	if not info or info.type ~= "draft" then
-		notify("The current note is not a draft", vim.log.levels.WARN)
-		return
-	end
-	local template, err = read_template(type_)
-	if not template then
-		notify(err --[[@as string]], vim.log.levels.ERROR)
-		return
-	end
-
-	local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
-	local content = table.concat(lines, "\n") .. "\n"
-	local draft_fm, draft_body = fm_split(content)
-	local _, iso = now()
-	local created = fm_get(draft_fm, "created_at")
-	if not created or created == "" then
-		created = iso_from_ts(info.ts) or iso
-	end
-
-	local rendered = render(template, { title = title, type = type_, created_at = created, updated_at = iso })
-	local tpl_fm, tpl_body = fm_split(rendered)
-
-	local fm = tpl_fm
-	if tpl_fm and draft_fm then
-		fm = fm_merge(tpl_fm, draft_fm)
-	elseif draft_fm then
-		fm = draft_fm
-	end
-	if fm then
-		fm = fm_set(fm, "created_at", created, true) or fm
-		fm = fm_set(fm, "updated_at", iso, true) or fm
-	end
-
-	local body
-	if is_blank(tpl_body) then
-		body = draft_body
-	elseif is_blank(draft_body) then
-		body = tpl_body
-	else
-		body = tpl_body:gsub("\n*$", "\n") .. "\n" .. draft_body
-	end
-	local result = (fm and ("---\n" .. fm .. "---\n") or "") .. body
-
-	local path, cerr = create_file(dir, type_, info.ts, M.slugify(title), result)
-	if not path then
-		notify(cerr --[[@as string]], vim.log.levels.ERROR)
-		return
-	end
-
-	local old_name, new_name = vim.fs.basename(old_path), vim.fs.basename(path)
-	local plan = plan_relinks(dir, old_name, new_name, iso)
-	switch_buffer(buf, path)
-	if uv.fs_stat(old_path) and not uv.fs_unlink(old_path) then
-		notify("Promoted, but the draft could not be removed: " .. old_path, vim.log.levels.WARN)
-	end
-	commit_relinks(plan)
-	notify("Promoted to " .. new_name)
-end
-
----Insert the body of a template below the cursor. The frontmatter of the
----template is dropped and nothing existing is replaced, so the type and the
----name of the note do not change.
+---Apply a template to the current note. The frontmatter of the note, if any, is
+---replaced by the one from the template, and the body of the template is
+---inserted below the cursor. The existing body is never replaced. The note's
+---own `title` and `date` feed the placeholders, so its creation date is kept.
 ---@param buf integer
 ---@param type_ string
 local function insert_template(buf, type_)
@@ -922,31 +583,46 @@ local function insert_template(buf, type_)
 		notify(err --[[@as string]], vim.log.levels.ERROR)
 		return
 	end
-	local path = vim.api.nvim_buf_get_name(buf)
-	local info = M.parse_name(vim.fs.basename(path))
-	local fm = fm_split(table.concat(vim.api.nvim_buf_get_lines(buf, 0, 40, false), "\n") .. "\n")
-	local _, iso = now()
-	local rendered = render(template, {
-		title = fm_get(fm, "title") or "",
-		type = info and info.type or type_,
-		created_at = fm_get(fm, "created_at") or (info and iso_from_ts(info.ts)) or iso,
-		updated_at = iso,
-	})
-	local _, body = fm_split(rendered)
-	if is_blank(body) then
-		notify("The template has no body to insert", vim.log.levels.WARN)
-		return
+
+	-- Existing frontmatter: values for the placeholders and the lines to replace.
+	local text = table.concat(vim.api.nvim_buf_get_lines(buf, 0, -1, false), "\n") .. "\n"
+	local old_fm = fm_split(text)
+	local old_len = 0
+	if old_fm then
+		local _, newlines = old_fm:gsub("\n", "")
+		old_len = newlines + 2 -- the two `---` delimiters
 	end
-	local row = vim.api.nvim_win_get_cursor(0)[1]
-	vim.api.nvim_buf_set_lines(buf, row, row, false, vim.split((body:gsub("\n$", "")), "\n", { plain = true }))
+
+	local _, iso = now()
+	local date = fm_get(old_fm, "date") or iso
+	local rendered = ensure_date(render(template, fm_get(old_fm, "title") or "", date), date)
+	local new_fm, tbody = fm_split(rendered)
+
+	-- Frontmatter lines to write, with a blank line after it when the note had none.
+	local fm_lines = { "---" }
+	if new_fm and new_fm ~= "" then
+		vim.list_extend(fm_lines, vim.split((new_fm:gsub("\n$", "")), "\n", { plain = true }))
+	end
+	table.insert(fm_lines, "---")
+	if not old_fm then
+		table.insert(fm_lines, "")
+	end
+
+	-- Body below the cursor (never inside the old frontmatter).
+	if not tbody:match("^%s*$") then
+		local row = math.max(vim.api.nvim_win_get_cursor(0)[1], old_len)
+		local body_lines = vim.split((tbody:gsub("\n$", "")), "\n", { plain = true })
+		vim.api.nvim_buf_set_lines(buf, row, row, false, body_lines)
+	end
+
+	-- Frontmatter: replace the old block (or insert at the top if none).
+	vim.api.nvim_buf_set_lines(buf, 0, old_len, false, fm_lines)
 end
 
----`<leader>on`: promote the current draft, or insert a template into the
----current note.
+---Pick a template and insert its body into the current note.
 function M.template()
 	local buf = vim.api.nvim_get_current_buf()
-	local path = vim.api.nvim_buf_get_name(buf)
-	if not M.is_note_path(path) then
+	if not M.is_note_path(vim.api.nvim_buf_get_name(buf)) then
 		notify("Not an Arcanum note", vim.log.levels.WARN)
 		return
 	end
@@ -955,144 +631,11 @@ function M.template()
 		notify("No templates found in " .. template_dir(), vim.log.levels.WARN)
 		return
 	end
-	local info = M.parse_name(vim.fs.basename(path))
-	if info and info.type == "draft" then
-		pick(types, "Promote to", function(type_)
-			vim.schedule(function()
-				if not vim.api.nvim_buf_is_valid(buf) then
-					return
-				end
-				local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
-				local fm, body = fm_split(table.concat(lines, "\n") .. "\n")
-				vim.ui.input({ prompt = "Title: ", default = suggest_title(fm, body) }, function(title)
-					if title ~= nil then
-						promote(buf, type_, clean_title(title))
-					end
-				end)
-			end)
-		end)
-		return
-	end
 	pick(types, "Insert template", function(type_)
 		vim.schedule(function()
 			if vim.api.nvim_buf_is_valid(buf) then
 				insert_template(buf, type_)
 			end
-		end)
-	end)
-end
-
----Make sure the current buffer is a saved, conforming note and return its
----path and parsed name.
----@return string? path
----@return table? info
-local function current_note()
-	local buf = vim.api.nvim_get_current_buf()
-	local path = vim.api.nvim_buf_get_name(buf)
-	if not M.is_note_path(path) then
-		notify("Not an Arcanum note", vim.log.levels.WARN)
-		return nil
-	end
-	local info = M.parse_name(vim.fs.basename(path))
-	if not info then
-		notify("The file name does not follow the naming convention", vim.log.levels.WARN)
-		return nil
-	end
-	if vim.bo[buf].modified then
-		local ok = pcall(vim.cmd, "silent write")
-		if not ok then
-			notify("Could not save the note before changing it", vim.log.levels.ERROR)
-			return nil
-		end
-	end
-	return path, info
-end
-
----Free file name for `type_`/`ts`/`slug`, ignoring the current file. Returns
----nil when the name would not change.
----@param dir string
----@param type_ string
----@param ts string
----@param slug string
----@param current string
----@return string?
-local function free_name(dir, type_, ts, slug, current)
-	for n = 1, MAX_COLLISIONS do
-		local name = M.build_name(type_, ts, slug, n)
-		if name == current then
-			return nil
-		end
-		if not uv.fs_lstat(dir .. "/" .. name) then
-			return name
-		end
-	end
-	return nil
-end
-
----Rename the current note after a new title. The type and the timestamp are
----kept, `title` is synced when the field exists, and `updated_at` is not
----touched. Wikilinks that point to the note are rewritten.
-function M.rename()
-	local path, info = current_note()
-	if not (path and info) then
-		return
-	end
-	local content = read_file(path) or ""
-	local fm = fm_split(content)
-	vim.ui.input({ prompt = "New title: ", default = fm_get(fm, "title") or info.slug:gsub("%-", " ") }, function(input)
-		if input == nil then
-			return
-		end
-		local title = clean_title(input)
-		local dir = vim.fs.dirname(path)
-		local name = free_name(dir, info.type, info.ts, M.slugify(title), vim.fs.basename(path))
-		if not name then
-			notify("Name unchanged")
-			return
-		end
-		local buf = vim.api.nvim_get_current_buf()
-		local new_path, err = rename_note(path, name, "title", yaml_quote(title))
-		if not new_path then
-			notify(err --[[@as string]], vim.log.levels.ERROR)
-			return
-		end
-		switch_buffer(buf, new_path)
-		notify("Renamed to " .. name)
-	end)
-end
-
----Change the type of the current note. The file is renamed and `type` is
----synced when the field exists; no template is applied and no content is
----replaced. A confirmation is asked first.
-function M.retype()
-	local path, info = current_note()
-	if not (path and info) then
-		return
-	end
-	local dir = vim.fs.dirname(path)
-	local buf = vim.api.nvim_get_current_buf()
-	pick(TYPES, "New type", function(type_)
-		vim.schedule(function()
-			if type_ == info.type then
-				notify("Type unchanged")
-				return
-			end
-			local name = free_name(dir, type_, info.ts, info.slug, vim.fs.basename(path))
-			if not name then
-				notify("Name unchanged")
-				return
-			end
-			local question = ("Retype %s -> %s?"):format(vim.fs.basename(path), name)
-			if vim.fn.confirm(question, "&Yes\n&No", 2) ~= 1 then
-				return
-			end
-			local new_path, err = rename_note(path, name, "type", type_)
-			if not new_path then
-				notify(err --[[@as string]], vim.log.levels.ERROR)
-				return
-			end
-			switch_buffer(buf, new_path)
-			notify("Renamed to " .. name)
 		end)
 	end)
 end
@@ -1109,7 +652,7 @@ local function require_fzf()
 	return fzf
 end
 
----`<leader>of`: fuzzy search by file name, with preview. Templates and
+---Fuzzy search by file name, with preview. Templates and
 ---attachments are not listed.
 function M.find_files()
 	local dir = require_vault()
@@ -1131,7 +674,7 @@ function M.find_files()
 	})
 end
 
----`<leader>og`: live ripgrep over the content of the notes, showing file, line
+---Live ripgrep over the content of the notes, showing file, line
 ---and text. Only the vault root is searched, so templates and attachments are
 ---left out.
 function M.grep()
@@ -1180,7 +723,7 @@ local function record_note(path)
 	save_history()
 end
 
----`<leader>ol`: reopen the last note. When that note is the one already open,
+---Reopen the last note. When that note is the one already open,
 ---go back to the one before it.
 function M.last()
 	if not require_vault() then
@@ -1203,86 +746,26 @@ function M.last()
 	open(target)
 end
 
--- updated_at
-
----Refresh `updated_at` in the buffer that is about to be written. It only
----touches the field's value, inside the frontmatter, and only when the field
----already exists. It never creates frontmatter or the field, runs no
----subprocess and reads nothing but the frontmatter lines.
----@param buf integer
-local function touch_updated_at(buf)
-	if not (vim.bo[buf].modified and vim.bo[buf].modifiable) then
-		return
-	end
-	if not M.is_note_path(vim.api.nvim_buf_get_name(buf)) then
-		return
-	end
-	if vim.api.nvim_buf_get_lines(buf, 0, 1, false)[1] ~= "---" then
-		return
-	end
-
-	local target, lnum
-	local first, chunk = 1, 64
-	while not lnum do
-		local lines = vim.api.nvim_buf_get_lines(buf, first, first + chunk, false)
-		if #lines == 0 then
-			return
-		end
-		for i, line in ipairs(lines) do
-			if line == "---" then
-				lnum = first + i - 1
-				break
-			end
-			if not target and line:sub(1, 11) == "updated_at:" then
-				target = { index = first + i - 1, line = line }
-			end
-		end
-		first = first + chunk
-	end
-	if not target or target.index >= lnum then
-		return
-	end
-
-	local _, iso = now()
-	local quote = vim.trim(target.line:sub(12)):sub(1, 1)
-	quote = (quote == '"' or quote == "'") and quote or ""
-	local line = "updated_at: " .. quote .. iso .. quote
-	if line == target.line then
-		return
-	end
-
-	local win = vim.fn.bufwinid(buf)
-	local cursor = win ~= -1 and vim.api.nvim_win_get_cursor(win) or nil
-	vim.api.nvim_buf_call(buf, function()
-		pcall(vim.cmd, "undojoin")
-		vim.api.nvim_buf_set_lines(buf, target.index, target.index + 1, false, { line })
-	end)
-	if cursor then
-		pcall(vim.api.nvim_win_set_cursor, win, cursor)
+---Open the vault folder in Neovim.
+function M.open_vault()
+	local dir = require_vault()
+	if dir then
+		open(dir)
 	end
 end
 
 function M.setup()
-	local km = vim.api.nvim_create_user_command
-	km("ArcanumDraft", M.new_draft, { desc = "Arcanum: quick draft" })
-	km("ArcanumNew", M.new_note, { desc = "Arcanum: new note (pick type and title)" })
-	km("ArcanumTemplate", M.template, { desc = "Arcanum: insert template or promote draft" })
-	km("ArcanumRename", M.rename, { desc = "Arcanum: rename the current note by title" })
-	km("ArcanumRetype", M.retype, { desc = "Arcanum: change the type of the current note" })
-	km("ArcanumFiles", M.find_files, { desc = "Arcanum: find notes by name" })
-	km("ArcanumGrep", M.grep, { desc = "Arcanum: search note contents" })
-	km("ArcanumLast", M.last, { desc = "Arcanum: reopen the last note" })
+	local cmd = vim.api.nvim_create_user_command
+	cmd("ArcanumDraft", M.new_draft, { desc = "Arcanum: quick draft" })
+	cmd("ArcanumNew", M.new_note, { desc = "Arcanum: new note (pick type and title)" })
+	cmd("ArcanumTemplate", M.template, { desc = "Arcanum: insert template into the current note" })
+	cmd("ArcanumFiles", M.find_files, { desc = "Arcanum: find notes by name" })
+	cmd("ArcanumGrep", M.grep, { desc = "Arcanum: search note contents" })
+	cmd("ArcanumLast", M.last, { desc = "Arcanum: reopen the last note" })
+	cmd("ArcanumOpen", M.open_vault, { desc = "Arcanum: open the vault folder" })
 
-	local group = vim.api.nvim_create_augroup("arcanum_notes", { clear = true })
-	vim.api.nvim_create_autocmd("BufWritePre", {
-		group = group,
-		pattern = "*.md",
-		callback = function(args)
-			touch_updated_at(args.buf)
-		end,
-	})
 	vim.api.nvim_create_autocmd("BufEnter", {
-		group = group,
+		group = vim.api.nvim_create_augroup("arcanum_notes", { clear = true }),
 		pattern = "*.md",
 		callback = function(args)
 			local path = vim.api.nvim_buf_get_name(args.buf)

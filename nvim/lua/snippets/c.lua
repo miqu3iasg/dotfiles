@@ -1,11 +1,20 @@
 -- lua/snippets/c.lua
 
+-- C snippets for small programs, practice problems, and Linux kernel-style
+-- documentation comments. Indentation follows the conventions of each snippet:
+-- four spaces for the basic program template and tabs for the solution scaffold.
+-- The documentation comment format uses @field: descriptions and can be adapted
+-- for structs or functions.
+--
+-- See: https://www.kernel.org/doc/html/v4.10/process/coding-style.html
+
 local ls = require("luasnip")
 local s = ls.snippet
 local t = ls.text_node
 local i = ls.insert_node
 
 return {
+	-- Minimal C program with an int main(void) entry point.
 	s("ivm", {
 		t({
 			"#include <stdio.h>",
@@ -17,10 +26,10 @@ return {
 		t({ "", "", "    return 0;", "}" }),
 	}),
 
-	-- Solution scaffolding for practice problems (LeetCode, Kattis, etc.).
-	-- Just a `solve` function plus an `int main` that calls it and prints
-	-- the result — trivial to strip the `main`/printf when pasting into a
-	-- judge that provides its own driver code.
+	-- Solution scaffold for practice problems (LeetCode, Kattis, etc.).
+	-- Provides a solve function and an int main that calls it and prints the
+	-- result. The main function can be removed when the judge provides its own
+	-- driver code.
 	s("sol", {
 		t({ "#include <stdio.h>", "", "" }),
 		i(1, "int"),
@@ -35,9 +44,9 @@ return {
 		i(0),
 	}),
 
-	-- Linux kernel style doc comment for structs (and similarly for
-	-- functions): one-line description followed by @field: description
-	-- bullets. Delete unused @field lines, or duplicate one for more fields.
+	-- Linux kernel-style documentation comment.
+	-- Starts with a short description followed by @field: description entries.
+	-- Unused fields can be removed or duplicated for additional entries.
 	s("doc", {
 		t("/* "),
 		i(1, "Short description"),
