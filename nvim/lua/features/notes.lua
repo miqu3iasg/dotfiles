@@ -23,7 +23,7 @@
 --
 -- See: lua/plugins/markdown.lua
 -- See: lua/plugins/fzf.lua
--- See: <vault>/README.md
+-- See: ~/dev/arcanum/README.md
 -- See: https://github.com/ibhagwan/fzf-lua
 
 local M = {}

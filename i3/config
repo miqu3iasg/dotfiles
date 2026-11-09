@@ -372,10 +372,6 @@ bindsym $mod+b exec --no-startup-id zen-browser; workspace number $ws3
 bindsym $mod2+b exec --no-startup-id helium-browser
 bindsym $mod2+Shift+b exec --no-startup-id helium-browser; workspace number $ws3
 
-# Qutebrowser
-bindsym $mod2+z exec --no-startup-id qutebrowser
-bindsym $mod2+Shift+z exec --no-startup-id qutebrowser; workspace number $ws3
-
 # Clipboard
 bindsym $mod2+v exec --no-startup-id copyq toggle
 
