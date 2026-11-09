@@ -33,7 +33,7 @@ local DEFAULT_COMMAND = {
 	lua = "lua %",
 	c = "cc -o %:r.out % && ./%:r.out",
 	cpp = "c++ -std=c++23 -o %:r.out % && ./%:r.out",
-	java = "javac -d out % && java %:r",
+	java = "javac -d out % && java -cp out %:t:r",
 	go = "go run %",
 }
 
@@ -62,14 +62,15 @@ local last_command = {}
 ---@type integer?
 local compilation_buf = nil
 
----Return the default command for the current filetype, expanding `%` and `%:r`
----word by word so that the other words are left untouched.
+---Return the default command for the current filetype, expanding `%`, `%:r`,
+---and `%:t:r` word by word so that the other words are left untouched.
 ---@return string
 local function default_for_ft()
 	local cmd = DEFAULT_COMMAND[vim.bo.filetype] or DEFAULT_COMMAND["*"] or ""
 
 	local fname = vim.fn.expand("%")
 	local base = vim.fn.expand("%:r")
+	local filename = vim.fn.expand("%:t:r")
 
 	local words = {}
 	for word in cmd:gmatch("%S+") do
@@ -77,10 +78,13 @@ local function default_for_ft()
 			table.insert(words, fname)
 		elseif word == "%:r" then
 			table.insert(words, base)
+		elseif word == "%:t:r" then
+			table.insert(words, filename)
 		else
 			table.insert(words, word)
 		end
 	end
+
 	return table.concat(words, " ")
 end
 

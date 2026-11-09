@@ -276,18 +276,22 @@ extract() {
     esac
 }
 
-# Obsidian
+# Note-taking
 
-# Open the Obsidian vault (path from $OBSIDIAN_VAULT_PATH) in Neovim
-oo() {
-    if [[ ! -d "$OBSIDIAN_VAULT_PATH" ]]; then
-        echo "Obsidian vault not found:"
-        echo "$OBSIDIAN_VAULT_PATH"
+_open_vault() {
+    local vault="$1"
+
+    if [[ ! -d "$vault" ]]; then
+        echo "Vault not found:"
+        echo "$vault"
         return 1
     fi
 
-    nvim "$OBSIDIAN_VAULT_PATH"
+    nvim "$vault"
 }
+
+oo()  { _open_vault "$OBSIDIAN_VAULT_PATH"; }
+arc() { _open_vault "$HOME/dev/arcanum"; }
 
 # Yazi
 
