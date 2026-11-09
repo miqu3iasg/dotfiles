@@ -1,20 +1,3 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 # Jan Local API Server - Claude Code Config
 export ANTHROPIC_BASE_URL='http://127.0.0.1:1337'
 export ANTHROPIC_AUTH_TOKEN='jan'
@@ -27,3 +10,6 @@ export ANTHROPIC_DEFAULT_HAIKU_MODEL='z-ai/glm-5.3'
 # Go binary
 export PATH=$PATH:/usr/loca/go/bin
 export PATH="$HOME/.cargo/bin:$PATH"
+
+# Programming note taking vault
+export ARCANUM_DIR="$HOME/dev/arcanum"

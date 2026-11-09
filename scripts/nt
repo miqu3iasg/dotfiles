@@ -1,0 +1,1550 @@
+#!/usr/bin/env zsh
+
+# nt - Notes CLI
+#
+# Single-file Zsh command line for the Arcanum vault, a flat Markdown vault of
+# software-development notes. It captures drafts, creates typed notes from
+# user-maintained templates, and lists, searches, renames, retypes and audits
+# them. Creating a note also opens it in the editor. The tool does not depend
+# on Neovim or on any of its plugins.
+#
+# The Neovim integration (lua/features/notes.lua) and this script implement the
+# same contract, documented in the vault's README.md: types, file names, slugs,
+# collisions, frontmatter and placeholders. Change the contract in the README
+# first, then in both implementations.
+#
+# Only Zsh and the usual coreutils are required. An editor (Neovim by default,
+# or whatever VISUAL and EDITOR point to), fzf, ripgrep and bat are optional
+# and enable the features that need them. Nothing is installed automatically.
+# Install them with the package manager of the distribution:
+#
+# $ sudo pacman -S neovim fzf ripgrep bat
+#
+# On Debian and Ubuntu the bat executable is named batcat, which nt detects.
+# Run `nt doctor` to see what is available.
+#
+# To install the script, copy it to a directory on PATH:
+#
+# $ install -m 755 nt ~/.local/bin/nt
+#
+# The vault is $ARCANUM_DIR, or $HOME/documents/arcanum when unset. Every
+# command resolves it the same way and never depends on the current directory.
+
+emulate -R zsh
+setopt extended_glob pipe_fail no_clobber
+zmodload zsh/datetime zsh/mapfile
+zmodload -F zsh/stat b:zstat
+
+typeset -gr NT_VERSION="1.0.0"
+typeset -gr NT_TITLE="Arcanum Notes CLI"
+typeset -gr NT_SELF=${${(%):-%x}:A}
+
+typeset -gra NT_TYPES=(script snippet doc bug adr idea content)
+typeset -gra NT_COMMANDS=(new ls recent find open preview path last mv retype backlinks template stats check doctor help)
+
+# Strict note file name: TYPE-YYYYMMDD-HHmmss[-SLUG].md.
+typeset -gr NAME_RE='^(draft|script|snippet|doc|bug|adr|idea|content)-([0-9]{8})-([0-9]{6})(-([a-z0-9]+(-[a-z0-9]+)*))?\.md$'
+# Loose shape of a note name, used by `check` to explain why a name is wrong.
+typeset -gr LOOSE_RE='^([A-Za-z0-9_]+)-([0-9]{8})-([0-9]{6})(-(.*))?\.md$'
+typeset -gr SLUG_RE='^[a-z0-9]+(-[a-z0-9]+)*$'
+typeset -gr ISO_RE='^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]$'
+typeset -gri SLUG_MAX=80
+typeset -gri RECENT_DEFAULT=5
+
+typeset -gri EX_OK=0
+typeset -gri EX_ERROR=1
+typeset -gri EX_USAGE=2
+typeset -gri EX_TYPE=3
+typeset -gri EX_TEMPLATE=4
+typeset -gri EX_COLLISION=5
+typeset -gri EX_NOTFOUND=6
+typeset -gri EX_DEP=7
+typeset -gri EX_IO=8
+
+# Accent folding table for slugs. Both cases are listed so that the result
+# does not depend on the locale. The same table lives in
+# lua/features/notes.lua.
+typeset -gA SLUG_MAP=(
+	á a  à a  â a  ã a  ä a  å a  Á a  À a  Â a  Ã a  Ä a  Å a
+	é e  è e  ê e  ë e  É e  È e  Ê e  Ë e
+	í i  ì i  î i  ï i  Í i  Ì i  Î i  Ï i
+	ó o  ò o  ô o  õ o  ö o  Ó o  Ò o  Ô o  Õ o  Ö o
+	ú u  ù u  û u  ü u  Ú u  Ù u  Û u  Ü u
+	ç c  Ç c  ñ n  Ñ n  ý y  ÿ y  Ý y
+	æ ae  Æ ae  œ oe  Œ oe  ß ss
+)
+
+typeset -g VAULT NT_STATE HIST_FILE
+typeset -g NOW_TS NOW_ISO CREATED
+typeset -g BAT PV_NOTE PV_HIT
+typeset -ga NOTES SORTED ED TMPFILES
+typeset -gi CHK_ERRORS=0 CHK_WARNINGS=0
+
+_nt_cleanup() {
+	(( ${#TMPFILES} )) && command rm -f -- "${TMPFILES[@]}" 2>/dev/null
+	return 0
+}
+
+_nt_init() {
+	trap _nt_cleanup EXIT
+	trap 'exit 130' INT TERM
+
+	local v=${ARCANUM_DIR:-$HOME/documents/arcanum}
+	v=${v/#\~/$HOME}
+	if [[ $v != /* ]]; then
+		_nt_die $EX_ERROR "ARCANUM_DIR must be an absolute path: $v"
+	fi
+	VAULT=${v:A}
+
+	NT_STATE=${XDG_STATE_HOME:-$HOME/.local/state}/arcanum
+	HIST_FILE=$NT_STATE/last
+
+	_nt_setup_colors
+	_nt_viewer_setup
+}
+
+# Enables colors per stream, since stdout and stderr may be redirected
+# independently. NO_COLOR and a dumb terminal disable them.
+_nt_setup_colors() {
+	typeset -g C_BOLD= C_DIM= C_RED= C_GREEN= C_YELLOW= C_CYAN= C_RESET=
+	typeset -g E_BOLD= E_RED= E_YELLOW= E_RESET=
+	[[ -z ${NO_COLOR-} && ${TERM-} != dumb ]] || return 0
+	if [[ -t 1 ]]; then
+		C_BOLD=$'\e[1m' C_DIM=$'\e[2m' C_RED=$'\e[31m' C_GREEN=$'\e[32m'
+		C_YELLOW=$'\e[33m' C_CYAN=$'\e[36m' C_RESET=$'\e[0m'
+	fi
+	if [[ -t 2 ]]; then
+		E_BOLD=$'\e[1m' E_RED=$'\e[31m' E_YELLOW=$'\e[33m' E_RESET=$'\e[0m'
+	fi
+}
+
+# Chooses the previewer commands once. bat is installed as batcat on Debian
+# and Ubuntu, and cat is the fallback. The vault path reaches the previewer
+# through the environment rather than the command string, so unusual
+# characters in the path are harmless.
+_nt_viewer_setup() {
+	BAT=
+	if (( $+commands[bat] )); then
+		BAT=bat
+	elif (( $+commands[batcat] )); then
+		BAT=batcat
+	fi
+	if [[ -n $BAT ]]; then
+		PV_NOTE="$BAT --color=always --style=plain --paging=never -- \"\$_NT_VAULT\"/{}"
+		PV_HIT="$BAT --color=always --style=numbers --paging=never --highlight-line {2} -- \"\$_NT_VAULT\"/{1}"
+	else
+		PV_NOTE='cat -- "$_NT_VAULT"/{}'
+		PV_HIT='cat -n -- "$_NT_VAULT"/{1}'
+	fi
+}
+
+# Succeeds when an interactive terminal can be reached, even if stdout is
+# piped.
+_nt_have_tty() {
+	{ : </dev/tty } 2>/dev/null
+}
+
+_nt_require_vault() {
+	[[ -d $VAULT ]] && return 0
+	_nt_err "vault not found: $VAULT"
+	print -ru2 -- "Create it, or point ARCANUM_DIR to an existing vault."
+	exit $EX_IO
+}
+
+# Interactive selection needs both fzf and a terminal.
+_nt_need_fzf() {
+	if (( ! $+commands[fzf] )); then
+		_nt_err "fzf is required for interactive selection; pass the argument explicitly instead"
+		return $EX_DEP
+	fi
+	if ! _nt_have_tty; then
+		_nt_err "no terminal available for interactive selection; pass the argument explicitly instead"
+		return $EX_DEP
+	fi
+	return 0
+}
+
+# Resolves the editor from VISUAL, EDITOR or nvim into the array ED, honoring
+# quoting in the variable. Fails when the executable cannot be found.
+_nt_editor() {
+	local e=${VISUAL:-${EDITOR:-nvim}}
+	ED=(${(Q)${(z)e}})
+	if (( ! ${#ED} )) || ! command -v -- ${ED[1]} >/dev/null 2>&1; then
+		_nt_err "editor not found: ${ED[1]:-$e} (set VISUAL or EDITOR)"
+		return $EX_DEP
+	fi
+	return 0
+}
+
+_nt_err() {
+	print -ru2 -- "${E_RED}nt: error:${E_RESET} $*"
+}
+
+_nt_warn() {
+	print -ru2 -- "${E_YELLOW}nt: warning:${E_RESET} $*"
+}
+
+_nt_die() {
+	local code=$1
+	shift
+	_nt_err "$*"
+	exit $code
+}
+
+# Reports invalid arguments with the correct syntax and a pointer to the
+# command help, then exits with the usage status.
+_nt_usage_err() {
+	local cmd=$1
+	shift
+	print -ru2 -- "${E_RED}nt: error:${E_RESET} $*"
+	local -a syntax=("${(@f)H_SYNTAX[$cmd]}")
+	print -ru2 -- "usage: ${syntax[1]}"
+	print -ru2 -- "Try 'nt help $cmd' for details."
+	exit $EX_USAGE
+}
+
+# Captures the current time as NOW_TS (file name form) and NOW_ISO
+# (frontmatter form).
+_nt_now() {
+	local t=$EPOCHSECONDS
+	strftime -s NOW_TS '%Y%m%d-%H%M%S' $t
+	strftime -s NOW_ISO '%Y-%m-%dT%H:%M:%S' $t
+}
+
+# Replaces control characters with spaces and trims the result into REPLY.
+_nt_clean_title() {
+	local t=$1
+	t=${t//[[:cntrl:]]/ }
+	t=${t##[[:space:]]##}
+	t=${t%%[[:space:]]##}
+	REPLY=$t
+}
+
+# Converts a title into a slug: accents folded, lowercase, runs of spaces
+# turned into single hyphens, everything outside [a-z0-9-] dropped, and the
+# result truncated to SLUG_MAX characters.
+_nt_slugify() {
+	local s=$1 k v
+	for k v in ${(kv)SLUG_MAP}; do
+		s=${s//$k/$v}
+	done
+	s=${(L)s}
+	s=${s//[[:space:]]##/-}
+	s=${s//[^a-z0-9-]/}
+	while [[ $s == *--* ]]; do
+		s=${s//--/-}
+	done
+	s=${s##-##}
+	s=${s%%-##}
+	if (( ${#s} > SLUG_MAX )); then
+		s=${s[1,SLUG_MAX]}
+		s=${s%%-##}
+	fi
+	REPLY=$s
+}
+
+# Quotes a string as a YAML double-quoted scalar into REPLY.
+_nt_yaml_quote() {
+	local q=${1//\\/\\\\}
+	q=${q//\"/\\\"}
+	REPLY="\"$q\""
+}
+
+_nt_is_type() {
+	(( ${NT_TYPES[(Ie)$1]} ))
+}
+
+# Validates a YYYYMMDD date and an HHmmss time, including leap years.
+_nt_valid_ts() {
+	local y=$((10#${1[1,4]})) m=$((10#${1[5,6]})) d=$((10#${1[7,8]}))
+	local H=$((10#${2[1,2]})) M=$((10#${2[3,4]})) S=$((10#${2[5,6]}))
+	local -a dm=(31 28 31 30 31 30 31 31 30 31 30 31)
+	(( y % 4 == 0 && (y % 100 != 0 || y % 400 == 0) )) && dm[2]=29
+	(( m >= 1 && m <= 12 && d >= 1 && d <= dm[m] && H < 24 && M < 60 && S < 60 ))
+}
+
+# Asks a yes/no question on the terminal. The default answer is no.
+_nt_confirm() {
+	local reply
+	read -q "reply?$1 [y/N] " </dev/tty
+	local rc=$?
+	print -ru2 --
+	return $rc
+}
+
+# Reads a line from the terminal into REPLY.
+_nt_ask() {
+	REPLY=
+	_nt_have_tty || return 1
+	read -r "REPLY?$1" </dev/tty
+}
+
+# Builds the file name of the n-th attempt into REPLY. On collision the
+# counter is appended to the slug (slug-2, slug-3, ...) or becomes the slug
+# itself when there is none. The timestamp never changes. The rule is
+# documented in the README.
+_nt_build_name() {
+	local type=$1 ts=$2 slug=$3 n=${4:-1}
+	(( n > 1 )) && slug=${slug:+$slug-}$n
+	REPLY=$type-$ts${slug:+-$slug}.md
+}
+
+# Lists the notes of the vault root into NOTES, excluding the README and any
+# file whose name contains a newline.
+_nt_list_notes() {
+	local -a f=($VAULT/*.md(N.))
+	NOTES=(${${f:t}:#README.md})
+	NOTES=(${NOTES:#*$'\n'*})
+}
+
+# Sorts the notes into SORTED by the timestamp in the name, newest first.
+# Names outside the convention go last, and ties are broken by name.
+_nt_sorted_notes() {
+	_nt_list_notes
+	local n inv
+	local -a keys=()
+	for n in $NOTES; do
+		if [[ $n =~ $NAME_RE ]]; then
+			printf -v inv '%014d' $(( 99999999999999 - 10#$match[2]$match[3] ))
+		else
+			inv=99999999999999
+		fi
+		keys+=("$inv $n")
+	done
+	SORTED=(${${(@o)keys}#* })
+}
+
+# Sorts the notes into SORTED by modification time, newest first.
+_nt_notes_by_mtime() {
+	local -a f=($VAULT/*.md(N.om))
+	SORTED=(${${f:t}:#README.md})
+	SORTED=(${SORTED:#*$'\n'*})
+}
+
+# Resolves a NOTE argument (a file name with or without .md, or a path) to a
+# file name inside the vault and stores it in REPLY.
+_nt_resolve_note() {
+	local arg=$1 name abs
+	if [[ $arg == */* ]]; then
+		abs=${arg:A}
+		if [[ ${abs:h} != "$VAULT" ]]; then
+			_nt_err "not a note of the vault: $arg"
+			return $EX_NOTFOUND
+		fi
+		name=${abs:t}
+	else
+		name=$arg
+	fi
+	[[ $name == *.md ]] || name=$name.md
+	if [[ $name == README.md || ! -f $VAULT/$name ]]; then
+		_nt_err "note not found: $arg"
+		return $EX_NOTFOUND
+	fi
+	REPLY=$name
+}
+
+# Selects a note with fzf and stores it in REPLY. Returns 1 when the
+# selection is cancelled so that callers can end normally.
+_nt_select_note() {
+	local query=${1-} out rc
+	_nt_need_fzf || return $?
+	_nt_sorted_notes
+	if (( ! ${#SORTED} )); then
+		_nt_err "no notes found"
+		return $EX_NOTFOUND
+	fi
+	out=$(print -rl -- $SORTED | _NT_VAULT=$VAULT command fzf \
+		--prompt='note> ' --query="$query" --tiebreak=index \
+		--preview="$PV_NOTE" --preview-window='right,60%,wrap')
+	rc=$?
+	if (( rc != 0 )); then
+		(( rc == 1 || rc == 130 )) && return 1
+		return $EX_ERROR
+	fi
+	REPLY=$out
+	return 0
+}
+
+# Resolves a note from an explicit argument or, when absent, from fzf. A
+# cancelled selection ends the command normally.
+_nt_note_arg() {
+	local arg=${1-} rc
+	if [[ -n $arg ]]; then
+		_nt_resolve_note $arg
+		return $?
+	fi
+	_nt_select_note
+	rc=$?
+	(( rc == 1 )) && exit $EX_OK
+	return $rc
+}
+
+# Writes content to a fresh temporary file inside the vault, which keeps it on
+# the same filesystem as the destination so that renames stay atomic, and
+# stores its path in REPLY.
+_nt_write_tmp() {
+	local tmp
+	tmp=$(command mktemp "$VAULT/.nt.XXXXXX" 2>/dev/null) || return $EX_IO
+	TMPFILES+=($tmp)
+	print -rn -- "$1" >| $tmp || return $EX_IO
+	REPLY=$tmp
+}
+
+# Gives tmp the permissions of ref, or the umask default for new files when
+# no reference is given.
+_nt_copy_mode() {
+	local tmp=$1 ref=${2-} m
+	local -a st
+	if [[ -n $ref ]] && zstat -A st +mode -- $ref 2>/dev/null; then
+		printf -v m '%o' $(( st[1] & 8#7777 ))
+	else
+		printf -v m '%o' $(( 8#666 & ~8#$(umask) ))
+	fi
+	command chmod $m -- $tmp 2>/dev/null
+}
+
+# Moves src to dst without ever overwriting dst. A hard link is atomic and
+# refuses to replace an existing file, so it is tried first. `mv -n` is the
+# fallback for filesystems without hard links.
+_nt_move_noclobber() {
+	local src=$1 dst=$2
+	if command ln -- $src $dst 2>/dev/null; then
+		if ! command rm -f -- $src 2>/dev/null; then
+			command rm -f -- $dst 2>/dev/null
+			return $EX_IO
+		fi
+		return 0
+	fi
+	[[ -e $dst || -L $dst ]] && return $EX_COLLISION
+	command mv -n -- $src $dst 2>/dev/null || return $EX_IO
+	[[ -e $src ]] && return $EX_COLLISION
+	return 0
+}
+
+# Splits content into FM_TEXT (the lines between the --- delimiters, with a
+# trailing newline) and FM_BODY. Returns 0 for a valid block, 1 when the
+# content has no frontmatter and 2 when the block is never closed.
+_nt_fm_split() {
+	local c=$1 rest
+	typeset -g FM_TEXT= FM_BODY=$c
+	[[ $c == '---'$'\n'* ]] || return 1
+	rest=${c#'---'$'\n'}
+	if [[ $rest == '---'$'\n'* ]]; then
+		FM_BODY=${rest#'---'$'\n'}
+		return 0
+	fi
+	if [[ $rest == '---' ]]; then
+		FM_BODY=
+		return 0
+	fi
+	if [[ $rest == *$'\n---'$'\n'* ]]; then
+		FM_TEXT=${rest%%$'\n---'$'\n'*}$'\n'
+		FM_BODY=${rest#*$'\n---'$'\n'}
+		return 0
+	fi
+	if [[ $rest == *$'\n---' ]]; then
+		FM_TEXT=${rest%$'\n---'}$'\n'
+		FM_BODY=
+		return 0
+	fi
+	return 2
+}
+
+# Reads the top-level field $2 from the frontmatter text $1 into REPLY,
+# without surrounding quotes. Returns 1 when the field does not exist.
+_nt_fm_get() {
+	local line v
+	[[ -n $1 ]] || return 1
+	for line in "${(@f)${1%$'\n'}}"; do
+		if [[ $line == "$2":* ]]; then
+			v=${line#"$2":}
+			v=${v##[[:space:]]#}
+			v=${v%%[[:space:]]#}
+			if (( ${#v} >= 2 )) && [[ ( $v[1] == '"' && $v[-1] == '"' ) || ( $v[1] == "'" && $v[-1] == "'" ) ]]; then
+				v=${v[2,-2]}
+			fi
+			REPLY=$v
+			return 0
+		fi
+	done
+	return 1
+}
+
+# Replaces only the value of an existing top-level field and stores the new
+# frontmatter text in REPLY. With the `keep` mode the quote style of the old
+# value is preserved. Returns 1 when the field does not exist.
+_nt_fm_set() {
+	local key=$2 value=$3 mode=${4-raw} raw
+	local -a lines
+	local -i i
+	[[ -n $1 ]] || return 1
+	lines=("${(@f)${1%$'\n'}}")
+	for (( i = 1; i <= ${#lines}; i++ )); do
+		if [[ ${lines[i]} == "$key":* ]]; then
+			if [[ $mode == keep ]]; then
+				raw=${${lines[i]#"$key":}##[[:space:]]#}
+				case ${raw[1]} in
+					'"') value="\"$value\"" ;;
+					"'") value="'$value'" ;;
+				esac
+			fi
+			lines[i]="$key: $value"
+			REPLY=${(F)lines}$'\n'
+			return 0
+		fi
+	done
+	return 1
+}
+
+# Rewrites one frontmatter field of the content in $1 and stores the full
+# result in REPLY. Returns 1 when nothing could be changed.
+_nt_content_set_field() {
+	local content=$1
+	_nt_fm_split "$content" || return 1
+	_nt_fm_set "$FM_TEXT" $2 "$3" ${4-raw} || return 1
+	REPLY='---'$'\n'$REPLY'---'$'\n'$FM_BODY
+}
+
+# Succeeds when every line of a frontmatter block looks like YAML. On failure
+# REPLY holds the offending line number inside the block. This is a shallow
+# check, not a YAML parser.
+_nt_fm_validate() {
+	local line v
+	local -i i=0
+	[[ -n $1 ]] || return 0
+	for line in "${(@f)${1%$'\n'}}"; do
+		(( i++ ))
+		[[ -z ${line//[[:space:]]/} || $line == [[:space:]]* || $line == '#'* || $line == '- '* || $line == '-' ]] && continue
+		if [[ ! $line =~ '^[A-Za-z0-9_][A-Za-z0-9_. -]*:([[:space:]].*)?$' ]]; then
+			REPLY=$i
+			return 1
+		fi
+		v=${line#*:}
+		v=${v##[[:space:]]#}
+		v=${v%%[[:space:]]#}
+		if [[ $v == '"'* ]] && { (( ${#v} < 2 )) || [[ $v != *'"' ]] }; then
+			REPLY=$i
+			return 1
+		fi
+	done
+	return 0
+}
+
+# Substitutes the four known placeholders literally and leaves any other
+# double braces untouched. Arguments: content, title, type, created_at and
+# updated_at.
+_nt_render() {
+	local c=$1 ph out rest val
+	local -a names=(title type created_at updated_at)
+	local -a vals=($2 $3 $4 $5)
+	local -i i
+	for (( i = 1; i <= 4; i++ )); do
+		ph='{{'${names[i]}'}}'
+		val=${vals[i]}
+		out=
+		rest=$c
+		while [[ $rest == *"$ph"* ]]; do
+			out+=${rest%%"$ph"*}$val
+			rest=${rest#*"$ph"}
+		done
+		c=$out$rest
+	done
+	REPLY=$c
+}
+
+# Replaces [[old]], [[old|...]] and [[old#...]] with the new name and stores
+# the result in REPLY. Returns 1 when the content has no such link.
+_nt_relink_content() {
+	local c=$1 o=$2 n=$3 r
+	r=${c//"[[$o]]"/"[[$n]]"}
+	r=${r//"[[$o|"/"[[$n|"}
+	r=${r//"[[$o#"/"[[$n#"}
+	REPLY=$r
+	[[ $r != $c ]]
+}
+
+_nt_template_path() {
+	REPLY=$VAULT/_templates/$1.md
+}
+
+# Stores the template path for a type in REPLY, or fails with EX_TEMPLATE
+# when the file is missing.
+_nt_require_template() {
+	_nt_template_path $1
+	if [[ ! -f $REPLY ]]; then
+		_nt_err "template not found: $REPLY"
+		return $EX_TEMPLATE
+	fi
+	[[ -r $REPLY ]] || { _nt_err "template is not readable: $REPLY"; return $EX_IO }
+	return 0
+}
+
+# Creates a draft (type draft) or a classified note and sets CREATED to its
+# path. The content is written to a temporary file first and linked into
+# place, so an existing note is never overwritten and no partial note is
+# left behind.
+_nt_create() {
+	local type=$1 title=$2 content tpl slug name rc
+	local -i n
+
+	if [[ $type == draft ]]; then
+		content='---'$'\n'"created_at: $NOW_ISO"$'\n'"updated_at: $NOW_ISO"$'\n'
+		if [[ -n $title ]]; then
+			_nt_yaml_quote "$title"
+			content+="title: $REPLY"$'\n'
+		fi
+		content+='---'$'\n\n'
+	else
+		_nt_require_template $type || return $?
+		tpl=$REPLY
+		content=$mapfile[$tpl]
+		_nt_render "$content" "$title" $type $NOW_ISO $NOW_ISO
+		content=$REPLY
+	fi
+
+	_nt_slugify "$title"
+	slug=$REPLY
+	_nt_write_tmp "$content" || { _nt_err "could not write in $VAULT"; return $EX_IO }
+	local tmp=$REPLY
+	_nt_copy_mode $tmp
+
+	for (( n = 1; n <= 99; n++ )); do
+		_nt_build_name $type $NOW_TS "$slug" $n
+		name=$REPLY
+		[[ -e $VAULT/$name || -L $VAULT/$name ]] && continue
+		_nt_move_noclobber $tmp $VAULT/$name
+		rc=$?
+		(( rc == EX_COLLISION )) && continue
+		if (( rc != 0 )); then
+			_nt_err "could not create $VAULT/$name"
+			return $rc
+		fi
+		CREATED=$VAULT/$name
+		return 0
+	done
+	_nt_err "too many notes with the same timestamp: $NOW_TS"
+	return $EX_COLLISION
+}
+
+# Creates a note of the given type, prints its path and opens it in the
+# editor. The editor is resolved first so that a missing editor is reported
+# before anything is written to the vault.
+_nt_create_and_open() {
+	local type=$1 title=$2
+	_nt_editor || exit $?
+	_nt_now
+	_nt_create $type "$title" || exit $?
+	print -r -- "${C_GREEN}Created${C_RESET}: $CREATED"
+	_nt_open $CREATED || exit $?
+}
+
+# Renames a note, optionally syncing one frontmatter field, and fixes the
+# wikilinks that point to it. Arguments: old name, new name and, optionally,
+# a field with its raw value. The new note is created before the old one is
+# removed, and other notes are only touched once the rename itself has
+# succeeded.
+_nt_rename_commit() {
+	local old=$1 new=$2 fkey=${3-} fval=${4-}
+	local oldp=$VAULT/$old newp=$VAULT/$new
+	local oldstem=${old%.md} newstem=${new%.md}
+	local content c2 other oc oc2 rc tmp
+	local -a plan_src=() plan_tmp=()
+
+	content=$mapfile[$oldp]
+	c2=$content
+	if [[ -n $fkey ]] && _nt_content_set_field "$c2" $fkey "$fval"; then
+		c2=$REPLY
+	fi
+	if _nt_relink_content "$c2" $oldstem $newstem; then
+		c2=$REPLY
+	fi
+
+	# Plan the link fixes in the other notes before touching anything.
+	_nt_list_notes
+	for other in $NOTES; do
+		[[ $other == $old ]] && continue
+		oc=$mapfile[$VAULT/$other]
+		_nt_relink_content "$oc" $oldstem $newstem || continue
+		oc2=$REPLY
+		if _nt_content_set_field "$oc2" updated_at $NOW_ISO keep; then
+			oc2=$REPLY
+		fi
+		_nt_write_tmp "$oc2" || { _nt_err "could not write in $VAULT"; return $EX_IO }
+		tmp=$REPLY
+		_nt_copy_mode $tmp $VAULT/$other
+		plan_src+=($VAULT/$other)
+		plan_tmp+=($tmp)
+	done
+
+	if [[ $c2 == $content ]]; then
+		# A plain rename keeps the inode and the modification time.
+		_nt_move_noclobber $oldp $newp
+		rc=$?
+	else
+		_nt_write_tmp "$c2" || { _nt_err "could not write in $VAULT"; return $EX_IO }
+		tmp=$REPLY
+		_nt_copy_mode $tmp $oldp
+		_nt_move_noclobber $tmp $newp
+		rc=$?
+		if (( rc == 0 )) && ! command rm -f -- $oldp 2>/dev/null; then
+			command rm -f -- $newp 2>/dev/null
+			rc=$EX_IO
+		fi
+	fi
+	if (( rc != 0 )); then
+		(( rc == EX_COLLISION )) && _nt_err "destination already exists: $new"
+		(( rc == EX_IO )) && _nt_err "could not rename $old"
+		return $rc
+	fi
+
+	local -i i fixed=0
+	for (( i = 1; i <= ${#plan_src}; i++ )); do
+		if command mv -f -- ${plan_tmp[i]} ${plan_src[i]} 2>/dev/null; then
+			(( fixed++ ))
+		else
+			_nt_warn "could not update links in ${plan_src[i]:t}"
+		fi
+	done
+
+	if _nt_hist_get && [[ $REPLY == $oldp ]]; then
+		_nt_hist_set $newp
+	fi
+	print -r -- "${C_GREEN}Renamed${C_RESET}: $old -> $new"
+	(( fixed )) && print -r -- "Updated links in $fixed note(s)"
+	return 0
+}
+
+# Finds the first free name for the given type, timestamp and slug, ignoring
+# the note being renamed, and stores it in REPLY. Returns 1 when the free name
+# is exactly the current one.
+_nt_free_name() {
+	local type=$1 ts=$2 slug=$3 current=$4
+	local -i n
+	for (( n = 1; n <= 99; n++ )); do
+		_nt_build_name $type $ts "$slug" $n
+		[[ $REPLY == $current ]] && return 1
+		[[ -e $VAULT/$REPLY || -L $VAULT/$REPLY ]] || return 0
+	done
+	_nt_err "too many notes with the same name"
+	return $EX_COLLISION
+}
+
+# Opens an absolute path in the editor, at the given line when the editor
+# supports it. The history is updated only after the editor exits
+# successfully.
+_nt_open() {
+	local file=$1 line=${2-} rc
+	local -a extra=()
+	_nt_editor || return $?
+	if [[ -n $line && ${ED[1]:t} == (nvim|vim|vi|nano|emacs|emacsclient) ]]; then
+		extra=(+$line)
+	fi
+	"${ED[@]}" "${extra[@]}" $file
+	rc=$?
+	if (( rc != 0 )); then
+		_nt_err "editor exited with status $rc"
+		return $EX_ERROR
+	fi
+	_nt_hist_set $file
+	return 0
+}
+
+# Runs a fixed-string ripgrep search over the notes of the vault root and
+# stores the name:line:text hits in the array reply.
+_nt_rg() {
+	local -a lines
+	if (( ! $+commands[rg] )); then
+		_nt_err "ripgrep (rg) is required for this command"
+		return $EX_DEP
+	fi
+	lines=(${(f)"$(command rg --no-config --no-heading --line-number --color never --smart-case \
+		--max-depth 1 -g '*.md' -g '!README.md' -F "$@" -- $VAULT)"})
+	local rc=$?
+	(( rc == 2 )) && return $EX_ERROR
+	reply=(${lines#$VAULT/})
+	return 0
+}
+
+# Lets the user pick one name:line:text hit and opens it at that line.
+_nt_pick_hit() {
+	local out rc name line
+	out=$(print -rl -- "$@" | _NT_VAULT=$VAULT command fzf \
+		--delimiter : --prompt='hit> ' --tiebreak=index \
+		--preview="$PV_HIT" --preview-window='right,60%,wrap')
+	rc=$?
+	if (( rc != 0 )); then
+		(( rc == 1 || rc == 130 )) && return 0
+		return $EX_ERROR
+	fi
+	name=${out%%:*}
+	line=${${out#*:}%%:*}
+	_nt_open $VAULT/$name $line
+}
+
+# Prints the hits as text, or lets the user pick one when an interactive
+# terminal and fzf are available.
+_nt_show_hits() {
+	(( $# )) || return 0
+	if [[ -t 1 ]] && (( $+commands[fzf] )) && _nt_have_tty; then
+		_nt_pick_hit "$@"
+		return $?
+	fi
+	print -rl -- "$@"
+}
+
+# The last opened note is stored outside the vault, independent of Neovim.
+# Failures here never stop a command.
+_nt_hist_set() {
+	local tmp
+	command mkdir -p -m 700 -- $NT_STATE 2>/dev/null || return 1
+	tmp=$(command mktemp "$NT_STATE/.last.XXXXXX" 2>/dev/null) || return 1
+	{
+		print -r -- $1 >| $tmp \
+			&& command chmod 600 -- $tmp \
+			&& command mv -f -- $tmp $HIST_FILE
+	} 2>/dev/null || {
+		command rm -f -- $tmp 2>/dev/null
+		return 1
+	}
+}
+
+_nt_hist_get() {
+	[[ -r $HIST_FILE ]] || return 1
+	REPLY=$(<$HIST_FILE) 2>/dev/null || return 1
+	[[ -n $REPLY ]]
+}
+
+# Counts the notes of a type into REPLY. NOTES must be populated.
+_nt_count_type() {
+	local n t=$1
+	local -i c=0
+	for n in $NOTES; do
+		[[ $n =~ $NAME_RE && $match[1] == $t ]] && (( c++ ))
+	done
+	REPLY=$c
+}
+
+# Prints one `check` finding as file[:line]: severity: message and updates
+# the error and warning counters.
+_nt_issue() {
+	local loc=$1 sev=$3
+	[[ -n $2 ]] && loc=$1:$2
+	if [[ $sev == error ]]; then
+		(( CHK_ERRORS++ ))
+		print -r -- "$loc: ${C_RED}error${C_RESET}: $4"
+	else
+		(( CHK_WARNINGS++ ))
+		print -r -- "$loc: ${C_YELLOW}warning${C_RESET}: $4"
+	fi
+}
+
+# Verifies the name, frontmatter and wikilinks of a single note.
+_nt_check_note() {
+	local name=$1 content type date time slug line target rest
+	local -i rc ln base
+
+	if [[ ! $name =~ $LOOSE_RE ]]; then
+		_nt_issue $name '' error "name does not follow TYPE-YYYYMMDD-HHmmss[-SLUG].md"
+	else
+		type=$match[1] date=$match[2] time=$match[3] slug=$match[5]
+		if [[ $type != draft ]] && ! _nt_is_type $type; then
+			_nt_issue $name '' error "invalid type '$type'"
+		fi
+		_nt_valid_ts $date $time || _nt_issue $name '' error "invalid timestamp $date-$time"
+		if [[ -n $slug && ! $slug =~ $SLUG_RE ]]; then
+			_nt_issue $name '' error "slug has characters outside [a-z0-9-]"
+		fi
+	fi
+
+	content=$mapfile[$VAULT/$name]
+	_nt_fm_split "$content"
+	rc=$?
+	base=0
+	if (( rc == 2 )); then
+		_nt_issue $name 1 error "frontmatter is not closed"
+	elif (( rc == 0 )); then
+		local key idx
+		local -a flines=()
+		[[ -n $FM_TEXT ]] && flines=("${(@f)${FM_TEXT%$'\n'}}")
+		base=$(( ${#flines} + 2 ))
+		if ! _nt_fm_validate "$FM_TEXT"; then
+			_nt_issue $name $(( REPLY + 1 )) error "malformed frontmatter line"
+		fi
+		for key in created_at updated_at; do
+			idx=${flines[(i)${key}:*]}
+			(( idx <= ${#flines} )) || continue
+			_nt_fm_get "$FM_TEXT" $key
+			[[ $REPLY =~ $ISO_RE ]] || _nt_issue $name $(( idx + 1 )) error "$key is not YYYY-MM-DDTHH:MM:SS: $REPLY"
+		done
+		idx=${flines[(i)type:*]}
+		if (( idx <= ${#flines} )) && [[ -n $type ]]; then
+			_nt_fm_get "$FM_TEXT" type
+			[[ $REPLY == $type ]] || _nt_issue $name $(( idx + 1 )) warning "frontmatter type '$REPLY' differs from the name"
+		fi
+	fi
+
+	# Only targets that look like Arcanum note names are checked, so links to
+	# other kinds of pages are never reported.
+	ln=$base
+	for line in "${(@f)FM_BODY}"; do
+		(( ln++ ))
+		rest=$line
+		while [[ $rest =~ '\[\[([^]|#]+)' ]]; do
+			target=$match[1]
+			rest=${rest:$MEND}
+			target=${target%.md}
+			[[ $target =~ '^(draft|script|snippet|doc|bug|adr|idea|content)-[0-9]{8}-[0-9]{6}' ]] || continue
+			[[ -f $VAULT/$target.md ]] || _nt_issue $name $ln warning "broken link [[$target]]"
+		done
+	done
+}
+
+_nt_kv() {
+	print -rn -- "${(r:18:)1}"
+}
+
+# Prints one `doctor` row and updates the counters: failures count as errors
+# and warnings as warnings.
+_nt_row() {
+	local sev=$1 label=$2 detail=$3 tag
+	case $sev in
+		ok) tag="${C_GREEN}ok${C_RESET}  " ;;
+		warn) tag="${C_YELLOW}warn${C_RESET}"; (( CHK_WARNINGS++ )) ;;
+		fail) tag="${C_RED}fail${C_RESET}"; (( CHK_ERRORS++ )) ;;
+	esac
+	print -r -- "  $tag  ${(r:22:)label} $detail"
+}
+
+typeset -gA H_DESC H_SYNTAX H_ARGS H_BEHAVIOR H_EXAMPLES H_ERRORS
+
+H_DESC[new]='Create a classified note from a template and open it.'
+H_SYNTAX[new]='nt new <TYPE> [TITLE...]'
+H_ARGS[new]=$'TYPE      one of: script snippet doc bug adr idea content\nTITLE     optional; the words are joined with spaces'
+H_BEHAVIOR[new]=$'Validates TYPE, the editor and _templates/<TYPE>.md first, so a missing\ntemplate or editor never leaves a partial note. Replaces {{title}},\n{{type}}, {{created_at}} and {{updated_at}}, keeps every other double\nbrace, creates the file in the vault root, prints its path and opens it\nin ${VISUAL:-${EDITOR:-nvim}}.'
+H_EXAMPLES[new]=$'nt new bug "Login failure"\nnt new snippet "Java stream filter"'
+H_ERRORS[new]=$'2 missing type or bad arguments, 3 invalid type, 4 template missing,\n5 collision after 99 attempts, 7 editor missing, 8 read/write failure'
+
+H_DESC[ls]='List notes by creation time (newest first).'
+H_SYNTAX[ls]='nt ls [TYPE|draft] [-i|--interactive]'
+H_ARGS[ls]=$'TYPE      one of the seven types, or "draft", to filter\n-i        pick one with fzf (preview included) and open it'
+H_BEHAVIOR[ls]=$'Lists the .md files in the vault root, ordered by the timestamp in the\nname, one file name per line, so it is safe in pipelines. Notes whose\nname breaks the convention come last; "nt check" explains them.'
+H_EXAMPLES[ls]=$'nt ls\nnt ls bug\nnt ls draft\nnt ls bug --interactive'
+H_ERRORS[ls]=$'2 bad arguments, 3 invalid type, 6 nothing to select, 7 fzf missing\nwith -i'
+
+H_DESC[recent]='List the most recently modified notes.'
+H_SYNTAX[recent]='nt recent [COUNT] [-i|--interactive]'
+H_ARGS[recent]=$'COUNT     how many notes to show (default 5)\n-i        pick one with fzf and open it'
+H_BEHAVIOR[recent]=$'Ordered by the modification time of the file, not by the timestamp in\nthe name ("nt ls" does that).'
+H_EXAMPLES[recent]=$'nt recent\nnt recent 10\nnt recent -i'
+H_ERRORS[recent]='2 bad arguments, 6 nothing to select, 7 fzf missing with -i'
+
+H_DESC[find]='Search the content of the notes.'
+H_SYNTAX[find]='nt find <QUERY...>'
+H_ARGS[find]='QUERY     text to look for; the words are joined with spaces'
+H_BEHAVIOR[find]=$'Fixed-string, smart-case search with ripgrep over the notes of the vault\nroot (templates and attachments are excluded). Prints name:line:text.\nOn a terminal with fzf you can pick a hit and open it at that line;\notherwise the hits are printed. No hits is not an error.'
+H_EXAMPLES[find]=$'nt find authentication\nnt find "spring security"'
+H_ERRORS[find]='2 missing query, 7 ripgrep missing'
+
+H_DESC[open]='Pick a note with fzf and open it in the editor.'
+H_SYNTAX[open]='nt open [QUERY...]'
+H_ARGS[open]='QUERY     optional initial query for the selector'
+H_BEHAVIOR[open]=$'Needs fzf and a terminal. Shows all notes with a preview (bat, or cat\nwhen bat is missing) and opens the choice with ${VISUAL:-${EDITOR:-nvim}}.\nThe history ("nt last") is updated only after a successful open.\nCancelling the selector ends normally.'
+H_EXAMPLES[open]=$'nt open\nnt open authentication'
+H_ERRORS[open]='6 no notes, 7 fzf or editor missing'
+
+H_DESC[preview]='Show a note without opening the editor.'
+H_SYNTAX[preview]='nt preview [NOTE]'
+H_ARGS[preview]='NOTE      file name (with or without .md) or path; fzf when omitted'
+H_BEHAVIOR[preview]=$'Prints the content with bat, or cat as fallback. It never modifies the\nnote and never touches the history.'
+H_EXAMPLES[preview]=$'nt preview bug-20261108-153012-login-error.md\nnt preview'
+H_ERRORS[preview]='6 note not found, 7 fzf missing when NOTE is omitted'
+
+H_DESC[path]='Print the absolute path of a note.'
+H_SYNTAX[path]='nt path [NOTE]'
+H_ARGS[path]='NOTE      file name (with or without .md) or path; fzf when omitted'
+H_BEHAVIOR[path]=$'Prints only the path on stdout, with nothing else, for use in scripts\nand command substitution. The selector works even when stdout is piped.'
+H_EXAMPLES[path]=$'nvim "$(nt path bug-20261108-153012-login-error.md)"\nnt path'
+H_ERRORS[path]='6 note not found, 7 fzf missing when NOTE is omitted'
+
+H_DESC[last]='Reopen the last note opened by nt.'
+H_SYNTAX[last]='nt last'
+H_ARGS[last]='(none)'
+H_BEHAVIOR[last]=$'The history lives in ${XDG_STATE_HOME:-~/.local/state}/arcanum/last, outside\nthe vault and independent of Neovim. It is checked before use.'
+H_EXAMPLES[last]='nt last'
+H_ERRORS[last]='6 no history, or the recorded note no longer exists, 7 editor missing'
+
+H_DESC[mv]='Rename a note by changing its title.'
+H_SYNTAX[mv]='nt mv [NOTE] [NEW_TITLE...]'
+H_ARGS[mv]=$'NOTE        file name or path; fzf when omitted\nNEW_TITLE   new title; asked on the terminal when omitted'
+H_BEHAVIOR[mv]=$'Keeps the type and the timestamp, builds a new slug, never overwrites\n(a counter is appended on collision) and updates the "title" field when it\nexists. updated_at is not changed. Wikilinks to the note in the other\nnotes are rewritten; those notes get a new updated_at when they have one.\nThe original is preserved if anything fails.'
+H_EXAMPLES[mv]=$'nt mv bug-20261108-153012-old.md "Authentication validation failure"\nnt mv'
+H_ERRORS[mv]='2 missing title, 5 collision, 6 note not found, 7 fzf missing, 8 write failure'
+
+H_DESC[retype]='Change the type of a note.'
+H_SYNTAX[retype]='nt retype [NOTE] [TYPE]'
+H_ARGS[retype]=$'NOTE      file name or path; fzf when omitted\nTYPE      one of the seven types; fzf when omitted ("draft" is not accepted)'
+H_BEHAVIOR[retype]=$'Renames the file and updates the "type" field when it exists. The\ntimestamp, slug, body and created_at are kept; no template is applied.\nWhen anything was chosen interactively it asks for confirmation. Links to\nthe note are rewritten as in "nt mv".'
+H_EXAMPLES[retype]=$'nt retype bug-20261108-153012-login-error.md content\nnt retype'
+H_ERRORS[retype]='2 bad arguments, 3 invalid type, 5 collision, 6 note not found, 7 fzf missing'
+
+H_DESC[backlinks]='Find the notes that link to a note.'
+H_SYNTAX[backlinks]='nt backlinks [NOTE]'
+H_ARGS[backlinks]='NOTE      target note; fzf when omitted'
+H_BEHAVIOR[backlinks]=$'Looks for [[name]], [[name|alias]] and [[name#heading]] in the other\nnotes and prints name:line:text. On a terminal with fzf you can pick a hit\nand open it. Partial name matches are not reported.'
+H_EXAMPLES[backlinks]=$'nt backlinks bug-20261108-153012-login-error.md\nnt backlinks'
+H_ERRORS[backlinks]='6 note not found, 7 ripgrep or fzf missing'
+
+H_DESC[template]='Inspect the templates.'
+H_SYNTAX[template]=$'nt template list [TYPE]\nnt template show <TYPE>'
+H_ARGS[template]=$'list      one template per line; TYPE filters\nshow      prints the content of _templates/<TYPE>.md'
+H_BEHAVIOR[template]=$'Templates are the .md files of _templates/ and are maintained by you; nt\nnever creates or edits them. Files whose name is not a valid type are\nreported as ignored.'
+H_EXAMPLES[template]=$'nt template list\nnt template show bug'
+H_ERRORS[template]='2 bad arguments, 3 invalid type, 4 template missing'
+
+H_DESC[stats]='Print statistics computed from the files.'
+H_SYNTAX[stats]='nt stats'
+H_ARGS[stats]='(none)'
+H_BEHAVIOR[stats]=$'Totals, drafts, classified notes, count per type, available templates,\nthe newest note by name and the most recently modified one. No index or\ndatabase is used.'
+H_EXAMPLES[stats]='nt stats'
+H_ERRORS[stats]='8 vault unreadable'
+
+H_DESC[check]='Verify the integrity of the vault. Changes nothing.'
+H_SYNTAX[check]='nt check [NOTE]'
+H_ARGS[check]='NOTE      check only this note'
+H_BEHAVIOR[check]=$'Reports names outside the convention, invalid types and timestamps,\nmalformed frontmatter, invalid date fields, broken wikilinks to notes\nnamed like Arcanum notes, repeated timestamp+slug and unexpected\ndirectories. Missing optional fields are not problems. Prints\nfile:line: error|warning: message. Warnings do not affect the exit status.'
+H_EXAMPLES[check]=$'nt check\nnt check bug-20261108-153012-login-error.md'
+H_ERRORS[check]='1 at least one error was found, 6 note not found'
+
+H_DESC[doctor]='Diagnose the environment.'
+H_SYNTAX[doctor]='nt doctor'
+H_ARGS[doctor]='(none)'
+H_BEHAVIOR[doctor]=$'Checks the vault, its folders and permissions, the editor, fzf, rg, bat,\nARCANUM_DIR, the history directory, Zsh and name conflicts with another\n"nt" executable. Required items fail; optional ones only warn and say\nwhich feature they affect. Nothing is installed or modified.'
+H_EXAMPLES[doctor]='nt doctor'
+H_ERRORS[doctor]='1 a required item failed'
+
+H_DESC[help]='Show the general help or the help of a command.'
+H_SYNTAX[help]='nt help [COMMAND]'
+H_ARGS[help]='COMMAND   any command listed by "nt help"'
+H_BEHAVIOR[help]='"nt --help" and "nt -h" are the same as "nt help".'
+H_EXAMPLES[help]=$'nt help\nnt help new'
+H_ERRORS[help]='2 unknown command'
+
+_nt_help_section() {
+	local line
+	print -r -- "${C_BOLD}$1${C_RESET}"
+	for line in "${(@f)2}"; do
+		print -r -- "    $line"
+	done
+	print
+}
+
+_nt_help_page() {
+	local c=$1
+	_nt_help_section NAME "nt $c - ${H_DESC[$c]}"
+	_nt_help_section SYNTAX "${H_SYNTAX[$c]}"
+	_nt_help_section ARGUMENTS "${H_ARGS[$c]}"
+	_nt_help_section BEHAVIOR "${H_BEHAVIOR[$c]}"
+	_nt_help_section EXAMPLES "${H_EXAMPLES[$c]}"
+	_nt_help_section 'ERRORS (EXIT STATUS)' "${H_ERRORS[$c]}"$'\n''Exit codes are listed in "nt help".'
+}
+
+_nt_help_general() {
+	local c syntax=$'nt [TITLE...]'
+	for c in ${NT_COMMANDS:#help}; do
+		syntax+=$'\n'$H_SYNTAX[$c]
+	done
+	syntax+=$'\nnt help [COMMAND]\nnt -h | --help\nnt -v | --version'
+	_nt_help_section NAME "nt - $NT_TITLE $NT_VERSION"
+	_nt_help_section DESCRIPTION $'Capture, classify, find and maintain the notes of the Arcanum vault, a flat\nfolder of Markdown files. Independent of Neovim.'
+	_nt_help_section SYNTAX "$syntax"
+	_nt_help_section 'DEFAULT BEHAVIOR' $'With no command, nt creates a draft in the vault root, prints its path and\nopens it in the editor. The first argument is a command only when it is one\nof the names above; anything else is the title of the draft. Use\n"nt -- TITLE" to force a title such as "open".'
+	_nt_help_section 'NOTE TYPES' $'script snippet doc bug adr idea content\n"draft" is a provisional state, not a type.'
+	_nt_help_section ENVIRONMENT $'ARCANUM_DIR      vault directory (default: $HOME/documents/arcanum)\nVISUAL, EDITOR    editor (default: nvim)\nNO_COLOR          disables colors\nXDG_STATE_HOME    base of the history directory (default: ~/.local/state)'
+	_nt_help_section EXAMPLES $'nt\nnt "Spring security notes"\nnt new bug "Login failure"\nnt ls bug\nnt find "spring security"\nnt open'
+	_nt_help_section 'EXIT CODES' $'0 success            1 general error      2 invalid arguments\n3 invalid type       4 template missing   5 file collision\n6 note not found     7 missing dependency 8 read/write failure'
+	print -r -- "Use 'nt help <command>' for details: ${(j: :)${NT_COMMANDS:#help}}"
+}
+
+cmd_draft() {
+	_nt_require_vault
+	_nt_clean_title "$*"
+	_nt_create_and_open draft "$REPLY"
+}
+
+cmd_new() {
+	_nt_require_vault
+	local type=${1-}
+	(( $# )) || _nt_usage_err new "missing note type"
+	shift
+	if ! _nt_is_type $type; then
+		_nt_err "invalid type: $type"
+		print -ru2 -- "valid types: ${NT_TYPES}"
+		exit $EX_TYPE
+	fi
+	_nt_clean_title "$*"
+	_nt_create_and_open $type "$REPLY"
+}
+
+cmd_ls() {
+	_nt_require_vault
+	local filter= a n
+	local -i interactive=0
+	local -a out=()
+	for a; do
+		case $a in
+			-i|--interactive) interactive=1 ;;
+			-*) _nt_usage_err ls "unknown option: $a" ;;
+			*) [[ -z $filter ]] || _nt_usage_err ls "too many arguments"; filter=$a ;;
+		esac
+	done
+	if [[ -n $filter && $filter != draft ]] && ! _nt_is_type $filter; then
+		_nt_err "invalid type: $filter"
+		print -ru2 -- "valid filters: ${NT_TYPES} draft"
+		exit $EX_TYPE
+	fi
+	_nt_sorted_notes
+	if [[ -n $filter ]]; then
+		for n in $SORTED; do
+			[[ $n =~ $NAME_RE && $match[1] == $filter ]] && out+=($n)
+		done
+	else
+		out=($SORTED)
+	fi
+	_nt_list_or_pick $interactive $out
+}
+
+# Prints the names, or selects one with fzf and opens it.
+_nt_list_or_pick() {
+	local -i interactive=$1
+	shift
+	if (( ! interactive )); then
+		(( $# )) && print -rl -- "$@"
+		return 0
+	fi
+	_nt_need_fzf || exit $?
+	if (( ! $# )); then
+		_nt_err "no notes found"
+		exit $EX_NOTFOUND
+	fi
+	local out rc
+	out=$(print -rl -- "$@" | _NT_VAULT=$VAULT command fzf --prompt='note> ' --tiebreak=index \
+		--preview="$PV_NOTE" --preview-window='right,60%,wrap')
+	rc=$?
+	if (( rc != 0 )); then
+		(( rc == 1 || rc == 130 )) && return 0
+		exit $EX_ERROR
+	fi
+	_nt_open $VAULT/$out || exit $?
+}
+
+cmd_recent() {
+	_nt_require_vault
+	local a
+	local -i interactive=0 count=$RECENT_DEFAULT
+	local given=
+	for a; do
+		case $a in
+			-i|--interactive) interactive=1 ;;
+			-*) _nt_usage_err recent "unknown option: $a" ;;
+			*)
+				[[ -z $given ]] || _nt_usage_err recent "too many arguments"
+				[[ $a == <-> ]] && (( a > 0 )) || _nt_usage_err recent "COUNT must be a positive integer: $a"
+				count=$a given=1
+				;;
+		esac
+	done
+	_nt_notes_by_mtime
+	_nt_list_or_pick $interactive ${SORTED[1,count]}
+}
+
+cmd_find() {
+	_nt_require_vault
+	(( $# )) || _nt_usage_err find "missing query"
+	local query
+	_nt_clean_title "$*"
+	query=$REPLY
+	[[ -n $query ]] || _nt_usage_err find "missing query"
+	_nt_rg -e $query || exit $?
+	_nt_show_hits "${reply[@]}" || exit $?
+}
+
+cmd_open() {
+	_nt_require_vault
+	local query
+	_nt_clean_title "$*"
+	query=$REPLY
+	_nt_select_note $query
+	local rc=$?
+	(( rc == 1 )) && return 0
+	(( rc != 0 )) && exit $rc
+	_nt_open $VAULT/$REPLY || exit $?
+}
+
+cmd_preview() {
+	_nt_require_vault
+	(( $# <= 1 )) || _nt_usage_err preview "too many arguments"
+	_nt_note_arg ${1-} || exit $?
+	if [[ -n $BAT ]]; then
+		command $BAT --style=plain --paging=never -- $VAULT/$REPLY
+	else
+		command cat -- $VAULT/$REPLY
+	fi
+}
+
+cmd_path() {
+	_nt_require_vault
+	(( $# <= 1 )) || _nt_usage_err path "too many arguments"
+	_nt_note_arg ${1-} || exit $?
+	print -r -- $VAULT/$REPLY
+}
+
+cmd_last() {
+	_nt_require_vault
+	(( $# == 0 )) || _nt_usage_err last "this command takes no arguments"
+	if ! _nt_hist_get; then
+		_nt_err "no history yet; open a note with nt first"
+		exit $EX_NOTFOUND
+	fi
+	local p=$REPLY
+	if [[ ${p:h} != "$VAULT" || ! -f $p ]]; then
+		_nt_err "the last note is no longer available: $p"
+		exit $EX_NOTFOUND
+	fi
+	_nt_open $p || exit $?
+}
+
+cmd_mv() {
+	_nt_require_vault
+	local name title new type ts slug
+	local -i have_title=0
+	if (( $# )); then
+		_nt_resolve_note $1 || exit $?
+		name=$REPLY
+		shift
+		if (( $# )); then
+			_nt_clean_title "$*"
+			title=$REPLY
+			have_title=1
+		fi
+	else
+		_nt_note_arg || exit $?
+		name=$REPLY
+	fi
+	if (( ! have_title )); then
+		_nt_ask "New title: " || _nt_usage_err mv "missing new title"
+		_nt_clean_title "$REPLY"
+		title=$REPLY
+		[[ -n $title ]] || exit $EX_OK
+	fi
+	if [[ ! $name =~ $NAME_RE ]]; then
+		_nt_err "$name does not follow the naming convention; run 'nt check $name'"
+		exit $EX_ERROR
+	fi
+	type=$match[1] ts=$match[2]-$match[3]
+	_nt_slugify "$title"
+	slug=$REPLY
+	_nt_free_name $type $ts "$slug" $name
+	local rc=$?
+	if (( rc == 1 )); then
+		print -r -- "Name unchanged: $name"
+		exit $EX_OK
+	fi
+	(( rc != 0 )) && exit $rc
+	new=$REPLY
+	_nt_yaml_quote "$title"
+	_nt_now
+	_nt_rename_commit $name $new title $REPLY || exit $?
+}
+
+cmd_retype() {
+	_nt_require_vault
+	local name target new slug out rc
+	local -i interactive=0
+	(( $# <= 2 )) || _nt_usage_err retype "too many arguments"
+	if (( $# )); then
+		_nt_resolve_note $1 || exit $?
+		name=$REPLY
+	else
+		interactive=1
+		_nt_note_arg || exit $?
+		name=$REPLY
+	fi
+	if [[ ! $name =~ $NAME_RE ]]; then
+		_nt_err "$name does not follow the naming convention; run 'nt check $name'"
+		exit $EX_ERROR
+	fi
+	local cur=$match[1] ts=$match[2]-$match[3]
+	slug=$match[5]
+
+	if [[ -n ${2-} ]]; then
+		target=$2
+	else
+		interactive=1
+		_nt_need_fzf || exit $?
+		out=$(print -rl -- $NT_TYPES | command fzf --prompt='type> ' --height=40%)
+		rc=$?
+		(( rc == 1 || rc == 130 )) && exit $EX_OK
+		(( rc != 0 )) && exit $EX_ERROR
+		target=$out
+	fi
+	if [[ $target == draft ]]; then
+		_nt_err "draft is not a valid target type"
+		exit $EX_TYPE
+	fi
+	if ! _nt_is_type $target; then
+		_nt_err "invalid type: $target"
+		print -ru2 -- "valid types: ${NT_TYPES}"
+		exit $EX_TYPE
+	fi
+	if [[ $target == $cur ]]; then
+		print -r -- "Type unchanged: $name"
+		exit $EX_OK
+	fi
+	_nt_free_name $target $ts "$slug" $name || exit $?
+	new=$REPLY
+	if (( interactive )); then
+		_nt_confirm "Retype $name -> $new?" || exit $EX_OK
+	fi
+	_nt_now
+	_nt_rename_commit $name $new type $target || exit $?
+}
+
+cmd_backlinks() {
+	_nt_require_vault
+	(( $# <= 1 )) || _nt_usage_err backlinks "too many arguments"
+	_nt_note_arg ${1-} || exit $?
+	local stem=${REPLY%.md} name=$REPLY
+	_nt_rg -e "[[$stem]]" -e "[[$stem|" -e "[[$stem#" || exit $?
+	local -a hits=()
+	local h
+	for h in "${reply[@]}"; do
+		[[ ${h%%:*} == $name ]] || hits+=($h)
+	done
+	_nt_show_hits "${hits[@]}" || exit $?
+}
+
+cmd_template() {
+	_nt_require_vault
+	local sub=${1-} t f
+	local -a found=() ignored=()
+	[[ -n $sub ]] || _nt_usage_err template "missing subcommand"
+	shift
+	case $sub in
+		list)
+			(( $# <= 1 )) || _nt_usage_err template "too many arguments"
+			if [[ -n ${1-} ]] && ! _nt_is_type $1; then
+				_nt_err "invalid type: $1"
+				exit $EX_TYPE
+			fi
+			if [[ ! -d $VAULT/_templates ]]; then
+				_nt_err "templates directory not found: $VAULT/_templates"
+				exit $EX_TEMPLATE
+			fi
+			for f in $VAULT/_templates/*.md(N.); do
+				t=${${f:t}%.md}
+				if _nt_is_type $t; then found+=($t); else ignored+=(${f:t}); fi
+			done
+			[[ -n ${1-} ]] && found=(${(M)found:#$1})
+			if [[ -n ${1-} && ${#found} -eq 0 ]]; then
+				_nt_err "template not found: $VAULT/_templates/$1.md"
+				exit $EX_TEMPLATE
+			fi
+			(( ${#found} )) && print -rl -- $found
+			if [[ -z ${1-} ]] && (( ${#ignored} )); then
+				_nt_warn "ignored (name is not a valid type): ${(j:, :)ignored}"
+			fi
+			;;
+		show)
+			(( $# == 1 )) || _nt_usage_err template "show needs exactly one TYPE"
+			if ! _nt_is_type $1; then
+				_nt_err "invalid type: $1"
+				print -ru2 -- "valid types: ${NT_TYPES}"
+				exit $EX_TYPE
+			fi
+			_nt_require_template $1 || exit $?
+			command cat -- $REPLY
+			;;
+		*) _nt_usage_err template "unknown subcommand: $sub" ;;
+	esac
+}
+
+cmd_stats() {
+	_nt_require_vault
+	(( $# == 0 )) || _nt_usage_err stats "this command takes no arguments"
+	[[ -r $VAULT ]] || _nt_die $EX_IO "cannot read $VAULT"
+	local n t
+	local -i drafts=0 classified=0 other=0
+	local -a tpls=() lines=()
+	_nt_sorted_notes
+	for n in $NOTES; do
+		if [[ $n =~ $NAME_RE ]]; then
+			if [[ $match[1] == draft ]]; then (( drafts++ )); else (( classified++ )); fi
+		else
+			(( other++ ))
+		fi
+	done
+	for n in $VAULT/_templates/*.md(N.); do
+		t=${${n:t}%.md}
+		_nt_is_type $t && tpls+=($t)
+	done
+	print -r -- "${C_BOLD}Arcanum${C_RESET} $VAULT"
+	print
+	print -r -- "  $(_nt_kv Notes) ${#NOTES}"
+	print -r -- "  $(_nt_kv Drafts) $drafts"
+	print -r -- "  $(_nt_kv Classified) $classified"
+	(( other )) && print -r -- "  $(_nt_kv Other) $other  (outside the naming convention)"
+	print
+	print -r -- "${C_BOLD}By type${C_RESET}"
+	for t in $NT_TYPES; do
+		_nt_count_type $t
+		print -r -- "  ${(r:18:)t} $REPLY"
+	done
+	print
+	print -r -- "  $(_nt_kv Templates) ${tpls:-none}"
+	local newest=$SORTED[1]
+	_nt_notes_by_mtime
+	print -r -- "  $(_nt_kv Newest) ${newest:--}"
+	print -r -- "  $(_nt_kv "Last modified") ${SORTED[1]:--}"
+}
+
+cmd_check() {
+	_nt_require_vault
+	(( $# <= 1 )) || _nt_usage_err check "too many arguments"
+	local n d key other
+	local -a targets
+	local -A seen
+	if (( $# )); then
+		_nt_resolve_note $1 || exit $?
+		targets=($REPLY)
+	else
+		_nt_sorted_notes
+		targets=($SORTED)
+	fi
+	for n in $targets; do
+		_nt_check_note $n
+		if [[ $n =~ $NAME_RE ]]; then
+			key=$match[2]-$match[3]-$match[5]
+			if [[ -n ${seen[$key]-} ]]; then
+				_nt_issue $n '' warning "same timestamp and slug as ${seen[$key]}"
+			else
+				seen[$key]=$n
+			fi
+		fi
+	done
+	if (( $# == 0 )); then
+		for d in $VAULT/*(N/); do
+			[[ ${d:t} == (_templates|attachments) ]] || _nt_issue ${d:t}/ '' warning "unexpected directory; notes live in the vault root"
+		done
+	fi
+	print -r -- "Checked ${#targets} note(s): $CHK_ERRORS error(s), $CHK_WARNINGS warning(s)"
+	(( CHK_ERRORS == 0 )) || exit $EX_ERROR
+}
+
+cmd_doctor() {
+	(( $# == 0 )) || _nt_usage_err doctor "this command takes no arguments"
+	local e=${VISUAL:-${EDITOR:-nvim}} t p
+	local -a ed all
+	print -r -- "${C_BOLD}Required${C_RESET}"
+	_nt_row ok zsh "$ZSH_VERSION"
+	if [[ -d $VAULT ]]; then
+		_nt_row ok vault $VAULT
+		[[ -r $VAULT && -x $VAULT ]] && _nt_row ok "vault read" yes || _nt_row fail "vault read" "no permission"
+		[[ -w $VAULT ]] && _nt_row ok "vault write" yes || _nt_row fail "vault write" "no permission"
+	else
+		_nt_row fail vault "not found: $VAULT"
+	fi
+	if [[ -n ${ARCANUM_DIR-} ]]; then
+		_nt_row ok ARCANUM_DIR $ARCANUM_DIR
+	else
+		_nt_row ok ARCANUM_DIR "unset, using the default"
+	fi
+	print
+	print -r -- "${C_BOLD}Vault layout${C_RESET}"
+	for t in _templates attachments; do
+		[[ -d $VAULT/$t ]] && _nt_row ok $t present || _nt_row warn $t "missing; create it"
+	done
+	[[ -f $VAULT/README.md ]] && _nt_row ok README.md present || _nt_row warn README.md "missing"
+	print
+	print -r -- "${C_BOLD}Optional${C_RESET}"
+	ed=(${(Q)${(z)e}})
+	if (( ${#ed} )) && command -v -- ${ed[1]} >/dev/null 2>&1; then
+		_nt_row ok editor "$e"
+	else
+		_nt_row warn editor "'$e' not found; needed to create and open notes (set VISUAL or EDITOR)"
+	fi
+	(( $+commands[fzf] )) && _nt_row ok fzf "$commands[fzf]" || _nt_row warn fzf "missing; interactive selection is disabled"
+	(( $+commands[rg] )) && _nt_row ok rg "$commands[rg]" || _nt_row warn rg "missing; find and backlinks are disabled"
+	if [[ -n $BAT ]]; then
+		_nt_row ok bat "$commands[$BAT]"
+	else
+		_nt_row warn bat "missing; previews fall back to cat"
+	fi
+	print
+	print -r -- "${C_BOLD}State${C_RESET}"
+	if [[ -d $NT_STATE ]]; then
+		[[ -w $NT_STATE ]] && _nt_row ok history $NT_STATE || _nt_row warn history "not writable: $NT_STATE"
+	else
+		_nt_row ok history "$NT_STATE (created on first use)"
+	fi
+	all=(${(u)${(f)"$(whence -pa nt 2>/dev/null)"}})
+	local c conflict=
+	for c in $all; do
+		[[ ${c:A} == $NT_SELF ]] || conflict+=" $c"
+	done
+	if [[ -n $conflict ]]; then
+		_nt_row warn "nt in PATH" "another executable named nt:$conflict"
+	else
+		_nt_row ok "nt in PATH" "no conflict ($NT_SELF)"
+	fi
+	print
+	print -r -- "$CHK_ERRORS failure(s), $CHK_WARNINGS warning(s)"
+	(( CHK_ERRORS == 0 )) || exit $EX_ERROR
+}
+
+cmd_help() {
+	if (( ! $# )); then
+		_nt_help_general
+		return 0
+	fi
+	(( $# == 1 )) || _nt_usage_err help "too many arguments"
+	if (( ! ${NT_COMMANDS[(Ie)$1]} )); then
+		print -ru2 -- "${E_RED}nt: error:${E_RESET} unknown command: $1"
+		print -ru2 -- "Try 'nt help' for the list of commands."
+		exit $EX_USAGE
+	fi
+	_nt_help_page $1
+}
+
+# The first argument is a command only when it matches a known name. Anything
+# else is the title of a draft, and `--` forces that interpretation.
+main() {
+	_nt_init
+	local first=${1-}
+	case $first in
+		-h|--help) shift; cmd_help "$@" ;;
+		-v|--version)
+			print -r -- "nt $NT_VERSION"
+			print -r -- "$NT_TITLE"
+			;;
+		--) shift; cmd_draft "$@" ;;
+		-*)
+			print -ru2 -- "${E_RED}nt: error:${E_RESET} unknown option: $first"
+			print -ru2 -- "Try 'nt help' for usage."
+			exit $EX_USAGE
+			;;
+		*)
+			if [[ -n $first ]] && (( ${NT_COMMANDS[(Ie)$first]} )); then
+				shift
+				if [[ ${1-} == (-h|--help) && $first != help ]]; then
+					_nt_help_page $first
+				else
+					cmd_$first "$@"
+				fi
+			else
+				cmd_draft "$@"
+			fi
+			;;
+	esac
+}
+
+main "$@"
