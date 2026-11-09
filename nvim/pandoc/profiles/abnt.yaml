@@ -7,6 +7,8 @@
 # The profile is loaded after metadata.yaml, so its values override the
 # general metadata defaults. The note's own YAML front matter is applied
 # later and can still override this profile.
+pdf-engine: xelatex
+mainfont: Times New Roman # Requires this font to be installed on the system.
 fontsize: 12pt
 linestretch: 1.5
 geometry:
@@ -15,8 +17,14 @@ geometry:
   - bottom=2cm
   - right=2cm
 numbersections: true
+indent: true
+header-includes:
+  - \usepackage{ragged2e}
+  - \AtBeginDocument{\justifying}
+  - \setlength{\parindent}{1.25cm}
+  - \setlength{\parskip}{0pt}
+  - \setlength{\emergencystretch}{3em}
 
 # Optional settings. Uncomment only the options you want to enable.
 # toc: true
 # toc-title: Sumário
-# mainfont: TeX Gyre Termes # Requires this font to be installed on the system.
