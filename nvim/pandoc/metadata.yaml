@@ -7,14 +7,14 @@
 # Example front matter:
 #
 #   ---
-#   lang: en-US
+#   lang: pt-BR
 #   geometry: margin=3cm
 #   ---
 #
 # Language controls hyphenation, quotation marks and translated labels such
 # as "Contents" and "Sumário". On Arch Linux, pt-BR hyphenation requires
 # texlive-langportuguese.
-lang: pt-BR
+lang: en-US
 # Page layout
 documentclass: article
 fontsize: 12pt
