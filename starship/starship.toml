@@ -15,7 +15,8 @@ $git_branch\
 $git_state\
 ${custom.git_worktree}\
 ${custom.vpn}\
-${env_var.HTTP_PROXY}\
+${custom.proxy}\
+${custom.net_open}\
 $status\
 $jobs\
 $character"""
@@ -217,10 +218,12 @@ command = "echo vpn"
 style = "fg:yellow"
 format = "[ $output]($style)"
 
-[env_var.HTTP_PROXY]
-variable = "HTTP_PROXY"
+[custom.proxy]
+description = "indicador de proxy setado (HTTP ou HTTPS)"
+when = 'test -n "$HTTP_PROXY" || test -n "$HTTPS_PROXY"'
+command = "echo proxy"
 style = "fg:yellow"
-format = "[ proxy]($style)"
+format = "[ $output]($style)"
 
 [status]
 disabled = false
