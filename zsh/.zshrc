@@ -6,12 +6,14 @@
 
 # Environment
 
-# Deduplicate PATH entries, even if .zshrc gets sourced more than once
-typeset -U PATH
+# Deduplicate PATH entries, even if .zshrc gets sourced more than once.
+# The U attribute must be on the `path` array (assignments to it go
+# through here too); the tied scalar PATH alone is not enough.
+typeset -U path PATH
 
-# pipx (appended) and pnpm (prepended)
+# pipx provides ~/.local/bin via .zprofile; pnpm (prepended) here
 export PNPM_HOME="$HOME/.local/share/pnpm"
-path=("$PNPM_HOME" $path "$HOME/.local/bin")
+path=("$PNPM_HOME" $path)
 
 # SDKMAN: put the installed candidates on PATH right away and only
 # source the (slow) init script the first time `sdk` is actually called.
@@ -103,7 +105,8 @@ ZLE_REMOVE_SUFFIX_CHARS=$' \t\n;'
 
 # Disable Ctrl+S freezing terminal output
 # Ctrl+Q would otherwise be needed to resume it
-stty stop undef
+# (only in ttys, so scripts don't see a spurious stty error)
+[[ -t 0 ]] && stty stop undef
 
 
 # Window title

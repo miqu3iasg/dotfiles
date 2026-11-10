@@ -7,9 +7,8 @@ export ANTHROPIC_DEFAULT_HAIKU_MODEL='z-ai/glm-5.3'
 
 # Jan Local API Server - Claude Code Config
 
-# Go binary
-export PATH=$PATH:/usr/loca/go/bin
-export PATH="$HOME/.cargo/bin:$PATH"
-
 # Programming note taking vault
 export ARCANUM_DIR="$HOME/dev/arcanum"
+
+# Rust toolchain
+export PATH="$HOME/.cargo/bin:$PATH"
