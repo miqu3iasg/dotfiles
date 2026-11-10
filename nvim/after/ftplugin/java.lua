@@ -1,9 +1,8 @@
 -- after/ftplugin/java.lua
 
 -- Configures Java buffers with editor options, buffer-local keymaps and a
--- lightweight jdtls client used only for code navigation. Completion,
--- diagnostics and formatting are disabled to keep startup fast and memory
--- usage low.
+-- jdtls client used for code navigation and completion. Diagnostics and
+-- formatting are disabled to keep startup fast and memory usage low.
 --
 -- nvim-jdtls must be declared in `pack.lua` and installed through the plugin
 -- manager. The jdtls server itself is installed through Mason, which must
@@ -245,13 +244,12 @@ map("n", "<leader>ju", update_project, "Java: reload Maven/Gradle project")
 map("n", "<leader>jL", stop_clients, "Java: stop LSP")
 map("n", "<leader>jW", wipe_workspace, "Java: wipe workspace and restart LSP")
 
----Disable every provider that navigation does not need, so Neovim never
----requests them from the server.
+---Disable every provider that is not needed, so Neovim never requests them
+---from the server. Completion is deliberately kept.
 ---@param client vim.lsp.Client
 local function on_attach(client)
 	for _, provider in ipairs({
 		"semanticTokensProvider",
-		"completionProvider",
 		"signatureHelpProvider",
 		"codeLensProvider",
 		"inlayHintProvider",
@@ -260,7 +258,6 @@ local function on_attach(client)
 		client.server_capabilities[provider] = nil
 	end
 end
-
 local cmd = {
 	mason .. "/bin/jdtls",
 	"--jvm-arg=-Xmx1g",
@@ -290,7 +287,14 @@ local config = {
 	settings = {
 		java = {
 			autobuild = { enabled = false },
-			completion = { enabled = false },
+			completion = {
+				enabled = true,
+				guessMethodArguments = true,
+				favoriteStaticMembers = {
+					"org.junit.jupiter.api.Assertions.*",
+					"org.mockito.Mockito.*",
+				},
+			},
 			format = { enabled = false },
 			signatureHelp = { enabled = false },
 			referencesCodeLens = { enabled = false },
