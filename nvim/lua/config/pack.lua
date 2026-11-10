@@ -81,7 +81,7 @@ vim.pack.add({
 	{ src = "https://github.com/stevearc/conform.nvim" },
 
 	-- nvim-lint
-	-- Asynchronous linter runner for external linters such as flake8.
+	-- Asynchronous linter runner for external linters such as ruff.
 	{ src = "https://github.com/mfussenegger/nvim-lint" },
 
 	-- fzf-lua
