@@ -44,6 +44,7 @@ local snippet_modules = {
 	tex = "snippets.latex",
 	typst = "snippets.typst",
 	c = "snippets.c",
+	go = "snippets.go",
 	python = "snippets.python",
 	java = "snippets.java",
 	lisp = "snippets.lisp",
