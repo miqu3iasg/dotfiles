@@ -3,7 +3,7 @@
 # Pick one or more branches (excluding the current and the main ones) with
 # fzf and insert the selection into the command line.
 #
-# See: conf.d/git-widgets.zsh (binding: Ctrl+G Ctrl+B)
+# See: conf.d/git-widgets.zsh
 
 local sel
 

@@ -1,8 +1,8 @@
 # zsh/functions/sudo-command-line
 #
-# Press Esc twice to prepend or remove "sudo " from the command line.
+# Prepend or remove "sudo " from the command line.
 #
-# See: conf.d/widgets.zsh (binding: Esc Esc)
+# See: conf.d/widgets.zsh
 
 [[ -z $BUFFER ]] && zle up-history
 

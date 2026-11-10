@@ -3,7 +3,7 @@
 # Pick one or more files from `git status` with fzf and insert the
 # selection into the command line.
 #
-# See: conf.d/git-widgets.zsh (binding: Ctrl+G Ctrl+F)
+# See: conf.d/git-widgets.zsh
 
 local sel
 

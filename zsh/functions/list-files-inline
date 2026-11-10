@@ -4,7 +4,7 @@
 # contents of the directory under the cursor (or of the typed directory)
 # inline, below the prompt.
 #
-# See: conf.d/widgets.zsh (binding: Ctrl+X Ctrl+U)
+# See: conf.d/widgets.zsh
 
 local -a words
 local word="" dir="."

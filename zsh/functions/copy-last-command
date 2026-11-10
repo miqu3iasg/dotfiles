@@ -3,7 +3,7 @@
 # Copy the last executed command to the clipboard.
 # Prefers Wayland (wl-copy), falls back to X11 (xclip).
 #
-# See: conf.d/widgets.zsh (binding: Ctrl+X Ctrl+Y)
+# See: conf.d/widgets.zsh
 
 local cmd=${$(fc -ln -1)## }
 

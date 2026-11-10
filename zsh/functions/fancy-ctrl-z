@@ -1,9 +1,9 @@
 # zsh/functions/fancy-ctrl-z
 #
-# Ctrl+Z: resume the last background job if the line is empty, otherwise
-# stash the current line and clear the screen.
+# Resume the last background job if the line is empty, otherwise stash the
+# current line and clear the screen.
 #
-# See: conf.d/widgets.zsh (binding: Ctrl+Z)
+# See: conf.d/widgets.zsh
 
 if [[ -z $BUFFER ]]; then
     BUFFER="fg"

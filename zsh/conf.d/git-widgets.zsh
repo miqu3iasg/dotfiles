@@ -1,9 +1,8 @@
 # zsh/conf.d/git-widgets.zsh
 
-# fzf-based git pickers bound to Ctrl+G chords. Each widget inserts the
-# selection into the current command line instead of running anything, so
-# they can be combined with other commands
-# (e.g. `git rebase <Ctrl+G Ctrl+G>`).
+# fzf-based git pickers. Each widget inserts the selection into the
+# current command line instead of running anything, so they can be
+# combined with other commands.
 #
 # See: functions/fzf-git-branches
 # See: functions/fzf-git-files

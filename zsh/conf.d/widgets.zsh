@@ -7,12 +7,12 @@
 # See: functions/
 # See: conf.d/vim-mode.zsh (built-in widgets and keymaps)
 
-# Press Esc twice to prepend or remove "sudo " from the command line
+# Prepend or remove "sudo " from the command line
 zle -N sudo-command-line
 bindkey -M viins '\e\e' sudo-command-line
 bindkey -M vicmd '\e\e' sudo-command-line
 
-# Ctrl+Z: resume the last background job if the line is empty,
+# Resume the last background job if the line is empty,
 # otherwise stash the current line and clear the screen
 zle -N fancy-ctrl-z
 bindkey -M viins '^Z' fancy-ctrl-z

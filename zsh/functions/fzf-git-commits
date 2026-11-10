@@ -3,7 +3,7 @@
 # Pick one or more commits (inserts the short hashes) from the last 50 with
 # fzf and insert the selection into the command line.
 #
-# See: conf.d/git-widgets.zsh (binding: Ctrl+G Ctrl+G)
+# See: conf.d/git-widgets.zsh
 
 local sel
 
