@@ -1,4 +1,4 @@
-# ~/.config/zsh/aliasrc
+# zsh/aliases/aliasrc
 
 # General replacements
 alias cat='bat'                     # cat with syntax highlighting
