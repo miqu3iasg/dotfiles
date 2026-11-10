@@ -1,16 +1,17 @@
 -- lua/modules/notes.lua
 
--- Arcanum notes workflow: a flat vault of software-development notes managed
--- from Neovim. It creates quick drafts and typed notes from user-maintained
--- templates, inserts a template into an existing note, searches by name and by
--- content, and reopens the last note.
+-- Notes workflow: a flat vault of Markdown notes managed from Neovim. It
+-- creates quick drafts and typed notes from user-maintained templates,
+-- inserts a template into an existing note, searches by name and by content,
+-- and reopens the last note. The vault is just a folder: the system works
+-- with any of them, and only the path below points at one.
 --
 -- Note types, the file name `TYPE-YYYYMMDD-HHmmss[-SLUG].md`, and the slug and
 -- collision rules follow the vault's `README.md`. A draft gets `id`,
 -- `description`, `aliases` and `date` (creation time), and the template
--- placeholders are `{{title}}`, `{{date}}`, `{{file_name}}`, `{{id}}` and
--- `{{adr_number}}`. Renaming a note is left to
--- obsidian.nvim (`:Obsidian rename`), which also fixes the backlinks.
+-- placeholders are `{{title}}`, `{{date}}`, `{{id}}` and `{{adr_number}}`.
+-- Renaming a note is left to obsidian.nvim (`:Obsidian rename`), which also
+-- fixes the backlinks.
 --
 -- The vault is `$ARCANUM_DIR`, or `~/dev/arcanum` when unset. Notes live
 -- directly in its root. `_templates/` holds the templates and `attachments/`
@@ -88,7 +89,7 @@ local ACCENTS = {
 ---Where the history of opened notes is kept. It holds two lines: the note
 ---that was current and the one before it.
 ---@type string
-local HISTORY_FILE = vim.fn.stdpath("state") .. "/arcanum-last"
+local HISTORY_FILE = vim.fn.stdpath("state") .. "/notes-last"
 
 ---@type { current: string?, previous: string? }
 local history = { current = nil, previous = nil }
@@ -101,7 +102,7 @@ local history_loaded = false
 ---@param msg string
 ---@param level? integer
 local function notify(msg, level)
-	vim.notify(msg, level or vim.log.levels.INFO, { title = "Arcanum" })
+	vim.notify(msg, level or vim.log.levels.INFO, { title = "Notes" })
 end
 
 -- Vault and paths
@@ -459,8 +460,8 @@ local function uuid()
 	return ("%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x"):format(unpack(b))
 end
 
----Substitute `{{title}}`, `{{date}}`, `{{file_name}}`, `{{id}}` and
----`{{adr_number}}`, literally, and leave any other double braces alone. Every
+---Substitute `{{title}}`, `{{date}}`, `{{id}}` and `{{adr_number}}`,
+---literally, and leave any other double braces alone. Every
 ---value is computed at most once, and the lazy ones (`id`, `adr_number`) only
 ---when the template uses them.
 ---
@@ -468,13 +469,12 @@ end
 ---(`title: "{{title}}"`) is written without the quotes: they only keep the
 ---template valid YAML. They come back when the value needs them.
 ---@param content string
----@param ctx { title: string, date: string, file_name: string, id: string? } `id` keeps an existing id; one is generated when nil
+---@param ctx { title: string, date: string, id: string? } `id` keeps an existing id; one is generated when nil
 ---@return string
 local function render(content, ctx)
 	local vars = {
 		title = ctx.title,
 		date = ctx.date,
-		file_name = ctx.file_name,
 		id = function()
 			return ctx.id or uuid()
 		end,
@@ -537,21 +537,19 @@ end
 -- Creation
 
 ---Write a new note under the first free name of the series. An existing note
----is never overwritten. `content` may be a function that receives the final
----file name, for templates that use it.
+---is never overwritten.
 ---@param dir string
 ---@param type_ string
 ---@param ts string
 ---@param slug string
----@param content string|fun(name: string): string
+---@param content string
 ---@return string? path
 ---@return string? err
 local function create_file(dir, type_, ts, slug, content)
 	for n = 1, MAX_COLLISIONS do
 		local name = M.build_name(type_, ts, slug, n)
 		local path = dir .. "/" .. name
-		local text = type(content) == "function" and content(name) or content
-		local ok, err = write_exclusive(path, text)
+		local ok, err = write_exclusive(path, content)
 		if ok then
 			return path
 		end
@@ -579,9 +577,8 @@ function M.create(type_, title)
 	end
 	local ts, iso = now()
 	title = clean_title(title)
-	return create_file(vault_dir(), type_, ts, M.slugify(title), function(name)
-		return ensure_date(render(template, { title = title, date = iso, file_name = name }), iso)
-	end)
+	local content = ensure_date(render(template, { title = title, date = iso }), iso)
+	return create_file(vault_dir(), type_, ts, M.slugify(title), content)
 end
 
 ---@param path string
@@ -700,12 +697,7 @@ local function insert_template(buf, type_)
 	local date = fm_get(old_fm, "date") or iso
 	local id = fm_get(old_fm, "id")
 	local rendered = ensure_date(
-		render(template, {
-			title = fm_get(old_fm, "title") or "",
-			date = date,
-			file_name = vim.fs.basename(vim.api.nvim_buf_get_name(buf)),
-			id = id ~= "" and id or nil,
-		}),
+		render(template, { title = fm_get(old_fm, "title") or "", date = date, id = id ~= "" and id or nil }),
 		date
 	)
 	local new_fm, tbody = fm_split(rendered)
@@ -735,7 +727,7 @@ end
 function M.template()
 	local buf = vim.api.nvim_get_current_buf()
 	if not M.is_note_path(vim.api.nvim_buf_get_name(buf)) then
-		notify("Not an Arcanum note", vim.log.levels.WARN)
+		notify("Not a vault note", vim.log.levels.WARN)
 		return
 	end
 	local types = M.templates()
@@ -868,16 +860,16 @@ end
 
 function M.setup()
 	local cmd = vim.api.nvim_create_user_command
-	cmd("ArcanumDraft", M.new_draft, { desc = "Arcanum: quick draft" })
-	cmd("ArcanumNew", M.new_note, { desc = "Arcanum: new note (pick type and title)" })
-	cmd("ArcanumTemplate", M.template, { desc = "Arcanum: insert template into the current note" })
-	cmd("ArcanumFiles", M.find_files, { desc = "Arcanum: find notes by name" })
-	cmd("ArcanumGrep", M.grep, { desc = "Arcanum: search note contents" })
-	cmd("ArcanumLast", M.last, { desc = "Arcanum: reopen the last note" })
-	cmd("ArcanumOpen", M.open_vault, { desc = "Arcanum: open the vault folder" })
+	cmd("NotesDraft", M.new_draft, { desc = "Notes: quick draft" })
+	cmd("NotesNew", M.new_note, { desc = "Notes: new note (pick type and title)" })
+	cmd("NotesTemplate", M.template, { desc = "Notes: insert template into the current note" })
+	cmd("NotesFiles", M.find_files, { desc = "Notes: find notes by name" })
+	cmd("NotesGrep", M.grep, { desc = "Notes: search note contents" })
+	cmd("NotesLast", M.last, { desc = "Notes: reopen the last note" })
+	cmd("NotesOpen", M.open_vault, { desc = "Notes: open the vault folder" })
 
 	vim.api.nvim_create_autocmd("BufEnter", {
-		group = vim.api.nvim_create_augroup("arcanum_notes", { clear = true }),
+		group = vim.api.nvim_create_augroup("notes_module", { clear = true }),
 		pattern = "*.md",
 		callback = function(args)
 			local path = vim.api.nvim_buf_get_name(args.buf)

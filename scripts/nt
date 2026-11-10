@@ -8,7 +8,7 @@
 # them. Creating a note also opens it in the editor. The tool does not depend
 # on Neovim or on any of its plugins.
 #
-# The Neovim integration (lua/features/notes.lua) and this script implement the
+# The Neovim integration (lua/modules/notes.lua) and this script implement the
 # same contract, documented in the vault's README.md: types, file names, slugs,
 # collisions, frontmatter and placeholders. Change the contract in the README
 # first, then in both implementations.
@@ -27,7 +27,7 @@
 #
 # $ install -m 755 nt ~/.local/bin/nt
 #
-# The vault is $ARCANUM_DIR, or $HOME/documents/arcanum when unset. Every
+# The vault is $ARCANUM_DIR, or $HOME/dev/arcanum when unset. Every
 # command resolves it the same way and never depends on the current directory.
 
 emulate -R zsh
@@ -35,8 +35,8 @@ setopt extended_glob pipe_fail no_clobber
 zmodload zsh/datetime zsh/mapfile
 zmodload -F zsh/stat b:zstat
 
-typeset -gr NT_VERSION="1.0.0"
-typeset -gr NT_TITLE="Arcanum Notes CLI"
+typeset -gr NT_VERSION="1.1.0"
+typeset -gr NT_TITLE="Notes CLI"
 typeset -gr NT_SELF=${${(%):-%x}:A}
 
 typeset -gra NT_TYPES=(script snippet doc bug adr idea content)
@@ -89,14 +89,14 @@ _nt_init() {
 	trap _nt_cleanup EXIT
 	trap 'exit 130' INT TERM
 
-	local v=${ARCANUM_DIR:-$HOME/documents/arcanum}
+	local v=${ARCANUM_DIR:-$HOME/dev/arcanum}
 	v=${v/#\~/$HOME}
 	if [[ $v != /* ]]; then
 		_nt_die $EX_ERROR "ARCANUM_DIR must be an absolute path: $v"
 	fi
 	VAULT=${v:A}
 
-	NT_STATE=${XDG_STATE_HOME:-$HOME/.local/state}/arcanum
+	NT_STATE=${XDG_STATE_HOME:-$HOME/.local/state}/notes
 	HIST_FILE=$NT_STATE/last
 
 	_nt_setup_colors
@@ -530,25 +530,136 @@ _nt_fm_validate() {
 	return 0
 }
 
-# Substitutes the four known placeholders literally and leaves any other
-# double braces untouched. Arguments: content, title, type, created_at and
-# updated_at.
+# Random (version 4) UUID into REPLY, e.g.
+# 3f2b8c1e-5d4a-4b7e-9c1d-2a6f0e8b7d35.
+_nt_uuid() {
+	local hex=${${(j: :)$(command od -An -N16 -tx1 /dev/urandom 2>/dev/null)}// /}
+	if (( ${#hex} != 32 )); then
+		local b
+		local -i i
+		hex=
+		for (( i = 0; i < 16; i++ )); do
+			printf -v b '%02x' $(( RANDOM % 256 ))
+			hex+=$b
+		done
+	fi
+	hex[13]=4 # version 4
+	hex[17]=8 # variant 10xx
+	REPLY="${hex[1,8]}-${hex[9,12]}-${hex[13,16]}-${hex[17,20]}-${hex[21,32]}"
+}
+
+# Zero-padded sequence number for the next note of TYPE (007), from the type
+# prefix of the existing file names.
+_nt_next_number() {
+	local t=$1 n
+	local -i count=0
+	_nt_list_notes
+	for n in $NOTES; do
+		[[ $n =~ $NAME_RE && $match[1] == $t ]] && (( count++ ))
+	done
+	printf -v REPLY '%03d' $(( count + 1 ))
+}
+
+# Formats a value for the right-hand side of a frontmatter line. It is
+# written plain whenever YAML reads it back as the same string, and
+# double-quoted otherwise (": ", " #", a leading indicator, true, 2026, ...).
+# An empty value stays empty. REPLY holds the result.
+_nt_yaml_scalar() {
+	local v=$1
+	REPLY=$v
+	[[ -z $v ]] && return 0
+	local -i q=0
+	local c1=${v[1]} c2=${v[2]}
+	[[ $v == *[[:cntrl:]]* || $v == ' '* || $v == *' ' ]] && q=1
+	[[ $v == *': '* || $v == *: || $v == *' #'* ]] && q=1
+	case $c1 in
+		'['|']'|'{'|'}'|','|'#'|'&'|'*'|'!'|'|'|'>'|'"'|"'") q=1 ;;
+		'%'|'@'|'`') q=1 ;;
+		'-'|'?'|':')
+			(( ${#v} == 1 )) && q=1
+			[[ $c2 == ' ' ]] && q=1
+			;;
+	esac
+	[[ $v == '~' || ${(L)v} == (true|false|yes|no|on|off|null) ]] && q=1
+	[[ $v =~ ^-?[0-9]+([.][0-9]+)?$ || $v =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2} ]] && q=1
+	(( q )) && _nt_yaml_quote $v
+	return 0
+}
+
+# Substitutes the known placeholders literally and leaves any other double
+# braces untouched. Arguments: content and title. {{date}} is the creation
+# time; {{id}} is a random UUID; {{adr_number}} counts the existing ADR
+# notes. Every value is computed at most once, and the lazy ones ({{id}} and
+# {{adr_number}}) only when the template uses them.
+#
+# In the frontmatter, a line whose whole value is a quoted placeholder
+# ("title: \"{{title}}\"") is written without the quotes: they only keep the
+# template valid YAML. They come back when the value needs them.
 _nt_render() {
-	local c=$1 ph out rest val
-	local -a names=(title type created_at updated_at)
-	local -a vals=($2 $3 $4 $5)
+	local c=$1 out rest name ph sval q line key var
+	local -a names=(title date id adr_number)
+	local -A vars=(title ${2-} date $NOW_ISO)
+	local -a lines
 	local -i i
-	for (( i = 1; i <= 4; i++ )); do
-		ph='{{'${names[i]}'}}'
-		val=${vals[i]}
+
+	# In the frontmatter, a line whose whole value is a quoted placeholder
+	# is written without the quotes: they only keep the template valid YAML.
+	# They come back when the value needs them. This pass runs before the
+	# plain replacement, while the placeholders are still in place.
+	if _nt_fm_split "$1" && [[ -n $FM_TEXT ]]; then
+		lines=("${(@f)${FM_TEXT%$'\n'}}")
+		for (( i = 1; i <= ${#lines}; i++ )); do
+			line=$lines[i]
+			q=
+			local qt
+			for qt in '"' "'"; do
+				if [[ $line == (#b)([[:alnum:]_-]##:)[[:space:]]#${qt}\{\{([[:alnum:]_]##)\}\}${qt} ]]; then
+					q=$qt
+					break
+				fi
+			done
+			[[ -n $q ]] || continue
+			key=$match[1] var=$match[2]
+			(( ${names[(Ie)$var]} )) || continue
+			if [[ -z ${vars[$var]+x} ]]; then
+				case $var in
+					id) _nt_uuid ;;
+					adr_number) _nt_next_number adr ;;
+				esac
+				vars[$var]=$REPLY
+			fi
+			# The date field is always written plain, like the RAW_VARS
+			# behavior of the Neovim side.
+			if [[ $var == date ]]; then
+				sval=${vars[$var]}
+			else
+				_nt_yaml_scalar ${vars[$var]}
+				sval=$REPLY
+			fi
+			lines[i]=$key${sval:+ $sval}
+		done
+		c='---'$'\n'${(F)lines}$'\n''---'$'\n'$FM_BODY
+	fi
+
+	for name in $names; do
+		ph='{{'$name'}}'
+		[[ $c == *"$ph"* ]] || continue
+		if [[ -z ${vars[$name]+x} ]]; then
+			case $name in
+				id) _nt_uuid ;;
+				adr_number) _nt_next_number adr ;;
+			esac
+			vars[$name]=$REPLY
+		fi
 		out=
 		rest=$c
 		while [[ $rest == *"$ph"* ]]; do
-			out+=${rest%%"$ph"*}$val
+			out+=${rest%%"$ph"*}${vars[$name]}
 			rest=${rest#*"$ph"}
 		done
 		c=$out$rest
 	done
+
 	REPLY=$c
 }
 
@@ -588,17 +699,18 @@ _nt_create() {
 	local -i n
 
 	if [[ $type == draft ]]; then
-		content='---'$'\n'"created_at: $NOW_ISO"$'\n'"updated_at: $NOW_ISO"$'\n'
+		_nt_uuid
+		content='---'$'\n'"id: $REPLY"$'\n'
 		if [[ -n $title ]]; then
-			_nt_yaml_quote "$title"
+			_nt_yaml_scalar "$title"
 			content+="title: $REPLY"$'\n'
 		fi
-		content+='---'$'\n\n'
+		content+='description:'$'\n'"aliases: []"$'\n'"date: $NOW_ISO"$'\n''---'$'\n\n'
 	else
 		_nt_require_template $type || return $?
 		tpl=$REPLY
 		content=$mapfile[$tpl]
-		_nt_render "$content" "$title" $type $NOW_ISO $NOW_ISO
+		_nt_render "$content" "$title"
 		content=$REPLY
 	fi
 
@@ -666,9 +778,6 @@ _nt_rename_commit() {
 		oc=$mapfile[$VAULT/$other]
 		_nt_relink_content "$oc" $oldstem $newstem || continue
 		oc2=$REPLY
-		if _nt_content_set_field "$oc2" updated_at $NOW_ISO keep; then
-			oc2=$REPLY
-		fi
 		_nt_write_tmp "$oc2" || { _nt_err "could not write in $VAULT"; return $EX_IO }
 		tmp=$REPLY
 		_nt_copy_mode $tmp $VAULT/$other
@@ -870,12 +979,18 @@ _nt_check_note() {
 		if ! _nt_fm_validate "$FM_TEXT"; then
 			_nt_issue $name $(( REPLY + 1 )) error "malformed frontmatter line"
 		fi
-		for key in created_at updated_at; do
+		for key in date; do
 			idx=${flines[(i)${key}:*]}
 			(( idx <= ${#flines} )) || continue
 			_nt_fm_get "$FM_TEXT" $key
 			[[ $REPLY =~ $ISO_RE ]] || _nt_issue $name $(( idx + 1 )) error "$key is not YYYY-MM-DDTHH:MM:SS: $REPLY"
 		done
+		idx=${flines[(i)id:*]}
+		if (( idx <= ${#flines} )); then
+			_nt_fm_get "$FM_TEXT" id
+			[[ $REPLY =~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' ]] ||
+				_nt_issue $name $(( idx + 1 )) warning "id is not a UUID: $REPLY"
+		fi
 		idx=${flines[(i)type:*]}
 		if (( idx <= ${#flines} )) && [[ -n $type ]]; then
 			_nt_fm_get "$FM_TEXT" type
@@ -883,7 +998,7 @@ _nt_check_note() {
 		fi
 	fi
 
-	# Only targets that look like Arcanum note names are checked, so links to
+	# Only targets that look like vault note names are checked, so links to
 	# other kinds of pages are never reported.
 	ln=$base
 	for line in "${(@f)FM_BODY}"; do
@@ -920,7 +1035,7 @@ typeset -gA H_DESC H_SYNTAX H_ARGS H_BEHAVIOR H_EXAMPLES H_ERRORS
 H_DESC[new]='Create a classified note from a template and open it.'
 H_SYNTAX[new]='nt new <TYPE> [TITLE...]'
 H_ARGS[new]=$'TYPE      one of: script snippet doc bug adr idea content\nTITLE     optional; the words are joined with spaces'
-H_BEHAVIOR[new]=$'Validates TYPE, the editor and _templates/<TYPE>.md first, so a missing\ntemplate or editor never leaves a partial note. Replaces {{title}},\n{{type}}, {{created_at}} and {{updated_at}}, keeps every other double\nbrace, creates the file in the vault root, prints its path and opens it\nin ${VISUAL:-${EDITOR:-nvim}}.'
+H_BEHAVIOR[new]=$'Validates TYPE, the editor and _templates/<TYPE>.md first, so a missing\ntemplate or editor never leaves a partial note. Replaces {{title}},\n{{date}}, {{id}} and {{adr_number}}, keeps every other double brace,\ndrops the quotes of a whole-value quoted placeholder when the value does\nnot need them, creates the file in the vault root, prints its path and\nopens it in ${VISUAL:-${EDITOR:-nvim}}.'
 H_EXAMPLES[new]=$'nt new bug "Login failure"\nnt new snippet "Java stream filter"'
 H_ERRORS[new]=$'2 missing type or bad arguments, 3 invalid type, 4 template missing,\n5 collision after 99 attempts, 7 editor missing, 8 read/write failure'
 
@@ -969,21 +1084,21 @@ H_ERRORS[path]='6 note not found, 7 fzf missing when NOTE is omitted'
 H_DESC[last]='Reopen the last note opened by nt.'
 H_SYNTAX[last]='nt last'
 H_ARGS[last]='(none)'
-H_BEHAVIOR[last]=$'The history lives in ${XDG_STATE_HOME:-~/.local/state}/arcanum/last, outside\nthe vault and independent of Neovim. It is checked before use.'
+H_BEHAVIOR[last]=$'The history lives in ${XDG_STATE_HOME:-~/.local/state}/notes/last, outside\nthe vault and independent of Neovim. It is checked before use.'
 H_EXAMPLES[last]='nt last'
 H_ERRORS[last]='6 no history, or the recorded note no longer exists, 7 editor missing'
 
 H_DESC[mv]='Rename a note by changing its title.'
 H_SYNTAX[mv]='nt mv [NOTE] [NEW_TITLE...]'
 H_ARGS[mv]=$'NOTE        file name or path; fzf when omitted\nNEW_TITLE   new title; asked on the terminal when omitted'
-H_BEHAVIOR[mv]=$'Keeps the type and the timestamp, builds a new slug, never overwrites\n(a counter is appended on collision) and updates the "title" field when it\nexists. updated_at is not changed. Wikilinks to the note in the other\nnotes are rewritten; those notes get a new updated_at when they have one.\nThe original is preserved if anything fails.'
+H_BEHAVIOR[mv]=$'Keeps the type and the timestamp, builds a new slug, never overwrites\n(a counter is appended on collision) and updates the "title" field when it\nexists. Wikilinks to the note in the other notes are rewritten. The\noriginal is preserved if anything fails.'
 H_EXAMPLES[mv]=$'nt mv bug-20261108-153012-old.md "Authentication validation failure"\nnt mv'
 H_ERRORS[mv]='2 missing title, 5 collision, 6 note not found, 7 fzf missing, 8 write failure'
 
 H_DESC[retype]='Change the type of a note.'
 H_SYNTAX[retype]='nt retype [NOTE] [TYPE]'
 H_ARGS[retype]=$'NOTE      file name or path; fzf when omitted\nTYPE      one of the seven types; fzf when omitted ("draft" is not accepted)'
-H_BEHAVIOR[retype]=$'Renames the file and updates the "type" field when it exists. The\ntimestamp, slug, body and created_at are kept; no template is applied.\nWhen anything was chosen interactively it asks for confirmation. Links to\nthe note are rewritten as in "nt mv".'
+H_BEHAVIOR[retype]=$'Renames the file and updates the "type" field when it exists. The\ntimestamp, slug, body and frontmatter are kept; no template is applied.\nRetyping a draft is how it becomes a classified note. When anything was\nchosen interactively it asks for confirmation. Links to the note are\nrewritten as in "nt mv".'
 H_EXAMPLES[retype]=$'nt retype bug-20261108-153012-login-error.md content\nnt retype'
 H_ERRORS[retype]='2 bad arguments, 3 invalid type, 5 collision, 6 note not found, 7 fzf missing'
 
@@ -1011,7 +1126,7 @@ H_ERRORS[stats]='8 vault unreadable'
 H_DESC[check]='Verify the integrity of the vault. Changes nothing.'
 H_SYNTAX[check]='nt check [NOTE]'
 H_ARGS[check]='NOTE      check only this note'
-H_BEHAVIOR[check]=$'Reports names outside the convention, invalid types and timestamps,\nmalformed frontmatter, invalid date fields, broken wikilinks to notes\nnamed like Arcanum notes, repeated timestamp+slug and unexpected\ndirectories. Missing optional fields are not problems. Prints\nfile:line: error|warning: message. Warnings do not affect the exit status.'
+H_BEHAVIOR[check]=$'Reports names outside the convention, invalid types and timestamps,\nmalformed frontmatter, invalid date or id fields, broken wikilinks to\nnotes named like vault notes, repeated timestamp+slug, repeated id and\nunexpected directories. Missing optional fields are not problems. Prints\nfile:line: error|warning: message. Warnings do not affect the exit status.'
 H_EXAMPLES[check]=$'nt check\nnt check bug-20261108-153012-login-error.md'
 H_ERRORS[check]='1 at least one error was found, 6 note not found'
 
@@ -1055,11 +1170,11 @@ _nt_help_general() {
 	done
 	syntax+=$'\nnt help [COMMAND]\nnt -h | --help\nnt -v | --version'
 	_nt_help_section NAME "nt - $NT_TITLE $NT_VERSION"
-	_nt_help_section DESCRIPTION $'Capture, classify, find and maintain the notes of the Arcanum vault, a flat\nfolder of Markdown files. Independent of Neovim.'
+	_nt_help_section DESCRIPTION $'Capture, classify, find and maintain the notes of a flat vault of\nMarkdown files. Independent of Neovim.'
 	_nt_help_section SYNTAX "$syntax"
-	_nt_help_section 'DEFAULT BEHAVIOR' $'With no command, nt creates a draft in the vault root, prints its path and\nopens it in the editor. The first argument is a command only when it is one\nof the names above; anything else is the title of the draft. Use\n"nt -- TITLE" to force a title such as "open".'
+	_nt_help_section 'DEFAULT BEHAVIOR' $'With no command, nt creates a draft (id, description, aliases, date) in\nthe vault root, prints its path and opens it in the editor. The first argument is a command only when it is one\nof the names above; anything else is the title of the draft. Use\n"nt -- TITLE" to force a title such as "open".'
 	_nt_help_section 'NOTE TYPES' $'script snippet doc bug adr idea content\n"draft" is a provisional state, not a type.'
-	_nt_help_section ENVIRONMENT $'ARCANUM_DIR      vault directory (default: $HOME/documents/arcanum)\nVISUAL, EDITOR    editor (default: nvim)\nNO_COLOR          disables colors\nXDG_STATE_HOME    base of the history directory (default: ~/.local/state)'
+	_nt_help_section ENVIRONMENT $'ARCANUM_DIR      vault directory (default: $HOME/dev/arcanum)\nVISUAL, EDITOR    editor (default: nvim)\nNO_COLOR          disables colors\nXDG_STATE_HOME    base of the history directory (default: ~/.local/state)'
 	_nt_help_section EXAMPLES $'nt\nnt "Spring security notes"\nnt new bug "Login failure"\nnt ls bug\nnt find "spring security"\nnt open'
 	_nt_help_section 'EXIT CODES' $'0 success            1 general error      2 invalid arguments\n3 invalid type       4 template missing   5 file collision\n6 note not found     7 missing dependency 8 read/write failure'
 	print -r -- "Use 'nt help <command>' for details: ${(j: :)${NT_COMMANDS:#help}}"
@@ -1251,7 +1366,7 @@ cmd_mv() {
 	fi
 	(( rc != 0 )) && exit $rc
 	new=$REPLY
-	_nt_yaml_quote "$title"
+	_nt_yaml_scalar "$title"
 	_nt_now
 	_nt_rename_commit $name $new title $REPLY || exit $?
 }
@@ -1387,7 +1502,7 @@ cmd_stats() {
 		t=${${n:t}%.md}
 		_nt_is_type $t && tpls+=($t)
 	done
-	print -r -- "${C_BOLD}Arcanum${C_RESET} $VAULT"
+	print -r -- "${C_BOLD}${VAULT:t}${C_RESET} $VAULT"
 	print
 	print -r -- "  $(_nt_kv Notes) ${#NOTES}"
 	print -r -- "  $(_nt_kv Drafts) $drafts"
@@ -1412,7 +1527,7 @@ cmd_check() {
 	(( $# <= 1 )) || _nt_usage_err check "too many arguments"
 	local n d key other
 	local -a targets
-	local -A seen
+	local -A seen seen_ids
 	if (( $# )); then
 		_nt_resolve_note $1 || exit $?
 		targets=($REPLY)
@@ -1422,6 +1537,12 @@ cmd_check() {
 	fi
 	for n in $targets; do
 		_nt_check_note $n
+		content=$mapfile[$VAULT/$n]
+		if _nt_fm_split "$content" && _nt_fm_get "$FM_TEXT" id && [[ -n $REPLY ]]; then
+			[[ -n ${seen_ids[$REPLY]-} ]] &&
+				_nt_issue $n '' warning "same id as ${seen_ids[$REPLY]}"
+			seen_ids[$REPLY]=$n
+		fi
 		if [[ $n =~ $NAME_RE ]]; then
 			key=$match[2]-$match[3]-$match[5]
 			if [[ -n ${seen[$key]-} ]]; then
@@ -1433,7 +1554,7 @@ cmd_check() {
 	done
 	if (( $# == 0 )); then
 		for d in $VAULT/*(N/); do
-			[[ ${d:t} == (_templates|attachments) ]] || _nt_issue ${d:t}/ '' warning "unexpected directory; notes live in the vault root"
+			[[ ${d:t} == (_templates|attachments|exports|logs) ]] || _nt_issue ${d:t}/ '' warning "unexpected directory; notes live in the vault root"
 		done
 	fi
 	print -r -- "Checked ${#targets} note(s): $CHK_ERRORS error(s), $CHK_WARNINGS warning(s)"

@@ -1,15 +1,14 @@
 -- lua/plugins/markdown.lua
 
--- Markdown note-taking workflow built on obsidian.nvim and img-clip.nvim, with
--- the Arcanum vault as the only workspace. obsidian.nvim provides wikilink
--- navigation, completion and the other Obsidian features. Everything that
--- creates, names, promotes, renames or searches notes lives in
--- `lua/modules/notes.lua`, and the keymaps below only delegate to it.
+-- Markdown note-taking workflow built on obsidian.nvim and img-clip.nvim.
+-- obsidian.nvim provides wikilink navigation, completion and the other
+-- Obsidian features. Everything that creates, names, renames or searches notes
+-- lives in `lua/modules/notes.lua`, and the keymaps below only delegate to it.
 --
--- The vault is `$ARCANUM_DIR`, or `~/documents/arcanum` when unset. It must
--- already exist. Notes live directly in its root, templates in `_templates/`
--- and pasted images in `attachments/`. The personal Obsidian vault is not
--- configured here and is only used through the Obsidian app.
+-- The vault is `$ARCANUM_DIR`, or `~/dev/arcanum` when unset. It must already
+-- exist. Notes live directly in its root, templates in `_templates/` and
+-- pasted images in `attachments/`. The vault is just a folder: only this path
+-- refers to it, and the workspace name below follows the folder name.
 --
 -- Notes are searched through fzf-lua, so `fzf.lua` must be loaded before this
 -- file. obsidian.nvim, img-clip.nvim and plenary.nvim must be installed through
@@ -125,7 +124,7 @@ local opts = {
 	legacy_commands = false,
 
 	workspaces = {
-		{ name = "Arcanum", path = VAULT_PATH },
+		{ name = vim.fs.basename(VAULT_PATH), path = VAULT_PATH },
 	},
 	-- Notes are created by modules.notes, which owns names, templates and dates.
 	new_notes_location = "current_dir",
@@ -166,7 +165,7 @@ vim.api.nvim_create_autocmd("CmdlineChanged", {
 			return
 		end
 		local cmdline = vim.fn.getcmdline()
-		if not cmdline:match("^Obsidian[A-Za-z0-9]*$") then
+		if not cmdline:match("^(Obsidian|Notes)[A-Za-z0-9]*$") then
 			return
 		end
 		vim.fn.wildtrigger()
