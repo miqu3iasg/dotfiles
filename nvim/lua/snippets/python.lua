@@ -1,9 +1,13 @@
 -- lua/snippets/python.lua
 
--- Python snippets for practice problem scaffolding and Google-style docstrings.
--- The solution template creates a Solution class with a solve method and a
--- runnable main block, while mirrored function nodes keep the method call
--- synchronized with its name.
+-- Python snippets for practice problem scaffolding and documentation
+-- boilerplate. The solution template creates a Solution class with a solve
+-- method and a runnable main block, while mirrored function nodes keep the
+-- method call synchronized with its name. Docstrings follow the Google style;
+-- indentation assumes four spaces.
+--
+-- See: https://peps.python.org/pep-0257/
+-- See: https://google.github.io/styleguide/pyguide.html#s38-comments-and-docstrings
 
 local ls = require("luasnip")
 local s = ls.snippet

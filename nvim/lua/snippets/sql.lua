@@ -1,9 +1,13 @@
 -- lua/snippets/sql.lua
 
 -- SQL snippets for queries, joins, clauses, data manipulation, schema
--- definitions, common table expressions, and comments. Helper functions generate
--- consistent index names and reusable JOIN clauses, while mirrored nodes keep
--- table aliases and repeated identifiers synchronized.
+-- definitions, common table expressions, and comments. Helper functions
+-- generate consistent index names and reusable JOIN clauses, while mirrored
+-- nodes keep table aliases and repeated identifiers synchronized. Keywords
+-- are upper-case, matching the sql-formatter configuration; indentation
+-- assumes four spaces.
+--
+-- See: https://github.com/sql-formatter-org/sql-formatter
 
 local ls = require("luasnip")
 local s = ls.snippet

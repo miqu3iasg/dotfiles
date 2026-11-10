@@ -1,5 +1,16 @@
 -- lua/snippets/latex.lua
 
+-- LaTeX snippets for documents, text and math. Text snippets are regular,
+-- math snippets are autosnippets hidden from the completion menu, and the same
+-- trigger can exist in both zones with a different output. Zone detection
+-- walks the treesitter parse tree when a LaTeX parser is available and falls
+-- back to vimtex and to the state of the \[...\] and \(...\) delimiters above
+-- the cursor. Accents, subscripts, fractions and Greek letters expand
+-- automatically while typing.
+--
+-- See: https://en.wikibooks.org/wiki/LaTeX
+-- See: https://github.com/lervag/vimtex
+
 local ls = require("luasnip")
 local s = ls.snippet
 local sn = ls.snippet_node

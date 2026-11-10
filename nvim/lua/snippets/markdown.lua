@@ -4,6 +4,10 @@
 -- callouts, front matter, and mathematical notation. Dynamic snippets generate
 -- tables from trigger dimensions and timestamps from the current time, while
 -- helpers provide reusable heading and language-specific code block templates.
+-- Callouts follow the Obsidian syntax.
+--
+-- See: https://www.markdownguide.org/
+-- See: https://help.obsidian.md/Editing+and+formatting/Callouts
 
 local ls = require("luasnip")
 local s = ls.snippet
