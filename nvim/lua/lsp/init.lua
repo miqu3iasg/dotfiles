@@ -185,9 +185,10 @@ vim.diagnostic.config({
 })
 
 -- The diagnostics display starts off, so buffers highlight nothing on their
--- own: underlines, signs and floats only appear after it is toggled on with
--- `<leader>vd`, and server results still follow the servers, since stopping
--- them with `<leader>ul` clears the clients and whatever they put on screen.
+-- own: underlines, signs and floats only appear after the display is toggled
+-- on (see lua/config/keymaps/misc.lua for the keymap), and server results still
+-- follow the servers, since stopping them clears the clients and whatever they
+-- put on screen (see the server toggle below).
 -- See: lua/config/keymaps/misc.lua
 vim.diagnostic.enable(false)
 

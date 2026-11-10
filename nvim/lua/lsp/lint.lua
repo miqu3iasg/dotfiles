@@ -15,10 +15,10 @@
 -- Flake8 reads its options from the project's `setup.cfg`, `.flake8` or
 -- `tox.ini`, so per-project rules need no configuration here.
 --
--- The toggle below follows the same shape as the `<leader>ul` LSP toggle in
+-- The toggle below follows the same shape as the server toggle of
 -- `lua/lsp/init.lua`, and lint jobs are skipped while linting is off. Lint
 -- findings are plain diagnostics, so they only show up when the global
--- diagnostics display is on as well, with `<leader>vd`.
+-- diagnostics display is on as well.
 --
 -- See: lua/lsp/init.lua
 -- See: lua/config/keymaps/misc.lua

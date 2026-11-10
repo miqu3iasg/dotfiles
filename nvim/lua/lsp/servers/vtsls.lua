@@ -38,8 +38,8 @@ local ts_shared = {
 return {
 	config = {
 		commands = {
-			-- Organizing imports runs through `<leader>gro`, so the default
-			-- command is stubbed out to keep it silent.
+			-- Organizing imports runs through its own keymap (see lua/lsp/init.lua),
+			-- so the default command is stubbed out to keep it silent.
 			["_typescript.didOrganizeImports"] = function() end,
 		},
 		settings = {
