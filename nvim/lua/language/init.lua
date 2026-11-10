@@ -9,8 +9,8 @@
 -- conform for every language (see lua/plugins/formatting.lua). Python is also
 -- linted with ruff through nvim-lint, which runs outside this stack and has
 -- its own toggle (see lua/language/lint.lua). Java's `jdtls` is installed through
--- Mason but started separately by the Java ftplugin (see
--- after/ftplugin/java.lua).
+-- Mason but started separately by its own module (see
+-- lua/language/servers/jdtls.lua).
 --
 -- nvim-lspconfig, mason.nvim and mason-lspconfig.nvim must be installed through
 -- the plugin manager; the lazydev.nvim setup lives in the lua_ls module, where
