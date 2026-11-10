@@ -128,10 +128,6 @@ vim.pack.add({
 	-- Highlights color codes such as hex and rgb with their actual color.
 	{ src = "https://github.com/catgoose/nvim-colorizer.lua" },
 
-	-- mason-tool-installer.nvim
-	-- Installs and updates a declared list of Mason tools.
-	{ src = "https://github.com/WhoIsSethDaniel/mason-tool-installer.nvim" },
-
 	-- nvim-jdtls
 	-- Java client for the Eclipse JDT language server.
 	{ src = "https://github.com/mfussenegger/nvim-jdtls" },
