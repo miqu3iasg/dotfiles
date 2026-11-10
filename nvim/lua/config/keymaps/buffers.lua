@@ -51,6 +51,3 @@ end, { desc = "Close other windows and buffers" })
 km("n", "]b", "<cmd>bnext<CR>", { desc = "Next buffer" })
 km("n", "[b", "<cmd>bprevious<CR>", { desc = "Previous buffer" })
 km("n", "<leader><Space>", "<C-^>", { desc = "Toggle between last two buffers" })
-
--- Scratch
-km("n", "<leader>bS", "<cmd>Scratch<CR>", { desc = "Toggle scratch buffer" })
