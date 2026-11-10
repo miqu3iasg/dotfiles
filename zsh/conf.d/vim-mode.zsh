@@ -12,8 +12,13 @@
 # conf.d/widgets.zsh; fzf and autosuggestions own their own keys
 # (fzf.zsh: ^R/^T/^F, autosuggestions.zsh: ^E/^O/^Y/^X^A).
 #
+# Inside tmux, vim-tmux-navigator claims ^H, ^J, ^K and ^L for pane
+# navigation, so those keys never reach the shell in that context; anything
+# that must work inside tmux is bound to an alternative chord.
+#
 # See: man zshzle (USER-DEFINED WIDGETS, KEYMAPS)
 # See: conf.d/widgets.zsh
+# See: ../tmux/tmux.conf (vim-tmux-navigator claims ^H/^J/^K/^L)
 # See: conf.d/terminal.zsh (stty flow control: makes ^S usable)
 
 bindkey -v
@@ -52,6 +57,15 @@ bindkey -M viins '^[.' insert-last-word
 bindkey -M viins '^U' backward-kill-line
 
 
+# Clear screen
+
+# ^L is owned by vim-tmux-navigator inside tmux (move to the pane on the
+# right), so clear screen lives on ^X^S. Outside tmux ^L keeps the zsh
+# default in both keymaps.
+bindkey -M viins '^X^S' clear-screen
+bindkey -M vicmd '^X^S' clear-screen
+
+
 # Word motion and deletion
 
 # Treat hyphens, slashes, and similar characters as word boundaries
@@ -63,14 +77,17 @@ autoload -Uz backward-kill-word-match
 zle -N backward-kill-space-word backward-kill-word-match
 zstyle ':zle:backward-kill-space-word' word-style space
 
-# Ctrl+W stops at `/`, `-` and similar (word-style bash);
 # Alt+Backspace and Ctrl+Backspace delete up to the previous space
+# (inside tmux, ^H is consumed by vim-tmux-navigator; Alt+Backspace covers
+# the same action there).
 bindkey -M viins '^W' backward-kill-word
 bindkey -M viins '^[^?' backward-kill-space-word
 bindkey -M viins '^H' backward-kill-space-word
 
 # Emacs-style word motions in insert mode, using the same word style:
 # Alt+B/Alt+F move, Alt+D kills forward (pairs with ^W killing backward).
+# Note: ^[f is Alt+F -- ^F (plain Ctrl+F) belongs to fzf's directory picker,
+# bound in conf.d/fzf.zsh.
 bindkey -M viins '^[b' backward-word
 bindkey -M viins '^[f' forward-word
 bindkey -M viins '^[d' kill-word
@@ -90,9 +107,6 @@ bindkey -M viins '^N' down-line-or-search
 # Forward incremental search in insert mode (backward incremental search is
 # taken by fzf's ^R). Requires stty stop undef, done in terminal.zsh.
 bindkey -M viins '^S' history-incremental-pattern-search-forward
-
-# Clear screen: ^L is the zsh default in both keymaps and is kept as the
-# single binding (an earlier custom ^X^S duplicate was removed).
 
 # Selection: `v` and `V` in normal mode enter zsh's visual mode (selection
 # over the command line), available since zsh 5.9. Kept unbound so the
