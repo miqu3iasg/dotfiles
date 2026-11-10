@@ -1,6 +1,6 @@
 # pandoc/defaults.yaml
 #
-# Global Pandoc defaults, always loaded by lua/shared/pandoc.lua. This file
+# Global Pandoc defaults, always loaded by lua/modules/pandoc.lua. This file
 # defines the conversion pipeline; document appearance (language, margins,
 # font size, etc.) belongs in metadata.yaml.
 #

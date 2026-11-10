@@ -1,15 +1,15 @@
 -- after/ftplugin/markdown.lua
 
 -- Configures Markdown buffers for prose writing, with buffer-local keymaps for
--- lists, checkboxes and inline formatting. Pandoc integration is loaded from a
--- shared module.
+-- lists, checkboxes and inline formatting. Pandoc integration lives in
+-- `lua/modules/pandoc.lua`.
 --
 -- `:PasteImage` is provided by img-clip.nvim, which must be installed through
 -- the plugin manager and relies on a clipboard utility such as wl-clipboard or
 -- xclip.
 --
 -- See: ~/.config/nvim/pandoc
--- See: lua/shared/pandoc.lua
+-- See: lua/modules/pandoc.lua
 -- See: lua/modules/markdown_lists.lua
 -- See: https://github.com/HakonHarnes/img-clip.nvim
 
@@ -33,7 +33,7 @@ opt.tabstop = 4
 opt.shiftwidth = 4
 opt.softtabstop = -1
 
-require("shared.pandoc").setup()
+require("modules.pandoc").setup()
 
 ---@param mode string|string[]
 ---@param lhs string

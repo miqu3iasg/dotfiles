@@ -9,7 +9,7 @@ after/ftplugin/markdown.lua
 lua/plugins/completions.lua
 lua/plugins/obsidian.lua
 lua/shared/exports.lua
-lua/shared/pandoc.lua
+lua/modules/pandoc.lua
 pandoc/defaults.yaml
 pandoc/metadata.yaml
 pandoc/profiles/abnt.yaml

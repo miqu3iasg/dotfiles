@@ -1,4 +1,4 @@
--- lua/shared/pandoc.lua
+-- lua/modules/pandoc.lua
 
 -- Exports the current Markdown buffer to PDF, EPUB, DOCX or HTML by running
 -- `pandoc` asynchronously, so the editor never blocks. The buffer is sent
