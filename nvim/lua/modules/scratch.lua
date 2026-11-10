@@ -6,7 +6,7 @@
 -- session ends or `:Scratch!` deletes it.
 --
 -- The buffer is unnamed in the buffer list (`buflisted` off), has no filetype
--- and no swapfile, and is displayed with the name `_*scratch*_`. Inside its
+-- and no swapfile, and is displayed with the virtual name `scratch://_*scratch*_`. Inside its
 -- window, `q` and `<Esc>` close the window without losing the content.
 --
 -- The command is registered by `setup()`, which must be called once at
@@ -23,7 +23,9 @@ local bufnr
 ---Create the scratch buffer and its buffer-local close mappings.
 local function create()
 	bufnr = vim.api.nvim_create_buf(false, false)
-	vim.api.nvim_buf_set_name(bufnr, "_*scratch*_")
+	-- A `scratch://` name, like `oil://` and `fugitive://`, so the buffer is
+	-- never mistaken for a real file under the working directory.
+	vim.api.nvim_buf_set_name(bufnr, "scratch://_*scratch*_")
 	vim.bo[bufnr].buftype = "nofile" -- Nothing to read or write, so no swapfile.
 	vim.bo[bufnr].bufhidden = "hide" -- The window can close without wiping it.
 
