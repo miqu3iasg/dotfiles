@@ -1,4 +1,4 @@
--- lua/features/stdsrc.lua
+-- archived/stdsrc.lua
 
 -- Declaration search over the source repository of a language, such as its
 -- standard library or API, so it can be explored without leaving the file being
