@@ -8,6 +8,20 @@
 
 local km = vim.keymap.set
 
+--- Temporarily highlights `positions` as a visual reference, without searching
+--- or affecting the search register or `hlsearch`.
+---@param positions (integer|integer[])[] Positions in the `matchaddpos()`
+---format: a line number, `{ line, col, len }`, etc.
+---@param ms? integer Duration in milliseconds
+local function flash(positions, ms)
+	local win = vim.api.nvim_get_current_win()
+	local id = vim.fn.matchaddpos("Visual", positions)
+
+	vim.defer_fn(function()
+		pcall(vim.fn.matchdelete, id, win)
+	end, ms or 400)
+end
+
 -- Scroll
 km("n", "<C-d>", "<C-d>zz", { desc = "Scroll down and center cursor" })
 km("n", "<C-u>", "<C-u>zz", { desc = "Scroll up and center cursor" })
@@ -37,6 +51,19 @@ km("n", "<leader>sw", function()
 end, { desc = "Search word under cursor" })
 
 -- Highlights
+km("n", "<leader>hw", function()
+	local lnum, col = vim.fn.line("."), vim.fn.col(".")
+	local _, s, e = unpack(vim.fn.matchstrpos(vim.fn.getline("."), [[\k*\%]] .. col .. [[c\k\+]]))
+	if s < 0 then
+		return
+	end
+	flash({ { lnum, s + 1, e - s } })
+end, { desc = "Flash word under cursor" })
+
+km("n", "<leader>hl", function()
+	flash({ vim.fn.line(".") })
+end, { desc = "Flash current line" })
+
 km("n", "zh", function()
 	vim.cmd("match none")
 	vim.cmd("nohlsearch")

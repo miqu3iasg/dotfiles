@@ -119,6 +119,7 @@ km("n", "<leader>of", notes.find_files, { desc = "Find notes by name" })
 km("n", "<leader>og", notes.grep, { desc = "Search note contents" })
 km("n", "<leader>ol", notes.last, { desc = "Reopen the last note" })
 km("n", "<leader>ov", notes.open_vault, { desc = "Open the vault folder" })
+km("n", "<leader>ow", "<cmd>e ~/TODO.md<cr>", { desc = "Open TODO file" })
 
 local opts = {
 	legacy_commands = false,

@@ -56,7 +56,7 @@ local function run_command_in_file_dir()
 		dir = vim.fn.getcwd()
 	end
 
-	vim.ui.input({ prompt = "Command: ", completion = "shellcmd" }, function(command)
+	vim.ui.input({ prompt = ":! ", completion = "shellcmd" }, function(command)
 		if not command or command:match("^%s*$") then
 			return
 		end
@@ -74,10 +74,6 @@ toggle_wo("<leader>vc", "cursorline", "Toggle cursorline")
 map("<leader>vg", function()
 	vim.wo.signcolumn = vim.wo.signcolumn == "no" and "yes" or "no"
 end, "Toggle sign column")
-
-map("<leader>vb", function()
-	vim.o.background = (vim.o.background == "dark") and "light" or "dark"
-end, "Toggle light/dark")
 
 map("<leader>vd", function()
 	local enabled = not vim.diagnostic.is_enabled()
@@ -101,17 +97,16 @@ map("<leader>vr", function()
 end, "Toggle relative numbers")
 
 -- Config files
-edit_file("<leader>zg", "~/.gitconfig", "Edit .gitconfig")
-edit_file("<leader>zi", "~/.config/i3/config", "Edit i3 config")
-edit_file("<leader>zz", "~/.zshrc", "Edit .zshrc")
-edit_file("<leader>zt", "~/.config/tmux/tmux.conf", "Edit tmux.conf")
-edit_file("<leader>zk", "~/.config/kitty/kitty.conf", "Edit kitty.conf")
-edit_file("<leader>zs", "~/.config/starship.toml", "Edit starship.toml")
+edit_file("<leader>zg", "~/dotfiles/git/.gitconfig", "Edit .gitconfig")
+edit_file("<leader>zi", "~/dotfiles/i3/config", "Edit i3 config")
+edit_file("<leader>zz", "~/dotfiles/zsh/.zshrc", "Edit .zshrc")
+edit_file("<leader>zt", "~/dotfiles/tmux/tmux.conf", "Edit tmux.conf")
+edit_file("<leader>zk", "~/dotfiles/kitty/kitty.conf", "Edit kitty.conf")
 
 -- Directories
-open_dir("<leader>zn", "~/.config/nvim", "Open nvim config dir")
-open_dir("<leader>zr", "~/repos", "Open repos dir (workspace)")
-open_dir("<leader>zc", "~/.config", "Open ~/.config directory")
+open_dir("<leader>zn", "~/dotfiles/nvim", "Open nvim config dir")
+open_dir("<leader>zr", "~/dev/repos", "Open repos dir (workspace)")
+open_dir("<leader>zd", "~/dotfiles", "Open dotfiles directory")
 open_dir("<leader>zb", "~/.local/bin", "Open ~/.local/bin directory (scripts)")
 
 -- Explicit mappings of the native commands, so they show up with a description.
@@ -120,7 +115,6 @@ map("ZQ", "<cmd>q!<cr>", "Quit without saving")
 map("ZX", "<cmd>w<cr>", "Save file")
 
 -- Reload, restart and run
-map("<leader>rl", "<cmd>source $MYVIMRC<cr>", "Reload nvim config")
 map("<leader>re", "<cmd>wa | restart<cr>", "Save all changes and restart Neovim")
 map("<leader>rs", "<cmd>luafile %<cr>", "Source lua files")
 map("<leader>ru", "<cmd>update<bar>source %<cr>", "Save and source current file")

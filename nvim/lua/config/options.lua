@@ -33,7 +33,7 @@ vim.opt.completeopt = "menuone,noselect"
 
 vim.opt.path:append("**") -- Makes `:find` and `gf` recursive.
 vim.opt.wildmenu = true
-vim.opt.wildmode = "noselect:lastused,full"
+vim.opt.wildmode = "lastused,full"
 vim.opt.wildoptions = "pum,fuzzy"
 vim.opt.pumheight = 15
 

@@ -7,6 +7,15 @@
 
 local km = vim.keymap.set
 
+-- TODO: add more colors to the prompt
+
+-- Prompt text, colored by the active colorscheme. Because of `default`, a
+-- colorscheme or user config can still override this group.
+vim.api.nvim_set_hl(0, "FilesPrompt", { link = "Question", default = true })
+
+---Sentinel returned by `input()` when the prompt is cancelled.
+local CANCEL = "\1<cancel>"
+
 ---Set a normal-mode keymap, always with a description.
 ---@param lhs string
 ---@param rhs string|fun()
@@ -21,7 +30,7 @@ end
 local function current_file()
 	local file = vim.fn.expand("%:p")
 	if file == "" then
-		print("No file in buffer")
+		print("Buffer is not visiting a file")
 		return nil
 	end
 	return file
@@ -47,6 +56,60 @@ local function yank_map(lhs, modifier, desc)
 	end, desc)
 end
 
+---Prompt for a path with file completion. The default is shown abbreviated
+---with `~`, and the result is expanded back to an absolute path. The key
+---hints are appended to the prompt.
+---@param prompt string Prompt text, without a trailing colon.
+---@param default string
+---@return string? path Absolute path, `""` when empty, or `nil` when cancelled.
+local function read_path(prompt, default)
+	vim.cmd("echohl FilesPrompt")
+	local ok, result = pcall(vim.fn.input, {
+		prompt = prompt .. " (Enter accept, TAB complete, C-c quit): ",
+		default = vim.fn.fnamemodify(default, ":~"),
+		completion = "file",
+		cancelreturn = CANCEL,
+	})
+	vim.cmd("echohl None")
+	vim.cmd("redraw")
+
+	if not ok or result == CANCEL then
+		print("Quit")
+		return nil
+	end
+	if result == "" then
+		return ""
+	end
+	return vim.fn.fnamemodify(vim.fn.expand(result), ":p")
+end
+
+---Ask a yes/no question on the command line, with the accepted keys shown.
+---`y`/`<Space>` accept, `n`/`<BS>`/`<Del>` refuse, `<C-c>`/`<Esc>` cancel.
+---@param prompt string Question text, without the key hints.
+---@return boolean? answer `nil` when cancelled.
+local function confirm_action(prompt)
+	local keys = " (y/Space yes, n/DEL no, C-c/ESC quit) "
+	local notice = ""
+	while true do
+		vim.cmd("redraw")
+		vim.api.nvim_echo({ { notice .. prompt, "FilesPrompt" }, { keys, "Comment" } }, false, {})
+		local ok, key = pcall(vim.fn.getcharstr)
+
+		if ok and (key == "y" or key == "Y" or key == " ") then
+			vim.cmd("redraw")
+			return true
+		elseif ok and (key == "n" or key == "N" or key == vim.keycode("<BS>") or key == vim.keycode("<Del>")) then
+			vim.cmd("redraw")
+			return false
+		elseif not ok or key == "\3" or key == "\27" then
+			vim.cmd("redraw")
+			print("Quit")
+			return nil
+		end
+		notice = "Please answer y or n. "
+	end
+end
+
 -- Working directory
 map("<leader>nw", "<cmd>Setwd<CR>", "Set working directory to current file")
 
@@ -61,28 +124,45 @@ map("<leader>nf", function()
 		current_dir = vim.fn.getcwd()
 	end
 
-	local file = vim.fn.input("New file: ", current_dir .. "/", "file")
-	if file == "" then
+	local file = read_path("Find file", current_dir .. "/")
+	if not file or file == "" then
 		return
 	end
 
 	local dir = vim.fn.fnamemodify(file, ":h")
 	if vim.fn.isdirectory(dir) == 0 then
+		if not confirm_action("Directory " .. vim.fn.fnamemodify(dir, ":~") .. " does not exist; create?") then
+			return
+		end
 		vim.fn.mkdir(dir, "p")
 	end
+
+	-- `:edit` on a missing path only opens an unsaved buffer, so create it first.
+	if vim.fn.filereadable(file) == 0 and vim.fn.isdirectory(file) == 0 then
+		if vim.fn.writefile({}, file) ~= 0 then
+			vim.notify("Failed to create: " .. file, vim.log.levels.ERROR)
+			return
+		end
+		print("Wrote " .. vim.fn.fnamemodify(file, ":~"))
+	end
 	vim.cmd("edit " .. vim.fn.fnameescape(file))
-end, "Create new file")
+end, "Find or create new file")
 
 map("<leader>nr", function()
-	local old = vim.fn.expand("%:p")
-	local new = vim.fn.input("Rename to: ", old, "file")
-	if new == "" or new == old then
+	local old = current_file()
+	if not old then
+		return
+	end
+
+	local new = read_path("Rename file " .. vim.fn.fnamemodify(old, ":t") .. " to", old)
+	if not new or new == "" or new == old then
 		return
 	end
 
 	vim.cmd("saveas " .. vim.fn.fnameescape(new))
 	vim.fn.delete(old)
 	vim.cmd("bd " .. vim.fn.bufnr(old))
+	print("Renamed to " .. vim.fn.fnamemodify(new, ":~"))
 end, "Rename current file")
 
 -- Deletes the file permanently, after confirmation.
@@ -92,7 +172,7 @@ map("<leader>nk", function()
 		return
 	end
 
-	if vim.fn.confirm("Delete " .. file .. "?", "&Yes\n&No", 2) ~= 1 then
+	if not confirm_action("Delete " .. vim.fn.fnamemodify(file, ":t") .. "?") then
 		return
 	end
 
@@ -101,7 +181,7 @@ map("<leader>nk", function()
 		return
 	end
 	vim.cmd("bd!")
-	print("Deleted: " .. file)
+	print("Deleted " .. vim.fn.fnamemodify(file, ":~"))
 end, "Delete current file")
 
 map("<leader>nx", function()

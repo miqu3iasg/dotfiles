@@ -161,6 +161,8 @@ km("i", "<C-n>", "<Down>", { desc = "Line down" })
 km("i", "<C-p>", "<Up>", { desc = "Line up" })
 km("i", "<C-c>", "<C-o>zz", { desc = "Recenter" })
 km("i", "<C-d>", "<Del>", { desc = "Delete char forward" })
+km("i", "<C-u>", "<C-g>u<C-u>", { desc = "Delete to start of line (undoable)" })
+km("i", "<C-w>", "<C-g>u<C-w>", { desc = "Delete word backward (undoable)" })
 km("i", "<C-k>", function()
 	return vim.fn.col(".") > #vim.fn.getline(".") and "<Del>" or "<C-g>u<C-o>D"
 end, { expr = true, desc = "Kill to end of line" })
