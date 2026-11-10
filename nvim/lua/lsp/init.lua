@@ -1,9 +1,12 @@
--- lua/plugins/lsp.lua
+-- lua/lsp/init.lua
 
 -- Language servers for frontend development (HTML, CSS, Tailwind CSS, Emmet and
--- TypeScript/JavaScript), LaTeX, Typst and Markdown. Backend language servers
--- are intentionally excluded. Java's `jdtls` is installed through Mason but
--- started separately by the Java ftplugin (see after/ftplugin/java.lua).
+-- TypeScript/JavaScript), LaTeX, Typst and Markdown. Each server is configured
+-- in its own module under `lua/lsp/servers/`, while this file holds the shared
+-- setup: the Mason installation, the global capabilities, the buffer-local
+-- keymaps and the enable/toggle state. Backend language servers are
+-- intentionally excluded. Java's `jdtls` is installed through Mason but started
+-- separately by the Java ftplugin (see after/ftplugin/java.lua).
 --
 -- nvim-lspconfig, mason.nvim, mason-lspconfig.nvim and lazydev.nvim must be
 -- installed through the plugin manager. Mason manages the language servers, but
@@ -26,20 +29,21 @@
 --
 -- Tinymist uses `typstyle` for formatting, and its PDF export also requires the
 -- `typst` executable. Mason only installs the servers, so each one is still
--- configured individually in this file, and only the servers in `servers` are
--- enabled.
+-- configured individually in `lua/lsp/servers/`, and only the servers declared
+-- below are enabled.
 --
 -- See: lua/shared/exports.lua
 -- See: https://github.com/mason-org/mason.nvim
 -- See: https://github.com/mason-org/mason-lspconfig.nvim
 -- See: https://github.com/neovim/nvim-lspconfig
 -- See: https://github.com/folke/lazydev.nvim
--- See: https://github.com/latex-lsp/texlab
--- See: https://github.com/Myriad-Dreamin/tinymist
--- See: https://github.com/artempyanykh/marksman
 -- See: :help lsp
 
-local servers = {
+-- Language server modules under `lua/lsp/servers/`. Each one returns a config
+-- table passed to `vim.lsp.config` and may declare an `on_attach` hook, which
+-- runs from the LspAttach autocmd below. `jdtls` is not listed because it is
+-- never started through this stack.
+local modules = {
 	"cssls",
 	"emmet_language_server",
 	"eslint",
@@ -51,13 +55,23 @@ local servers = {
 	"vtsls",
 }
 
+-- Servers installed through Mason, but started elsewhere.
+local install_only = { "jdtls" }
+
+-- Server modules indexed by server name, used by the LspAttach autocmd to run
+-- the module hooks, such as the eslint fix-all on save.
+local servers = {}
+
+-- Installation
+-- ------------
+
 require("mason").setup()
 
 -- Only used to install servers, so it can wait until startup is done.
 vim.schedule(function()
 	require("mason-lspconfig").setup({
 		automatic_enable = false,
-		ensure_installed = vim.list_extend({ "jdtls" }, servers),
+		ensure_installed = vim.list_extend(vim.deepcopy(modules), install_only),
 	})
 end)
 
@@ -69,6 +83,9 @@ require("lazydev").setup({
 	},
 })
 
+-- Server configuration
+-- --------------------
+
 -- Disabling dynamic file watching avoids servers registering thousands of
 -- watchers in large projects.
 vim.lsp.config("*", {
@@ -76,125 +93,14 @@ vim.lsp.config("*", {
 	workspace = { didChangeWatchedFiles = { dynamicRegistration = false } },
 })
 
--- Validation only produces diagnostics, so it is disabled.
-vim.lsp.config("cssls", {
-	settings = {
-		css = { validate = false },
-		scss = { validate = false },
-		less = { validate = false },
-	},
-})
+for _, name in ipairs(modules) do
+	local mod = require("lsp.servers." .. name)
+	vim.lsp.config(name, mod.config)
+	servers[name] = mod
+end
 
-vim.lsp.config("html", {
-	filetypes = { "templ", "html", "php" },
-})
-
-vim.lsp.config("emmet_language_server", {
-	filetypes = { "templ", "html", "css", "scss", "php", "javascriptreact", "typescriptreact" },
-})
-
--- Any folder with a README is a workspace, falling back to the file's directory.
-vim.lsp.config("marksman", {
-	root_dir = function(bufnr, on_dir)
-		local root = vim.fs.root(bufnr, { ".git", "README.md", "README.markdown", ".marksman.toml" })
-		on_dir(root or vim.fs.dirname(vim.api.nvim_buf_get_name(bufnr)))
-	end,
-})
-
--- vtsls replaces ts_ls. Never enable both, or every diagnostic and completion
--- shows up twice.
-local ts_shared = {
-	updateImportsOnFileMove = { enabled = "always" },
-	suggest = { completeFunctionCalls = true },
-	preferences = {
-		-- Use "non-relative" if the project relies on path aliases (@/...).
-		importModuleSpecifier = "shortest",
-		preferTypeOnlyAutoImports = true,
-	},
-	inlayHints = {
-		parameterNames = { enabled = "literals" },
-		parameterTypes = { enabled = false },
-		variableTypes = { enabled = false },
-		propertyDeclarationTypes = { enabled = true },
-		functionLikeReturnTypes = { enabled = true },
-		enumMemberValues = { enabled = true },
-	},
-}
-
-vim.lsp.config("vtsls", {
-	commands = {
-		["_typescript.didOrganizeImports"] = function() end,
-	},
-	settings = {
-		typescript = vim.tbl_deep_extend("force", ts_shared, {
-			tsserver = { maxTsServerMemory = 8192 },
-		}),
-		javascript = ts_shared,
-		vtsls = { autoUseWorkspaceTsdk = true },
-	},
-})
-
--- Formatting stays with conform and prettier, so the server's formatter is off.
-vim.lsp.config("eslint", {
-	settings = { format = false, run = "onSave" },
-})
-
--- Runs `LspEslintFixAll` before conform formats. The autocmd is created on
--- attach so that it is registered before conform's, and it respects the
--- autoformat toggle.
-vim.api.nvim_create_autocmd("LspAttach", {
-	group = vim.api.nvim_create_augroup("EslintFixOnSave", { clear = true }),
-	callback = function(args)
-		local client = vim.lsp.get_client_by_id(args.data.client_id)
-		if not client or client.name ~= "eslint" then
-			return
-		end
-		vim.api.nvim_create_autocmd("BufWritePre", {
-			-- One group per buffer, so re-attaching replaces the autocmd instead
-			-- of stacking it.
-			group = vim.api.nvim_create_augroup("EslintFix" .. args.buf, { clear = true }),
-			buffer = args.buf,
-			callback = function()
-				if require("shared.autoformat").enabled(args.buf) then
-					vim.cmd("silent! LspEslintFixAll")
-				end
-			end,
-		})
-	end,
-})
-
-vim.lsp.config("tailwindcss", {
-	filetypes = { "templ", "html", "css", "javascriptreact", "typescriptreact" },
-	settings = {
-		tailwindCSS = {
-			includeLanguages = { templ = "html" },
-			-- Detects classes inside helper calls such as `cn("...")`.
-			classFunctions = { "cn", "clsx", "cx", "cva", "tv", "twMerge" },
-		},
-	},
-})
-
--- Fuzzy matching lets abbreviations such as "thm" and "eqn" find "\theorem" and
--- "\begin{equation}".
-vim.lsp.config("texlab", {
-	settings = { texlab = { completion = { matcher = "fuzzy-ignore-case" } } },
-})
-
-vim.lsp.config("tinymist", {
-	-- Uses the same root as the other exporters.
-	root_dir = function(bufnr, on_dir)
-		on_dir(require("shared.exports").root(bufnr))
-	end,
-	settings = {
-		formatterMode = "typstyle",
-		exportPdf = "onSave",
-		-- Mirrors `exports.output_path()`.
-		outputPath = require("shared.exports").output_pattern(),
-		-- Highlighting comes from treesitter only.
-		semanticTokens = "disable",
-		lint = { enabled = false },
-	},
-})
+-- Attach
+-- ------
 
 -- Buffer-local mappings set once a server attaches. The native LSP and
 -- diagnostic mappings, such as hover, rename and diagnostic navigation, are
@@ -205,6 +111,11 @@ vim.api.nvim_create_autocmd("LspAttach", {
 	callback = function(ev)
 		local fzf = require("fzf-lua")
 
+		---Set a buffer-local mapping on the attached buffer.
+		---@param mode string|string[]
+		---@param lhs string
+		---@param rhs string|fun()
+		---@param desc string
 		local function km(mode, lhs, rhs, desc)
 			vim.keymap.set(mode, lhs, rhs, { buffer = ev.buf, desc = desc })
 		end
@@ -244,8 +155,18 @@ vim.api.nvim_create_autocmd("LspAttach", {
 		km("n", "]e", function()
 			vim.diagnostic.jump({ count = 1, float = true })
 		end, "Go to next diagnostic")
+
+		-- Server-specific hooks declared in the server modules.
+		local client = vim.lsp.get_client_by_id(ev.data.client_id)
+		local mod = client and servers[client.name] or nil
+		if mod and mod.on_attach then
+			mod.on_attach(client, ev.buf)
+		end
 	end,
 })
+
+-- Diagnostics
+-- -----------
 
 vim.diagnostic.config({
 	virtual_text = false,
@@ -254,11 +175,14 @@ vim.diagnostic.config({
 	float = { border = vim.o.winborder },
 })
 
-vim.lsp.enable(servers)
+-- Toggle
+-- ------
+
+vim.lsp.enable(modules)
 
 local lsp_enabled = true
 
----Enable or disable every language server in `servers` at once. `jdtls` is
+---Enable or disable every language server in `modules` at once. `jdtls` is
 ---started elsewhere and is deliberately left alone.
 ---
 ---Disabling prevents new clients from starting and also stops the ones still
@@ -274,12 +198,12 @@ local function toggle_lsp(enable)
 	end
 
 	if lsp_enabled then
-		vim.lsp.enable(servers)
+		vim.lsp.enable(modules)
 	else
-		vim.lsp.enable(servers, false)
+		vim.lsp.enable(modules, false)
 
 		for _, client in ipairs(vim.lsp.get_clients()) do
-			if vim.tbl_contains(servers, client.name) then
+			if vim.tbl_contains(modules, client.name) then
 				client:stop()
 			end
 		end
