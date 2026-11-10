@@ -1,4 +1,4 @@
--- lua/features/statusline.lua
+-- lua/modules/statusline.lua
 
 -- Native statusline built on the 'statusline' option, with no plugin required.
 -- The active window shows editor state, position, search and selection info,
@@ -20,7 +20,7 @@
 -- Git must be installed for the branch segment, which stays empty without it.
 -- `setup()` must be called once.
 --
--- See: lua/features/window_zoom.lua
+-- See: lua/modules/window_zoom.lua
 -- See: :help 'statusline'
 
 local M = {}

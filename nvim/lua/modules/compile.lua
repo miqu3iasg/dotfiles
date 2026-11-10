@@ -1,4 +1,4 @@
--- lua/features/compile.lua
+-- lua/modules/compile.lua
 
 -- Native, Emacs-like `:Compile` that runs a build command asynchronously and
 -- streams its output into a `*compilation*` buffer in a bottom split. When the

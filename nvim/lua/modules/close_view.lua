@@ -1,4 +1,4 @@
--- lua/features/close_view.lua
+-- lua/modules/close_view.lua
 
 -- Closes Fugitive views without ever quitting Neovim. The mappings are
 -- buffer-local and installed by autocmds, so `setup()` must be called once.

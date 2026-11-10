@@ -1,4 +1,4 @@
--- lua/features/notes.lua
+-- lua/modules/notes.lua
 
 -- Arcanum notes workflow: a flat vault of software-development notes managed
 -- from Neovim. It creates quick drafts and typed notes from user-maintained

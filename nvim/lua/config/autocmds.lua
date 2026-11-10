@@ -58,7 +58,7 @@ vim.api.nvim_create_autocmd("BufRead", {
 -- Runs when Neovim starts with no arguments or with a single directory. It is
 -- `nested` so the restored session fires its own autocmds, such as filetype,
 -- and scheduled so it runs after startup has finished.
--- See: lua/features/sessions.lua
+-- See: lua/modules/sessions.lua
 -- See: lua/plugins/oil.lua
 vim.api.nvim_create_augroup("StartupBehavior", { clear = true })
 vim.api.nvim_create_autocmd("VimEnter", {
@@ -74,7 +74,7 @@ vim.api.nvim_create_autocmd("VimEnter", {
 		end
 
 		vim.schedule(function()
-			local sessions = require("features.sessions")
+			local sessions = require("modules.sessions")
 			if sessions.enabled() and sessions.load() then
 				return
 			end
@@ -89,12 +89,12 @@ vim.api.nvim_create_autocmd("VimEnter", {
 })
 
 -- The save is wrapped in `pcall` so a failure never blocks quitting.
--- See: lua/features/sessions.lua
+-- See: lua/modules/sessions.lua
 vim.api.nvim_create_autocmd("VimLeavePre", {
 	group = vim.api.nvim_create_augroup("SessionSave", { clear = true }),
 	desc = "Save the session of the current directory on exit, inside tmux only",
 	callback = function()
-		local sessions = require("features.sessions")
+		local sessions = require("modules.sessions")
 		if sessions.enabled() then
 			pcall(sessions.save)
 		end
@@ -151,8 +151,8 @@ vim.api.nvim_create_autocmd("BufWritePre", {
 })
 
 -- Utility buffers share the close behavior and the clean UI below.
--- See: lua/features/compile.lua
--- See: lua/features/close_view.lua
+-- See: lua/modules/compile.lua
+-- See: lua/modules/close_view.lua
 ---@type string[]
 local utility_filetypes = {
 	"checkhealth",

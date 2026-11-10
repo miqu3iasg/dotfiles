@@ -1,4 +1,4 @@
--- lua/features/markdown_lists.lua
+-- lua/modules/markdown_lists.lua
 
 -- Native list editing for Markdown buffers, plus the formatter helpers that
 -- keep list markers and indentation the way they were written.

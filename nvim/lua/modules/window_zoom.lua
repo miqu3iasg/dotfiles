@@ -1,4 +1,4 @@
--- lua/features/window_zoom.lua
+-- lua/modules/window_zoom.lua
 
 -- Zooms the focused window by showing it as the only window of a new tab, while
 -- the original layout stays intact in its own tab. Toggling again closes the
@@ -8,7 +8,7 @@
 -- statusline reads. Since the zoom is a tab, closing it by other means, such as
 -- `:tabclose` or `:tabonly`, also ends it.
 --
--- See: lua/features/statusline.lua
+-- See: lua/modules/statusline.lua
 
 local M = {}
 

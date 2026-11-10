@@ -19,7 +19,7 @@
 --
 -- $ git config --global --list
 --
--- See: lua/features/close_view.lua
+-- See: lua/modules/close_view.lua
 -- See: https://git-scm.com/doc
 -- See: https://github.com/tpope/vim-fugitive
 -- See: https://github.com/tpope/vim-rhubarb
@@ -88,7 +88,7 @@ vim.api.nvim_create_autocmd("FileType", {
 	end,
 })
 
-require("features.close_view").setup()
+require("modules.close_view").setup()
 
 gmap("n", "<leader>gg", "<cmd>silent tab Git<cr>", "Git status")
 gmap("n", "<leader>ga", "<cmd>silent Gwrite<cr>", "Stage current file")

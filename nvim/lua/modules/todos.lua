@@ -1,4 +1,4 @@
--- lua/features/todos.lua
+-- lua/modules/todos.lua
 
 -- Native search and navigation for task comments such as TODO, FIXME, HACK, BUG
 -- and XXX. It adds no highlighting on purpose, since the keywords live in

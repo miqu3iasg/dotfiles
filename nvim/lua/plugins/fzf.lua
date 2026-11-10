@@ -8,7 +8,7 @@
 --
 -- $ sudo pacman -S fzf grep ripgrep fd
 --
--- See: lua/features/todos.lua
+-- See: lua/modules/todos.lua
 -- See: https://github.com/ibhagwan/fzf-lua
 -- See: https://github.com/bruhtus/dotfiles/blob/master/.vim/after/autoload/enable/fzf.vim
 -- See: https://github.com/bruhtus/dotfiles/blob/master/.vim/plugin/fzf.vim
@@ -201,7 +201,7 @@ km("n", "<leader>fh", "<cmd>FzfLua help_tags<cr>", { desc = "Fzf: search Neovim 
 km("n", "<leader>fm", "<cmd>FzfLua man_pages<cr>", { desc = "Fzf: search man pages" })
 
 km("n", "<leader>ft", function()
-	require("features.todos").fzf_search()
+	require("modules.todos").fzf_search()
 end, { desc = "Fzf: list tasks (TODO/FIXME/...)" })
 
 km("n", "<leader>fx", "<cmd>FzfLua diagnostics_document<cr>", { desc = "Fzf: list LSP diagnostics in current buffer" })

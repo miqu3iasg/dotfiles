@@ -3,12 +3,12 @@
 -- Global editor options, set at startup. An option's help is available with
 -- `:help 'name'`.
 --
--- See: lua/features/statusline.lua
+-- See: lua/modules/statusline.lua
 
 -- ripgrep is used as 'grepprg' when it is installed, which the project-wide
 -- features rely on.
 -- See: lua/utils/substitute.lua
--- See: lua/features/todos.lua
+-- See: lua/modules/todos.lua
 if vim.fn.executable("rg") == 1 then
 	vim.opt.grepprg = "rg --vimgrep"
 end
@@ -55,7 +55,7 @@ vim.opt.expandtab = true
 
 vim.opt.splitright = true
 vim.opt.splitbelow = true
--- See: lua/features/statusline.lua
+-- See: lua/modules/statusline.lua
 vim.opt.laststatus = 2
 vim.opt.winborder = "single"
 
@@ -87,7 +87,7 @@ vim.opt.backup = false
 vim.opt.undofile = true
 vim.opt.undolevels = 10000
 -- Must match what the sessions feature saves and restores.
--- See: lua/features/sessions.lua
+-- See: lua/modules/sessions.lua
 vim.o.sessionoptions = "buffers,curdir,tabpages,winsize,help,globals,skiprtp,folds,terminal"
 
 vim.opt.guicursor = "a:block"
