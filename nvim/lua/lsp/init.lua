@@ -1,12 +1,14 @@
 -- lua/lsp/init.lua
 
 -- Language servers for frontend development (HTML, CSS, Tailwind CSS, Emmet and
--- TypeScript/JavaScript), LaTeX, Typst and Markdown. Each server is configured
--- in its own module under `lua/lsp/servers/`, while this file holds the shared
--- setup: the Mason installation, the global capabilities, the buffer-local
--- keymaps and the enable/toggle state. Backend language servers are
--- intentionally excluded. Java's `jdtls` is installed through Mason but started
--- separately by the Java ftplugin (see after/ftplugin/java.lua).
+-- TypeScript/JavaScript), LaTeX, Typst, Markdown and Lua, plus Python through
+-- pyright, C and C++ through clangd and Go through gopls. Each server is
+-- configured in its own module under `lua/lsp/servers/`, while this file holds
+-- the shared setup: the Mason installation, the global capabilities, the
+-- buffer-local keymaps and the enable/toggle state. Formatting stays with
+-- conform for every language (see lua/plugins/formatting.lua). Java's `jdtls`
+-- is installed through Mason but started separately by the Java ftplugin (see
+-- after/ftplugin/java.lua).
 --
 -- nvim-lspconfig, mason.nvim, mason-lspconfig.nvim and lazydev.nvim must be
 -- installed through the plugin manager. Mason manages the language servers, but
@@ -25,7 +27,7 @@
 -- The configuration requests the installation of the language servers at
 -- startup. They can also be installed manually from Neovim:
 --
--- :MasonInstall css-lsp emmet-language-server eslint-lsp html-lsp lua-language-server marksman tailwindcss-language-server texlab tinymist vtsls jdtls
+-- :MasonInstall clangd css-lsp emmet-language-server eslint-lsp gopls html-lsp lua-language-server marksman pyright tailwindcss-language-server texlab tinymist vtsls jdtls
 --
 -- Tinymist uses `typstyle` for formatting, and its PDF export also requires the
 -- `typst` executable. Mason only installs the servers, so each one is still
@@ -48,12 +50,15 @@
 -- runs from the LspAttach autocmd below. `jdtls` is not listed because it is
 -- never started through this stack.
 local modules = {
+	"clangd",
 	"cssls",
 	"emmet_language_server",
 	"eslint",
+	"gopls",
 	"html",
 	"lua_ls",
 	"marksman",
+	"pyright",
 	"tailwindcss",
 	"texlab",
 	"tinymist",
