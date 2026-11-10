@@ -80,6 +80,10 @@ vim.pack.add({
 	-- Formatter runner for external formatters such as stylua and prettier.
 	{ src = "https://github.com/stevearc/conform.nvim" },
 
+	-- nvim-lint
+	-- Asynchronous linter runner for external linters such as flake8.
+	{ src = "https://github.com/mfussenegger/nvim-lint" },
+
 	-- fzf-lua
 	-- Fuzzy finder for files, grep, buffers and LSP results, powered by fzf.
 	{ src = "https://github.com/ibhagwan/fzf-lua" },
