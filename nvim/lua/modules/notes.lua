@@ -44,6 +44,29 @@ for _, t in ipairs(TYPES) do
 	TYPE_SET[t] = true
 end
 
+---Short description of each note type, shown in the picker header.
+---@type table<string, string>
+local TYPE_HELP = {
+	script = "automation script",
+	snippet = "reusable code",
+	doc = "documentation",
+	bug = "coding error",
+	adr = "technical decision note",
+	idea = "idea to explore",
+	content = "content draft",
+}
+
+---Header for the type picker, listing only the given types.
+---@param types string[]
+---@return string
+local function types_header(types)
+	local parts = { "<enter> accept" }
+	for _, t in ipairs(types) do
+		table.insert(parts, ("%s (%s)"):format(t, TYPE_HELP[t] or t))
+	end
+	return table.concat(parts, " | ")
+end
+
 ---@type integer
 local SLUG_MAX = 80
 
@@ -591,7 +614,8 @@ end
 ---@param items string[]
 ---@param prompt string
 ---@param on_choice fun(item: string)
-local function pick(items, prompt, on_choice)
+---@param header? string
+local function pick(items, prompt, on_choice, header)
 	local ok, fzf = pcall(require, "fzf-lua")
 	if not ok then
 		vim.ui.select(items, { prompt = prompt }, function(item)
@@ -603,8 +627,17 @@ local function pick(items, prompt, on_choice)
 	end
 	fzf.fzf_exec(items, {
 		prompt = prompt .. "> ",
+		header = header,
+		fzf_opts = {
+			["--layout"] = "reverse", -- prompt at the top
+			["--info"] = "inline-right", -- match counter on the prompt line
+			["--cycle"] = true, -- wrap around at the ends of the list
+			["--no-scrollbar"] = true,
+			["--tiebreak"] = "index", -- ties follow the order of TYPES
+		},
+		fzf_colors = { ["header"] = { "fg", "Comment" } },
 		winopts = {
-			height = 0.15,
+			height = 0.18,
 			width = 1.0,
 			row = 1.0,
 			col = 0.0,
@@ -666,7 +699,7 @@ function M.new_note()
 				open(path)
 			end)
 		end)
-	end)
+	end, types_header(types))
 end
 
 -- Templates in existing notes
@@ -741,7 +774,7 @@ function M.template()
 				insert_template(buf, type_)
 			end
 		end)
-	end)
+	end, types_header(types))
 end
 
 -- Search
