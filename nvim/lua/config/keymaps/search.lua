@@ -4,7 +4,6 @@
 -- navigation. Most of them recenter the cursor after moving.
 --
 -- See: lua/modules/compile.lua
--- See: lua/modules/todos.lua
 
 local km = vim.keymap.set
 

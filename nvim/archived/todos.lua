@@ -1,4 +1,4 @@
--- lua/modules/todos.lua
+-- archived/todos.lua
 
 -- Native search and navigation for task comments such as TODO, FIXME, HACK, BUG
 -- and XXX. It adds no highlighting on purpose, since the keywords live in
@@ -23,6 +23,7 @@
 -- See: lua/config/options.lua
 -- See: https://github.com/james-orcales/james-orcales/blob/main/home/.config/nvim/init.lua
 
+---@deprecated This module has been discontinued and is no longer used.
 local M = {}
 
 ---@type string
@@ -81,6 +82,9 @@ end
 ---Jump to the next task comment when `dir` is 1, or to the previous one when it
 ---is -1. A fresh scan runs unless the current quickfix list is already a TODO
 ---scan.
+---
+---@deprecated Discontinued module.
+---
 ---@param dir integer
 function M.jump(dir)
 	if is_todo_qf() then
@@ -96,6 +100,8 @@ function M.jump(dir)
 end
 
 ---Live grep restricted to the task keywords.
+---
+---@deprecated Discontinued module.
 function M.fzf_search()
 	require("fzf-lua").grep({
 		search = RG_PATTERN,
@@ -106,6 +112,8 @@ function M.fzf_search()
 	})
 end
 
+---Register the `:Todos` command.
+---@deprecated Discontinued module.
 function M.setup()
 	vim.keymap.set("n", "]t", function()
 		M.jump(1)

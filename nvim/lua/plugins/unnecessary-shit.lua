@@ -91,12 +91,6 @@ require("colorizer").setup({
 	},
 })
 
--- Registers the task comment jumps and the command that digs up every TODO I
--- swore I would fix someday.
--- See: lua/modules/todos.lua
--- See: lua/plugins/fzf.lua
-require("modules.todos").setup()
-
 local flash = require("flash")
 -- The backdrop is off because dimming the whole screen just to jump two words
 -- is dramatic and unnecessary.

@@ -8,7 +8,6 @@
 -- ripgrep is used as 'grepprg' when it is installed, which the project-wide
 -- features rely on.
 -- See: lua/lib/substitute.lua
--- See: lua/modules/todos.lua
 if vim.fn.executable("rg") == 1 then
 	vim.opt.grepprg = "rg --vimgrep"
 end
