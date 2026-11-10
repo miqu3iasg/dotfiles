@@ -320,7 +320,7 @@ function M.setup()
 		"%{v:lua.StlLine.search()}",
 		"   %{v:lua.StlLine.major()}",
 		"   %{get(b:, 'git_branch', '')}",
-		" %{v:lua.StlLine.diag()}",
+		-- " %{v:lua.StlLine.diag()}",
 		"%{reg_recording() !=# '' ? 'REC@' . reg_recording() . ' ' : ''}",
 		"%=",
 		"%{get(t:, 'zoomed', 0) ? '[Z]  ' : ''}",
