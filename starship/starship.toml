@@ -17,6 +17,7 @@ ${custom.git_worktree}\
 ${custom.vpn}\
 ${custom.proxy}\
 ${custom.net_open}\
+${custom.offline}\
 $status\
 $jobs\
 $character"""
@@ -223,6 +224,24 @@ description = "indicador de proxy setado (HTTP ou HTTPS)"
 when = 'test -n "$HTTP_PROXY" || test -n "$HTTPS_PROXY"'
 command = "echo proxy"
 style = "fg:yellow"
+format = "[ $output]($style)"
+
+[custom.net_open]
+description = "Wi-Fi conectado a rede aberta/sem criptografia"
+when = '''
+grep -q . /proc/net/wireless 2>/dev/null &&
+  nmcli -t -f ACTIVE,SECURITY device wifi list --rescan no 2>/dev/null |
+  grep -q '^yes:[^:]*:$'
+'''
+command = "echo open"
+style = "fg:yellow"
+format = "[ $output]($style)"
+
+[custom.offline]
+description = "sem rota default -> offline"
+when = '''! awk '$2 == "00000000" && $3 != "00000000"' /proc/net/route 2>/dev/null | grep -q .'''
+command = "echo off"
+style = "fg:fg"
 format = "[ $output]($style)"
 
 [status]
