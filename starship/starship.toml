@@ -18,6 +18,8 @@ ${custom.vpn}\
 ${custom.proxy}\
 ${custom.net_open}\
 ${custom.offline}\
+${env_var.SSH_CONNECTION}\
+${env_var.AWS_PROFILE}\
 $status\
 $jobs\
 $character"""
@@ -243,6 +245,16 @@ when = '''! awk '$2 == "00000000" && $3 != "00000000"' /proc/net/route 2>/dev/nu
 command = "echo off"
 style = "fg:fg"
 format = "[ $output]($style)"
+
+[env_var.SSH_CONNECTION]
+variable = "SSH_CONNECTION"
+style = "fg:fg"
+format = "[ ssh]($style)"
+
+[env_var.AWS_PROFILE]
+variable = "AWS_PROFILE"
+style = "fg:fg"
+format = "[ aws:($value)]($style)"
 
 [status]
 disabled = false
