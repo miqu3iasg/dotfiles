@@ -184,6 +184,13 @@ vim.diagnostic.config({
 	float = { border = vim.o.winborder },
 })
 
+-- The diagnostics display starts off, so buffers highlight nothing on their
+-- own: underlines, signs and floats only appear after it is toggled on with
+-- `<leader>vd`, and server results still follow the servers, since stopping
+-- them with `<leader>ul` clears the clients and whatever they put on screen.
+-- See: lua/config/keymaps/misc.lua
+vim.diagnostic.enable(false)
+
 -- Toggle
 
 vim.lsp.enable(modules)

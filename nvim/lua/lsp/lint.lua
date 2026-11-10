@@ -16,9 +16,12 @@
 -- `tox.ini`, so per-project rules need no configuration here.
 --
 -- The toggle below follows the same shape as the `<leader>ul` LSP toggle in
--- `lua/lsp/init.lua`, and lint jobs are skipped while linting is off.
+-- `lua/lsp/init.lua`, and lint jobs are skipped while linting is off. Lint
+-- findings are plain diagnostics, so they only show up when the global
+-- diagnostics display is on as well, with `<leader>vd`.
 --
 -- See: lua/lsp/init.lua
+-- See: lua/config/keymaps/misc.lua
 -- See: https://github.com/mfussenegger/nvim-lint
 -- See: https://flake8.pycqa.org
 
