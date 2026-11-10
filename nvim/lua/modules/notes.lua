@@ -6,9 +6,10 @@
 -- content, and reopens the last note.
 --
 -- Note types, the file name `TYPE-YYYYMMDD-HHmmss[-SLUG].md`, and the slug and
--- collision rules follow the vault's `README.md`. The only frontmatter field
--- written here is `date` (creation time), and the only template placeholders
--- are `{{title}}`, `{{date}}` and `{{adr_number}}`. Renaming a note is left to
+-- collision rules follow the vault's `README.md`. A draft gets `id`,
+-- `description`, `aliases` and `date` (creation time), and the template
+-- placeholders are `{{title}}`, `{{date}}`, `{{file_name}}`, `{{id}}` and
+-- `{{adr_number}}`. Renaming a note is left to
 -- obsidian.nvim (`:Obsidian rename`), which also fixes the backlinks.
 --
 -- The vault is `$ARCANUM_DIR`, or `~/dev/arcanum` when unset. Notes live
@@ -334,8 +335,12 @@ local function fm_get(fm, key)
 		if line:sub(1, #key + 1) == key .. ":" then
 			local value = vim.trim(line:sub(#key + 2))
 			local first, last = value:sub(1, 1), value:sub(-1)
-			if #value >= 2 and first == last and (first == '"' or first == "'") then
-				value = value:sub(2, -2)
+			if #value >= 2 and first == last then
+				if first == '"' then
+					value = value:sub(2, -2):gsub('\\(["\\])', "%1")
+				elseif first == "'" then
+					value = value:sub(2, -2):gsub("''", "'")
+				end
 			end
 			return value
 		end
@@ -392,33 +397,125 @@ local function next_number(type_)
 	return ("%03d"):format(count + 1)
 end
 
----Substitute `{{title}}`, `{{date}}` and `{{adr_number}}`, literally, and leave
----any other double braces alone. The ADR number is only computed when the
----template actually uses it.
----@param content string
----@param title string
----@param date string
----@return string
-local function render(content, title, date)
-	content = content:gsub("(\ndate:[ \t]*)[\"']({{date}})[\"']", "%1%2")
+---Plain YAML scalars that would be read back as another type.
+---@type table<string, boolean>
+local YAML_RESERVED = {
+	["true"] = true,
+	["false"] = true,
+	["yes"] = true,
+	["no"] = true,
+	["on"] = true,
+	["off"] = true,
+	["null"] = true,
+	["~"] = true,
+}
 
+---Placeholders whose value is always written plain when their quotes go away.
+---@type table<string, boolean>
+local RAW_VARS = { date = true }
+
+---Format a value for the right-hand side of a frontmatter line. It is written
+---plain whenever YAML reads it back as the same string, and double-quoted
+---otherwise (`: `, ` #`, a leading indicator, `true`, `2026`, ...).
+---@param value string
+---@return string
+local function yaml_scalar(value)
+	local needs_quotes = value:find("^[%[%]{},#&*!|>'\"%%@`]")
+		or value:find("^[-?:]%s")
+		or value:find("^[-?:]$")
+		or value:find(":%s")
+		or value:find(":$")
+		or value:find("%s#")
+		or value:find("^%s")
+		or value:find("%s$")
+		or value:find("%c")
+		or YAML_RESERVED[value:lower()]
+		or tonumber(value) ~= nil
+		or value:find("^%d%d%d%d%-%d%d%-%d%d[%dT:%.%sZ+%-]*$")
+	if value == "" or not needs_quotes then
+		return value
+	end
+	return '"' .. value:gsub('[\\"]', "\\%0") .. '"'
+end
+
+local unpack = table.unpack or unpack
+
+---Random (version 4) UUID, e.g. `3f2b8c1e-5d4a-4b7e-9c1d-2a6f0e8b7d35`.
+---@return string
+local function uuid()
+	local b = {}
+	local ok, bytes = pcall(uv.random, 16)
+	if ok and type(bytes) == "string" and #bytes == 16 then
+		for i = 1, 16 do
+			b[i] = bytes:byte(i)
+		end
+	else
+		for i = 1, 16 do
+			b[i] = vim.fn.rand() % 256
+		end
+	end
+	b[7] = b[7] % 16 + 64 -- version 4
+	b[9] = b[9] % 64 + 128 -- variant 10xx
+	return ("%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x"):format(unpack(b))
+end
+
+---Substitute `{{title}}`, `{{date}}`, `{{file_name}}`, `{{id}}` and
+---`{{adr_number}}`, literally, and leave any other double braces alone. Every
+---value is computed at most once, and the lazy ones (`id`, `adr_number`) only
+---when the template uses them.
+---
+---In the frontmatter, a line whose whole value is a quoted placeholder
+---(`title: "{{title}}"`) is written without the quotes: they only keep the
+---template valid YAML. They come back when the value needs them.
+---@param content string
+---@param ctx { title: string, date: string, file_name: string, id: string? } `id` keeps an existing id; one is generated when nil
+---@return string
+local function render(content, ctx)
 	local vars = {
-		title = title,
-		date = date,
+		title = ctx.title,
+		date = ctx.date,
+		file_name = ctx.file_name,
+		id = function()
+			return ctx.id or uuid()
+		end,
 		adr_number = function()
 			return next_number("adr")
 		end,
 	}
-	for name, value in pairs(vars) do
-		local token = "{{" .. name .. "}}"
-		if content:find(token, 1, true) then
-			local text = type(value) == "function" and value() or value
-			content = content:gsub(vim.pesc(token), function()
-				return text
-			end)
+
+	local cache = {}
+	---@param name string
+	---@return string?
+	local function value(name)
+		if cache[name] == nil then
+			local v = vars[name]
+			if type(v) == "function" then
+				v = v()
+			end
+			cache[name] = v
 		end
+		return cache[name]
 	end
-	return content
+
+	-- Frontmatter only: `key: "{{var}}"` becomes `key: value`.
+	local fm = fm_split(content)
+	if fm then
+		local cut = 4 + #fm
+		local head = content:sub(1, cut):gsub("(\n[%w_%-]+:)[ \t]*([\"'])%{%{([%w_]+)%}%}%2", function(key, _, name)
+			local v = value(name)
+			if v == nil then
+				return nil
+			end
+			local text = RAW_VARS[name] and v or yaml_scalar(v)
+			return key .. (text ~= "" and (" " .. text) or "")
+		end)
+		content = head .. content:sub(cut + 1)
+	end
+
+	-- Everything else, in a single pass. Unknown names are kept as they are.
+	return (content:gsub("%{%{([%w_]+)%}%}", function(name)
+		return value(name)
+	end))
 end
 
 ---Guarantee that the frontmatter of `content` has a `date` field. An existing
@@ -440,18 +537,21 @@ end
 -- Creation
 
 ---Write a new note under the first free name of the series. An existing note
----is never overwritten.
+---is never overwritten. `content` may be a function that receives the final
+---file name, for templates that use it.
 ---@param dir string
 ---@param type_ string
 ---@param ts string
 ---@param slug string
----@param content string
+---@param content string|fun(name: string): string
 ---@return string? path
 ---@return string? err
 local function create_file(dir, type_, ts, slug, content)
 	for n = 1, MAX_COLLISIONS do
-		local path = dir .. "/" .. M.build_name(type_, ts, slug, n)
-		local ok, err = write_exclusive(path, content)
+		local name = M.build_name(type_, ts, slug, n)
+		local path = dir .. "/" .. name
+		local text = type(content) == "function" and content(name) or content
+		local ok, err = write_exclusive(path, text)
 		if ok then
 			return path
 		end
@@ -479,8 +579,9 @@ function M.create(type_, title)
 	end
 	local ts, iso = now()
 	title = clean_title(title)
-	local content = ensure_date(render(template, title, iso), iso)
-	return create_file(vault_dir(), type_, ts, M.slugify(title), content)
+	return create_file(vault_dir(), type_, ts, M.slugify(title), function(name)
+		return ensure_date(render(template, { title = title, date = iso, file_name = name }), iso)
+	end)
 end
 
 ---@param path string
@@ -523,7 +624,8 @@ local function pick(items, prompt, on_choice)
 	})
 end
 
----Quick capture: create a draft with the minimal frontmatter and open it,
+---Quick capture: create a draft with `id`, an empty `description`, empty
+---`aliases` and `date`, and open it,
 ---ready to type. There are no prompts.
 function M.new_draft()
 	local dir = require_vault()
@@ -531,7 +633,8 @@ function M.new_draft()
 		return
 	end
 	local ts, iso = now()
-	local path, err = create_file(dir, "draft", ts, "", ("---\ndate: %s\n---\n\n"):format(iso))
+	local frontmatter = ("---\nid: %s\ndescription:\naliases: []\ndate: %s\n---\n\n"):format(uuid(), iso)
+	local path, err = create_file(dir, "draft", ts, "", frontmatter)
 	if not path then
 		notify(err --[[@as string]], vim.log.levels.ERROR)
 		return
@@ -595,7 +698,16 @@ local function insert_template(buf, type_)
 
 	local _, iso = now()
 	local date = fm_get(old_fm, "date") or iso
-	local rendered = ensure_date(render(template, fm_get(old_fm, "title") or "", date), date)
+	local id = fm_get(old_fm, "id")
+	local rendered = ensure_date(
+		render(template, {
+			title = fm_get(old_fm, "title") or "",
+			date = date,
+			file_name = vim.fs.basename(vim.api.nvim_buf_get_name(buf)),
+			id = id ~= "" and id or nil,
+		}),
+		date
+	)
 	local new_fm, tbody = fm_split(rendered)
 
 	-- Frontmatter lines to write, with a blank line after it when the note had none.
