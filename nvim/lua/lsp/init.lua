@@ -6,8 +6,10 @@
 -- configured in its own module under `lua/lsp/servers/`, while this file holds
 -- the shared setup: the Mason installation, the global capabilities, the
 -- buffer-local keymaps and the enable/toggle state. Formatting stays with
--- conform for every language (see lua/plugins/formatting.lua). Java's `jdtls`
--- is installed through Mason but started separately by the Java ftplugin (see
+-- conform for every language (see lua/plugins/formatting.lua). Python is also
+-- linted with flake8 through nvim-lint, which runs outside this stack and has
+-- its own toggle (see lua/lsp/lint.lua). Java's `jdtls` is
+-- installed through Mason but started separately by the Java ftplugin (see
 -- after/ftplugin/java.lua).
 --
 -- nvim-lspconfig, mason.nvim, mason-lspconfig.nvim and lazydev.nvim must be
@@ -39,6 +41,7 @@
 --
 -- See: lua/lsp/servers/lua_ls.lua
 -- See: lua/shared/exports.lua
+-- See: lua/lsp/lint.lua
 -- See: https://github.com/mason-org/mason.nvim
 -- See: https://github.com/mason-org/mason-lspconfig.nvim
 -- See: https://github.com/neovim/nvim-lspconfig
