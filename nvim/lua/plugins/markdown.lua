@@ -4,7 +4,7 @@
 -- the Arcanum vault as the only workspace. obsidian.nvim provides wikilink
 -- navigation, completion and the other Obsidian features. Everything that
 -- creates, names, promotes, renames or searches notes lives in
--- `lua/features/notes.lua`, and the keymaps below only delegate to it.
+-- `lua/modules/notes.lua`, and the keymaps below only delegate to it.
 --
 -- The vault is `$ARCANUM_DIR`, or `~/documents/arcanum` when unset. It must
 -- already exist. Notes live directly in its root, templates in `_templates/`
@@ -26,7 +26,7 @@
 -- link.
 --
 -- Markdown language-server features require Marksman to be both installed and
--- enabled in `lua/lsp/`. The Obsidian app is only needed to open
+-- enabled in `lua/language/`. The Obsidian app is only needed to open
 -- notes in it. On Arch Linux:
 --
 -- $ sudo pacman -S obsidian
@@ -35,9 +35,9 @@
 --
 -- :MasonInstall marksman
 --
--- See: lua/features/notes.lua
+-- See: lua/modules/notes.lua
 -- See: after/ftplugin/markdown.lua
--- See: lua/lsp/servers/marksman.lua
+-- See: lua/language/servers/marksman.lua
 -- See: ~/.local/bin/nt
 -- See: https://github.com/HakonHarnes/img-clip.nvim
 -- See: https://github.com/obsidian-nvim/obsidian.nvim
@@ -45,7 +45,7 @@
 -- See: https://github.com/ibhagwan/fzf-lua
 -- See: https://github.com/iamcco/markdown-preview.nvim
 
-local notes = require("features.notes")
+local notes = require("modules.notes")
 
 local VAULT_PATH = notes.vault()
 
@@ -127,7 +127,7 @@ local opts = {
 	workspaces = {
 		{ name = "Arcanum", path = VAULT_PATH },
 	},
-	-- Notes are created by features.notes, which owns names, templates and dates.
+	-- Notes are created by modules.notes, which owns names, templates and dates.
 	new_notes_location = "current_dir",
 
 	ui = {

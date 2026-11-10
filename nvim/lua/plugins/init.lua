@@ -6,7 +6,7 @@
 -- order matters because some modules depend on others (for example,
 -- lua/plugins/fzf.lua must load before lua/plugins/markdown.lua). Module names
 -- are full paths, so modules living outside `lua/plugins/` can slot into the
--- same order; the LSP stack does that, with `lua/lsp/init.lua` loading between
+-- same order; the LSP stack does that, with `lua/language/init.lua` loading between
 -- completions and fzf. A module that fails to load notifies an error instead
 -- of aborting the rest.
 
@@ -14,7 +14,7 @@ for _, mod in ipairs({
 	"plugins.treesitter",
 	"plugins.formatting",
 	"plugins.completions",
-	"lsp",
+	"language",
 	"plugins.fzf",
 	"plugins.git",
 	"plugins.unnecessary-shit",

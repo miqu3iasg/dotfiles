@@ -7,7 +7,7 @@
 -- destination that generally does not exist in the exported PDF.
 --
 -- Image embeds such as ![[image.png]] are handled earlier by
--- lua/shared/pandoc.lua, which rewrites them as ordinary Markdown images
+-- lua/modules/pandoc.lua, which rewrites them as ordinary Markdown images
 -- because Pandoc does not parse Obsidian image embeds reliably.
 
 ---Determine whether a Pandoc link represents an Obsidian wikilink.

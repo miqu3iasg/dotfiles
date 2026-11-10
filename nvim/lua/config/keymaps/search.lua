@@ -3,8 +3,8 @@
 -- Keymaps for scrolling, search navigation, search highlights and quickfix
 -- navigation. Most of them recenter the cursor after moving.
 --
--- See: lua/features/compile.lua
--- See: lua/features/todos.lua
+-- See: lua/modules/compile.lua
+-- See: lua/modules/todos.lua
 
 local km = vim.keymap.set
 

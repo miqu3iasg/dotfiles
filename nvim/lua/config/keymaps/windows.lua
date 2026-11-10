@@ -34,7 +34,7 @@ km("n", "=", "<cmd>vertical resize +5<cr>", { desc = "Increase window width" })
 km("n", "-", "<cmd>vertical resize -5<cr>", { desc = "Decrease window width" })
 
 -- Zoom
--- See: lua/features/window_zoom.lua
+-- See: lua/modules/window_zoom.lua
 km("n", "<leader>sm", function()
-	require("features.window_zoom").toggle()
+	require("modules.window_zoom").toggle()
 end, { desc = "Toggle window zoom" })

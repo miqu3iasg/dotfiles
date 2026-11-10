@@ -5,18 +5,18 @@
 --
 -- See: lua/config/pack.lua
 -- See: lua/config/keymaps/pack.lua
--- See: lua/shared/autoformat.lua
+-- See: lua/lib/autoformat.lua
 
 vim.api.nvim_create_user_command("Setwd", function()
 	vim.cmd.cd(vim.fn.expand("%:p:h"))
 end, { desc = "Change the working directory to the current file's directory" })
 
 vim.api.nvim_create_user_command("FormatDisable", function()
-	require("shared.autoformat").disable()
+	require("lib.autoformat").disable()
 end, { desc = "Disable autoformat on save" })
 
 vim.api.nvim_create_user_command("FormatEnable", function()
-	require("shared.autoformat").enable()
+	require("lib.autoformat").enable()
 end, { desc = "Enable autoformat on save" })
 
 vim.api.nvim_create_user_command("PackAdd", function(opts)

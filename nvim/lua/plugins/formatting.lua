@@ -44,11 +44,11 @@
 -- The binaries for Julia (runic), Clojure (cljfmt) and Dockerfile (dockerfmt)
 -- must be installed by hand or through Mason.
 --
--- See: lua/shared/autoformat.lua
--- See: lua/features/markdown_lists.lua
+-- See: lua/lib/autoformat.lua
+-- See: lua/modules/markdown_lists.lua
 -- See: https://github.com/stevearc/conform.nvim
 
-local autoformat = require("shared.autoformat")
+local autoformat = require("lib.autoformat")
 
 vim.keymap.set("n", "<leader>k", function()
 	require("conform").format({ async = true, lsp_format = "fallback" })
@@ -56,7 +56,7 @@ end, { desc = "Format buffer" })
 
 vim.keymap.set("n", "<leader>uf", autoformat.toggle, { desc = "Toggle autoformat" })
 
-local md_lists = require("features.markdown_lists")
+local md_lists = require("modules.markdown_lists")
 
 ---Bullet markers saved by buffer while a markdown format is running.
 ---@type table<integer, string[]>

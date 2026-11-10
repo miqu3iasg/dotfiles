@@ -2,7 +2,7 @@
 
 -- Keymaps for managing files and directories.
 --
--- See: lua/utils/system.lua
+-- See: lua/lib/system.lua
 -- See: lua/config/commands.lua
 
 local km = vim.keymap.set
@@ -201,7 +201,7 @@ map("<leader>ne", function()
 		return
 	end
 
-	local os_name = require("utils.system").get_os()
+	local os_name = require("lib.system").get_os()
 	if os_name == "mac" then
 		vim.fn.system({ "open", "-R", file })
 	elseif os_name == "windows" then

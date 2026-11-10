@@ -1,16 +1,16 @@
 -- after/ftplugin/markdown.lua
 
 -- Configures Markdown buffers for prose writing, with buffer-local keymaps for
--- lists, checkboxes and inline formatting. Pandoc integration is loaded from a
--- shared module.
+-- lists, checkboxes and inline formatting. Pandoc integration lives in
+-- `lua/modules/pandoc.lua`.
 --
 -- `:PasteImage` is provided by img-clip.nvim, which must be installed through
 -- the plugin manager and relies on a clipboard utility such as wl-clipboard or
 -- xclip.
 --
 -- See: ~/.config/nvim/pandoc
--- See: lua/shared/pandoc.lua
--- See: lua/features/markdown_lists.lua
+-- See: lua/modules/pandoc.lua
+-- See: lua/modules/markdown_lists.lua
 -- See: https://github.com/HakonHarnes/img-clip.nvim
 
 local opt = vim.opt_local
@@ -33,7 +33,7 @@ opt.tabstop = 4
 opt.shiftwidth = 4
 opt.softtabstop = -1
 
-require("shared.pandoc").setup()
+require("modules.pandoc").setup()
 
 ---@param mode string|string[]
 ---@param lhs string
@@ -100,7 +100,7 @@ map({ "n", "x" }, "<localleader>lt", ":ToggleCheckbox<CR>", "Toggle checkbox")
 -- Normal mode acts on the current line and accepts a count. Visual mode acts on
 -- the selected lines and keeps the selection, so a mapping can be repeated to
 -- cycle the list type.
-local lists = require("features.markdown_lists")
+local lists = require("modules.markdown_lists")
 
 map({ "n", "x" }, "<localleader>lb", lists.action(lists.toggle, "bullet"), "Toggle bullet list")
 map({ "n", "x" }, "<localleader>ln", lists.action(lists.toggle, "number"), "Toggle numbered list")
