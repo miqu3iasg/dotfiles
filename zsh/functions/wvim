@@ -9,16 +9,18 @@
 # See: conf.d/completion.zsh (Tab completion: compdef wvim=which)
 # See: conf.d/aliases.zsh
 
-local name=$1 kind pattern hit
+local name=$1 kind pattern hit files
 
 [[ -z $name ]] && { echo "usage: wvim <name>" >&2; return 1; }
 
-kind=${$(whence -w -- $name)##*: }
+# whence -w prints "<name>: <kind>"; strip up to the first ": ".
+kind=$(whence -w -- $name)
+kind=${kind#*: }
 
 case $kind in
     alias)
         pattern="^[[:space:]]*(alias[[:space:]]+)?${name}="
-        local -a files=($ZDOTDIR/aliases/*.zsh(N) $ZDOTDIR/conf.d/*.zsh(N))
+        files=($ZDOTDIR/aliases/*(N) $ZDOTDIR/conf.d/*.zsh(N))
         ;;
     function)
         # Functions of this config live in one file each under functions/;
@@ -30,7 +32,8 @@ case $kind in
             return
         fi
         pattern="^[[:space:]]*(function[[:space:]]+)?${name}[[:space:]]*\\(\\)"
-        local -a files=($ZDOTDIR/conf.d/*.zsh(N) $ZDOTDIR/.zshrc(N))
+        # alias functions (l(), ...) live in aliases/, inline widgets in conf.d/
+        files=($ZDOTDIR/conf.d/*.zsh(N) $ZDOTDIR/aliases/*(N) $ZDOTDIR/.zshrc(N))
         ;;
     command)
         ${=EDITOR} "$(whence -p -- $name)"
