@@ -8,21 +8,23 @@
 -- buffer-local keymaps and the enable/toggle state. Formatting stays with
 -- conform for every language (see lua/plugins/formatting.lua). Python is also
 -- linted with flake8 through nvim-lint, which runs outside this stack and has
--- its own toggle (see lua/lsp/lint.lua). Java's `jdtls` is
--- installed through Mason but started separately by the Java ftplugin (see
+-- its own toggle (see lua/lsp/lint.lua). Java's `jdtls` is installed through
+-- Mason but started separately by the Java ftplugin (see
 -- after/ftplugin/java.lua).
 --
--- nvim-lspconfig, mason.nvim, mason-lspconfig.nvim and lazydev.nvim must be
--- installed through the plugin manager. Mason manages the language servers, but
--- some of them rely on external runtimes and command-line tools. On Arch Linux,
--- install Node.js and npm for the JavaScript-based servers, a JDK for Java, and
--- the Typst CLI and typstyle for Typst compilation and formatting:
+-- nvim-lspconfig, mason.nvim and mason-lspconfig.nvim must be installed through
+-- the plugin manager; the lazydev.nvim setup lives in the lua_ls module, where
+-- it takes effect. Mason manages the language servers, but some of them rely on
+-- external runtimes and command-line tools. On Arch Linux, install Node.js and
+-- npm for the JavaScript-based servers, a JDK for Java, and the Typst CLI and
+-- typstyle for Typst compilation and formatting:
 --
 -- $ sudo pacman -S nodejs npm jdk-openjdk typst typstyle
 --
--- Texlab provides the LaTeX language-server features, but compiling LaTeX
--- documents needs a TeX Live installation. These packages provide the core
--- distribution, LaTeX packages and additional build utilities:
+-- Texlab provides the LaTeX language-server features, and its chktex options
+-- need chktex, but compiling LaTeX documents needs a TeX Live installation.
+-- These packages provide the core distribution, LaTeX packages and additional
+-- build utilities:
 --
 -- $ sudo pacman -S texlive-basic texlive-latex texlive-latexextra texlive-binextra
 --
@@ -36,22 +38,19 @@
 -- configured individually in `lua/lsp/servers/`, and only the servers declared
 -- below are enabled.
 --
--- lua_ls serves the Neovim configuration itself, with the Neovim API types
--- provided by lazydev.nvim.
---
+-- See: lua/lsp/lint.lua
 -- See: lua/lsp/servers/lua_ls.lua
 -- See: lua/shared/exports.lua
--- See: lua/lsp/lint.lua
 -- See: https://github.com/mason-org/mason.nvim
 -- See: https://github.com/mason-org/mason-lspconfig.nvim
 -- See: https://github.com/neovim/nvim-lspconfig
--- See: https://github.com/folke/lazydev.nvim
 -- See: :help lsp
 
--- Language server modules under `lua/lsp/servers/`. Each one returns a config
--- table passed to `vim.lsp.config` and may declare an `on_attach` hook, which
--- runs from the LspAttach autocmd below. `jdtls` is not listed because it is
--- never started through this stack.
+-- Language server modules under `lua/lsp/servers/`, loaded and registered
+-- below. `jdtls` is not listed because it is never started through this stack.
+-- The order is alphabetical and meaningless, since each module registers on its
+-- own.
+---@type string[]
 local modules = {
 	"clangd",
 	"cssls",
@@ -68,15 +67,23 @@ local modules = {
 	"vtsls",
 }
 
--- Servers installed through Mason, but started elsewhere.
+---Servers installed through Mason, but started elsewhere.
+---@type string[]
 local install_only = { "jdtls" }
 
--- Server modules indexed by server name, used by the LspAttach autocmd to run
--- the module hooks, such as the eslint fix-all on save.
+---The shape returned by every file in `servers/`. The `config` table is passed
+---to `vim.lsp.config(name, ...)`, and `on_attach`, when present, runs from the
+---LspAttach autocmd below for buffers that attach to that server.
+---@class UserLspServerModule
+---@field config vim.lsp.Config Configuration passed to `vim.lsp.config`.
+---@field on_attach? fun(client: vim.lsp.Client, bufnr: integer) Hook run once the client attaches.
+
+---Modules indexed by server name, so the attach autocmd reaches the hook of
+---the client that fired the event.
+---@type table<string, UserLspServerModule>
 local servers = {}
 
 -- Installation
--- ------------
 
 require("mason").setup()
 
@@ -88,16 +95,7 @@ vim.schedule(function()
 	})
 end)
 
--- Provides the Neovim runtime types to Lua files.
-require("lazydev").setup({
-	library = {
-		{ path = "${3rd}/luv/library", words = { "vim%.uv" } },
-		{ path = "${3rd}/love2d/library", words = { "love%." } },
-	},
-})
-
 -- Server configuration
--- --------------------
 
 -- Disabling dynamic file watching avoids servers registering thousands of
 -- watchers in large projects.
@@ -113,7 +111,6 @@ for _, name in ipairs(modules) do
 end
 
 -- Attach
--- ------
 
 -- Buffer-local mappings set once a server attaches. The native LSP and
 -- diagnostic mappings, such as hover, rename and diagnostic navigation, are
@@ -179,7 +176,6 @@ vim.api.nvim_create_autocmd("LspAttach", {
 })
 
 -- Diagnostics
--- -----------
 
 vim.diagnostic.config({
 	virtual_text = false,
@@ -189,7 +185,6 @@ vim.diagnostic.config({
 })
 
 -- Toggle
--- ------
 
 vim.lsp.enable(modules)
 
