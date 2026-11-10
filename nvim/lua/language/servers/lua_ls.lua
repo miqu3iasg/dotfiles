@@ -1,4 +1,4 @@
--- lua/lsp/servers/lua_ls.lua
+-- lua/language/servers/lua_ls.lua
 
 -- Lua through lua-language-server. Its main purpose is to support the Neovim
 -- configuration itself, so lazydev.nvim is set up in this file: the library

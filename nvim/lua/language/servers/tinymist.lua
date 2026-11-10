@@ -1,4 +1,4 @@
--- lua/lsp/servers/tinymist.lua
+-- lua/language/servers/tinymist.lua
 
 -- Typst through tinymist, with typstyle as the formatter and PDF export on
 -- save. Export targets the same root and layout as the latexmk and pandoc

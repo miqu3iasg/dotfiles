@@ -1,4 +1,4 @@
--- lua/lsp/servers/gopls.lua
+-- lua/language/servers/gopls.lua
 
 -- Go through gopls. The nvim-lspconfig defaults cover the command, the
 -- filetypes and the root markers, which search for `go.work` and `go.mod`. The

@@ -1,6 +1,6 @@
--- lua/lsp/lint.lua
+-- lua/language/lint.lua
 
--- External linters through nvim-lint, kept apart from `lua/lsp/servers/`
+-- External linters through nvim-lint, kept apart from `lua/language/servers/`
 -- because linters do not start a server: each one is a command-line tool run on
 -- demand, and its findings are attached to the buffer as plain diagnostics.
 -- Python is the only linted language right now, with flake8.
@@ -16,11 +16,11 @@
 -- `tox.ini`, so per-project rules need no configuration here.
 --
 -- The toggle below follows the same shape as the server toggle of
--- `lua/lsp/init.lua`, and lint jobs are skipped while linting is off. Lint
+-- `lua/language/init.lua`, and lint jobs are skipped while linting is off. Lint
 -- findings are plain diagnostics, so they only show up when the global
 -- diagnostics display is on as well.
 --
--- See: lua/lsp/init.lua
+-- See: lua/language/init.lua
 -- See: lua/config/keymaps/misc.lua
 -- See: https://github.com/mfussenegger/nvim-lint
 -- See: https://flake8.pycqa.org

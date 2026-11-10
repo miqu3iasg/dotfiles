@@ -1,4 +1,4 @@
--- lua/lsp/servers/pyright.lua
+-- lua/language/servers/pyright.lua
 
 -- Python through pyright. The server provides types, navigation, hover,
 -- completion with auto-import and inlay hints for variable and function return

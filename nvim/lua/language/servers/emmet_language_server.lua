@@ -1,4 +1,4 @@
--- lua/lsp/servers/emmet_language_server.lua
+-- lua/language/servers/emmet_language_server.lua
 
 -- Emmet expansion for HTML, CSS and markup-based templates, taken over from the
 -- nvim-lspconfig defaults so that templ and PHP buffers get the abbreviations

@@ -1,4 +1,4 @@
--- lua/lsp/servers/marksman.lua
+-- lua/language/servers/marksman.lua
 
 -- Markdown through marksman, used for note-taking together with obsidian.nvim.
 -- Any folder with a README is a workspace, falling back to the file's

@@ -1,4 +1,4 @@
--- lua/lsp/servers/texlab.lua
+-- lua/language/servers/texlab.lua
 
 -- LaTeX through texlab, which provides completion, hover, navigation, build
 -- support and document diagnostics. Abbreviations such as "thm" and "eqn"

@@ -1,4 +1,4 @@
--- lua/lsp/servers/cssls.lua
+-- lua/language/servers/cssls.lua
 
 -- CSS, SCSS and LESS through the VS Code CSS language service. Validation only
 -- produces diagnostics, so it is disabled. Formatting stays with prettier

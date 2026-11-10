@@ -1,4 +1,4 @@
--- lua/lsp/servers/vtsls.lua
+-- lua/language/servers/vtsls.lua
 
 -- TypeScript and JavaScript through vtsls, which wraps tsserver requests into
 -- native LSP. vtsls replaces ts_ls. Never enable both, or every diagnostic and
@@ -12,7 +12,7 @@
 -- declarations to a new file, and the server takes part in completion
 -- filtering through fuzzy matching. Imports are reorganized automatically on
 -- save, and the manual command stays available through its own keymap (see
--- lua/lsp/init.lua).
+-- lua/language/init.lua).
 --
 -- :MasonInstall vtsls
 --
@@ -44,7 +44,7 @@ local ts_shared = {
 return {
 	config = {
 		commands = {
-			-- Organizing imports runs through its own keymap (see lua/lsp/init.lua),
+			-- Organizing imports runs through its own keymap (see lua/language/init.lua),
 			-- so the default command is stubbed out to keep it silent.
 			["_typescript.didOrganizeImports"] = function() end,
 		},

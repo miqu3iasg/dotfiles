@@ -1,4 +1,4 @@
--- lua/lsp/servers/clangd.lua
+-- lua/language/servers/clangd.lua
 
 -- C, C++ and Objective-C through clangd. The flags below keep the background
 -- index, which persists parsing results between sessions, insert missing

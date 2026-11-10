@@ -15,7 +15,7 @@
 -- by filetype.
 --
 -- Completion depends on the language servers configured in
--- `lua/lsp/`. Language servers and formatters are installed through
+-- `lua/language/`. Language servers and formatters are installed through
 -- Mason, according to the languages in use, with `:Mason` or `:MasonInstall`
 -- followed by package names.
 --
@@ -29,7 +29,7 @@
 -- :TSInstall c java python lua scheme racket sql markdown javascript typescript
 -- :TSInstall html css json jsonc yaml toml bash latex typst
 --
--- See: lua/lsp/init.lua
+-- See: lua/language/init.lua
 -- See: lua/plugins/formatting.lua
 -- See: https://github.com/L3MON4D3/LuaSnip
 -- See: https://github.com/nvim-treesitter/nvim-treesitter

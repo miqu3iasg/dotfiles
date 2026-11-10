@@ -1,4 +1,4 @@
--- lua/lsp/servers/eslint.lua
+-- lua/language/servers/eslint.lua
 
 -- ESLint for JavaScript and TypeScript validation. Formatting stays with
 -- conform and prettier, so the server's formatter is off, and linting runs on

@@ -26,7 +26,7 @@
 -- link.
 --
 -- Markdown language-server features require Marksman to be both installed and
--- enabled in `lua/lsp/`. The Obsidian app is only needed to open
+-- enabled in `lua/language/`. The Obsidian app is only needed to open
 -- notes in it. On Arch Linux:
 --
 -- $ sudo pacman -S obsidian
@@ -37,7 +37,7 @@
 --
 -- See: lua/modules/notes.lua
 -- See: after/ftplugin/markdown.lua
--- See: lua/lsp/servers/marksman.lua
+-- See: lua/language/servers/marksman.lua
 -- See: ~/.local/bin/nt
 -- See: https://github.com/HakonHarnes/img-clip.nvim
 -- See: https://github.com/obsidian-nvim/obsidian.nvim

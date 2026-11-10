@@ -14,7 +14,7 @@
 -- unnamed buffer is treated as a file called `scratch` in the current directory.
 --
 -- See: lua/plugins/latex.lua
--- See: lua/lsp/servers/tinymist.lua
+-- See: lua/language/servers/tinymist.lua
 
 local M = {}
 

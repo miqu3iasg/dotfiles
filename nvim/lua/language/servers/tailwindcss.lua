@@ -1,4 +1,4 @@
--- lua/lsp/servers/tailwindcss.lua
+-- lua/language/servers/tailwindcss.lua
 
 -- Tailwind CSS class completion, hover and color hints, attached to HTML, CSS,
 -- SCSS and React buffers, to templ templates, which map to HTML through

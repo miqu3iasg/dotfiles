@@ -1,4 +1,4 @@
--- lua/lsp/servers/html.lua
+-- lua/language/servers/html.lua
 
 -- HTML through the VS Code HTML language service. The nvim-lspconfig defaults
 -- cover the command and the root markers, so only the filetypes are widened to

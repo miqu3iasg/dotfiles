@@ -1,14 +1,14 @@
--- lua/lsp/init.lua
+-- lua/language/init.lua
 
 -- Language servers for frontend development (HTML, CSS, Tailwind CSS, Emmet and
 -- TypeScript/JavaScript), LaTeX, Typst, Markdown and Lua, plus Python through
 -- pyright, C and C++ through clangd and Go through gopls. Each server is
--- configured in its own module under `lua/lsp/servers/`, while this file holds
+-- configured in its own module under `lua/language/servers/`, while this file holds
 -- the shared setup: the Mason installation, the global capabilities, the
 -- buffer-local keymaps and the enable/toggle state. Formatting stays with
 -- conform for every language (see lua/plugins/formatting.lua). Python is also
 -- linted with flake8 through nvim-lint, which runs outside this stack and has
--- its own toggle (see lua/lsp/lint.lua). Java's `jdtls` is installed through
+-- its own toggle (see lua/language/lint.lua). Java's `jdtls` is installed through
 -- Mason but started separately by the Java ftplugin (see
 -- after/ftplugin/java.lua).
 --
@@ -35,12 +35,12 @@
 --
 -- Tinymist uses `typstyle` for formatting, and its PDF export also requires the
 -- `typst` executable. Mason only installs the servers, so each one is still
--- configured individually in `lua/lsp/servers/`, and only the servers declared
+-- configured individually in `lua/language/servers/`, and only the servers declared
 -- below are enabled.
 --
--- See: lua/lsp/lint.lua
--- See: lua/lsp/servers/lua_ls.lua
--- See: lua/lsp/types.lua
+-- See: lua/language/lint.lua
+-- See: lua/language/servers/lua_ls.lua
+-- See: lua/language/types.lua
 -- See: lua/lib/exports.lua
 -- See: https://github.com/mason-org/mason.nvim
 -- See: https://github.com/mason-org/mason-lspconfig.nvim
@@ -49,9 +49,9 @@
 
 -- The shape check is what turns a malformed module into a load error with the
 -- server name, instead of a broken attach.
-local types = require("lsp.types")
+local types = require("language.types")
 
--- Language server modules under `lua/lsp/servers/`, loaded and registered
+-- Language server modules under `lua/language/servers/`, loaded and registered
 -- below. `jdtls` is not listed because it is never started through this stack.
 -- The order is alphabetical and meaningless, since each module registers on its
 -- own.
@@ -78,7 +78,7 @@ local install_only = { "jdtls" }
 
 ---Modules indexed by server name, so the attach autocmd reaches the hook of
 ---the client that fired the event. The `UserLspServerModule` class that these
----modules follow lives in `lua/lsp/types.lua`.
+---modules follow lives in `lua/language/types.lua`.
 ---@type table<string, UserLspServerModule>
 local servers = {}
 
@@ -104,7 +104,7 @@ vim.lsp.config("*", {
 })
 
 for _, name in ipairs(modules) do
-	local mod = require("lsp.servers." .. name)
+	local mod = require("language.servers." .. name)
 	types.validate(name, mod)
 	vim.lsp.config(name, mod.config)
 	servers[name] = mod
