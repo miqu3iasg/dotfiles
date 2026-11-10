@@ -40,11 +40,16 @@
 --
 -- See: lua/lsp/lint.lua
 -- See: lua/lsp/servers/lua_ls.lua
+-- See: lua/lsp/types.lua
 -- See: lua/shared/exports.lua
 -- See: https://github.com/mason-org/mason.nvim
 -- See: https://github.com/mason-org/mason-lspconfig.nvim
 -- See: https://github.com/neovim/nvim-lspconfig
 -- See: :help lsp
+
+-- The shape check is what turns a malformed module into a load error with the
+-- server name, instead of a broken attach.
+local types = require("lsp.types")
 
 -- Language server modules under `lua/lsp/servers/`, loaded and registered
 -- below. `jdtls` is not listed because it is never started through this stack.
@@ -71,15 +76,9 @@ local modules = {
 ---@type string[]
 local install_only = { "jdtls" }
 
----The shape returned by every file in `servers/`. The `config` table is passed
----to `vim.lsp.config(name, ...)`, and `on_attach`, when present, runs from the
----LspAttach autocmd below for buffers that attach to that server.
----@class UserLspServerModule
----@field config vim.lsp.Config Configuration passed to `vim.lsp.config`.
----@field on_attach? fun(client: vim.lsp.Client, bufnr: integer) Hook run once the client attaches.
-
 ---Modules indexed by server name, so the attach autocmd reaches the hook of
----the client that fired the event.
+---the client that fired the event. The `UserLspServerModule` class that these
+---modules follow lives in `lua/lsp/types.lua`.
 ---@type table<string, UserLspServerModule>
 local servers = {}
 
@@ -106,6 +105,7 @@ vim.lsp.config("*", {
 
 for _, name in ipairs(modules) do
 	local mod = require("lsp.servers." .. name)
+	types.validate(name, mod)
 	vim.lsp.config(name, mod.config)
 	servers[name] = mod
 end
