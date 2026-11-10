@@ -47,7 +47,10 @@ local snippet_modules = {
 	go = "snippets.go",
 	python = "snippets.python",
 	java = "snippets.java",
+	javascript = "snippets.js",
+	latex = "snippets.latex",
 	lisp = "snippets.lisp",
+	lua = "snippets.lua",
 	sql = "snippets.sql",
 	markdown = "snippets.markdown",
 	common = "snippets.common",
@@ -58,6 +61,9 @@ local aliases = {
 	scheme = "lisp",
 	mysql = "sql",
 	plsql = "sql",
+	javascriptreact = "javascript",
+	typescript = "javascript",
+	typescriptreact = "typescript",
 }
 
 ---@type table<string, boolean>
@@ -68,7 +74,9 @@ local common_filetypes = {
 	lua = true,
 	java = true,
 	javascript = true,
+	javascriptreact = true,
 	typescript = true,
+	typescriptreact = true,
 	go = true,
 	sh = true,
 	markdown = true,

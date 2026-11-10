@@ -64,4 +64,12 @@ return {
 		i(7, "Description."),
 		t({ "", " */" }),
 	}),
+
+	-- One-line comment for fields, constants and small declarations.
+	s("docf", {
+		t("/* "),
+		i(1, "Description."),
+		t(" */"),
+		i(0),
+	}),
 }

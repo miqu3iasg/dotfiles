@@ -56,4 +56,37 @@ return {
 		i(6, "Description."),
 		t({ "", '"""' }),
 	}),
+
+	-- Google-style docstring for functions and methods that return nothing.
+	s("docv", {
+		t('"""'),
+		i(1, "Short description."),
+		t({ "", "", "Args:", "    " }),
+		i(2, "param"),
+		t(": "),
+		i(3, "Description."),
+		t({ "", '"""' }),
+	}),
+
+	-- Google-style class docstring with an Attributes section. Duplicate the
+	-- attribute lines as needed.
+	s("docc", {
+		t('"""'),
+		i(1, "Class description."),
+		t({ "", "", "Attributes:", "    " }),
+		i(2, "attr"),
+		t(": "),
+		i(3, "Description."),
+		t({ "", '"""' }),
+	}),
+
+	-- Module docstring with a short and a longer description, placed at the
+	-- very top of the file.
+	s("docm", {
+		t('"""'),
+		i(1, "Short description."),
+		t({ "", "", "" }),
+		i(2, "Longer description."),
+		t({ "", '"""' }),
+	}),
 }
