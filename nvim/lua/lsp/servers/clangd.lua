@@ -1,12 +1,12 @@
 -- lua/lsp/servers/clangd.lua
 
--- C, C++ and Objective-C through clangd. The nvim-lspconfig defaults cover the
--- command, the filetypes and the root markers, which search for a compilation
--- database first, so projects with `compile_commands.json` or `compile_flags.txt`
--- get an accurate view of includes and flags.
---
--- Formatting stays with conform, which runs clang-format with the style from
--- `~/.clang-format`, so the server never formats.
+-- C, C++ and Objective-C through clangd. The flags below keep the background
+-- index, which persists parsing results between sessions, insert missing
+-- headers by include-what-you-use ordering, filter the completion lists on the
+-- server side, and complete function calls with placeholder arguments. Project
+-- roots come from `compile_commands.json` or `compile_flags.txt` when they
+-- exist. Formatting stays with conform, which runs clang-format with the style
+-- from `~/.clang-format`.
 --
 -- :MasonInstall clangd
 --
@@ -14,6 +14,15 @@
 -- See: resources/clang-format.example.yaml
 -- See: https://clangd.llvm.org
 
+---@type UserLspServerModule
 return {
-	config = {},
+	config = {
+		cmd = {
+			"clangd",
+			"--background-index",
+			"--header-insertion=iwyu",
+			"--completion-style=detailed",
+			"--function-arg-placeholders=1",
+		},
+	},
 }

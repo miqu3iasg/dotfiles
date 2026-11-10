@@ -10,6 +10,7 @@
 --
 -- See: https://github.com/olegtsaplin/emmet_language_server
 
+---@type UserLspServerModule
 return {
 	config = {
 		filetypes = { "templ", "html", "css", "scss", "php", "javascriptreact", "typescriptreact" },

@@ -7,6 +7,9 @@
 -- The settings are shared between the `typescript` and the `javascript`
 -- sections through a single table, so the two languages behave exactly the
 -- same way, with `maxTsServerMemory` applied on top of the TypeScript side.
+-- The workspace tsserver wins over the global one when a project brings its
+-- own, code actions can move declarations to a new file, and the server takes
+-- part in completion filtering through fuzzy matching.
 --
 -- :MasonInstall vtsls
 --
@@ -31,11 +34,12 @@ local ts_shared = {
 	},
 }
 
+---@type UserLspServerModule
 return {
 	config = {
 		commands = {
-			-- Organizing imports runs through `:LspOrganize` instead, so the
-			-- default command is stubbed out to keep it from piling up.
+			-- Organizing imports runs through `<leader>gro`, so the default
+			-- command is stubbed out to keep it silent.
 			["_typescript.didOrganizeImports"] = function() end,
 		},
 		settings = {
@@ -43,7 +47,15 @@ return {
 				tsserver = { maxTsServerMemory = 8192 },
 			}),
 			javascript = ts_shared,
-			vtsls = { autoUseWorkspaceTsdk = true },
+			vtsls = {
+				autoUseWorkspaceTsdk = true,
+				enableMoveToFileCodeAction = true,
+				experimental = {
+					completion = {
+						enableServerSideFuzzyMatch = true,
+					},
+				},
+			},
 		},
 	},
 }

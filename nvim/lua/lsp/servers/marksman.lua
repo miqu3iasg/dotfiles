@@ -9,6 +9,7 @@
 -- See: lua/plugins/markdown.lua
 -- See: https://github.com/artempyanykh/marksman
 
+---@type UserLspServerModule
 return {
 	config = {
 		root_dir = function(bufnr, on_dir)

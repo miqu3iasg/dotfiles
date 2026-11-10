@@ -12,6 +12,7 @@
 -- See: lua/shared/exports.lua
 -- See: https://github.com/Myriad-Dreamin/tinymist
 
+---@type UserLspServerModule
 return {
 	config = {
 		-- Uses the same root as the other exporters.

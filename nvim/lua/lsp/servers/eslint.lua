@@ -2,7 +2,9 @@
 
 -- ESLint for JavaScript and TypeScript validation. Formatting stays with
 -- conform and prettier, so the server's formatter is off, and linting runs on
--- save through the server's own `run` setting.
+-- save through the server's own `run` setting. ESLint resolves its
+-- configuration from the closest `eslint.config.*` or `.eslintrc.*` in
+-- monorepos through the `workingDirectory` mode.
 --
 -- `LspEslintFixAll` runs before conform formats. The hook is registered below,
 -- and it respects the autoformat toggle from `lua/shared/autoformat.lua`.
@@ -13,9 +15,14 @@
 -- See: lua/shared/autoformat.lua
 -- See: https://github.com/microsoft/vscode-eslint
 
+---@type UserLspServerModule
 return {
 	config = {
-		settings = { format = false, run = "onSave" },
+		settings = {
+			format = false,
+			run = "onSave",
+			workingDirectory = { mode = "auto" },
+		},
 	},
 
 	---Registers `LspEslintFixAll` on `BufWritePre`. The autocmd is created on
