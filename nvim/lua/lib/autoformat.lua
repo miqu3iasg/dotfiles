@@ -1,4 +1,4 @@
--- lua/shared/autoformat.lua
+-- lua/lib/autoformat.lua
 
 -- Single source of truth for the autoformat-on-save state. Anything that reads
 -- or changes the state must go through this module instead of touching the

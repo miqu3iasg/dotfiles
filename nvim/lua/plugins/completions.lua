@@ -114,7 +114,7 @@ local function maybe_enable(client, buf)
 	if not client:supports_method("textDocument/completion", buf) then
 		return
 	end
-	if vim.b[buf].completion == false or require("utils.bigfile").is_big(buf) then
+	if vim.b[buf].completion == false or require("lib.bigfile").is_big(buf) then
 		return
 	end
 

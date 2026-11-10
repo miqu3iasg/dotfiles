@@ -41,7 +41,7 @@
 -- See: lua/lsp/lint.lua
 -- See: lua/lsp/servers/lua_ls.lua
 -- See: lua/lsp/types.lua
--- See: lua/shared/exports.lua
+-- See: lua/lib/exports.lua
 -- See: https://github.com/mason-org/mason.nvim
 -- See: https://github.com/mason-org/mason-lspconfig.nvim
 -- See: https://github.com/neovim/nvim-lspconfig

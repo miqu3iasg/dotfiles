@@ -28,12 +28,12 @@ vim.api.nvim_create_autocmd("FileType", {
 })
 
 -- A buffer is big based on file size and line length.
--- See: lua/utils/bigfile.lua
+-- See: lua/lib/bigfile.lua
 vim.api.nvim_create_autocmd("FileType", {
 	group = bigfile_group,
 	desc = "Disable heavy features on big files",
 	callback = function(ev)
-		if not require("utils.bigfile").is_big(ev.buf) then
+		if not require("lib.bigfile").is_big(ev.buf) then
 			return
 		end
 		pcall(vim.treesitter.stop, ev.buf)

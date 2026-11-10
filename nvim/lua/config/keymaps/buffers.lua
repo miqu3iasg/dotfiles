@@ -2,9 +2,9 @@
 
 -- Keymaps to manage buffers.
 --
--- See: lua/utils/buffers.lua
+-- See: lua/lib/buffers.lua
 
-local utils = require("utils.buffers")
+local buffers = require("lib.buffers")
 
 ---Set a keymap, silent by default.
 ---@param mode string|string[]
@@ -25,8 +25,8 @@ km("n", "<leader>bs", "<cmd>noautocmd write<CR>", { desc = "Save buffer without 
 km("n", "<leader>bd", function()
 	local buf = vim.api.nvim_get_current_buf()
 
-	if utils.save_if_modified(buf) then
-		utils.delete_keep_layout(buf)
+	if buffers.save_if_modified(buf) then
+		buffers.delete_keep_layout(buf)
 	else
 		vim.notify("Could not save buffer, not deleted", vim.log.levels.WARN)
 	end
@@ -37,12 +37,12 @@ km("n", "<leader>bo", function()
 	local current_buf = vim.api.nvim_get_current_buf()
 
 	for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
-		if win ~= current_win and utils.is_normal_window(win) then
+		if win ~= current_win and buffers.is_normal_window(win) then
 			pcall(vim.api.nvim_win_close, win, true)
 		end
 	end
 
-	utils.delete_where(function(info)
+	buffers.delete_where(function(info)
 		return info.bufnr ~= current_buf
 	end)
 end, { desc = "Close other windows and buffers" })

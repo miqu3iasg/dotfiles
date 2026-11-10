@@ -44,11 +44,11 @@
 -- The binaries for Julia (runic), Clojure (cljfmt) and Dockerfile (dockerfmt)
 -- must be installed by hand or through Mason.
 --
--- See: lua/shared/autoformat.lua
+-- See: lua/lib/autoformat.lua
 -- See: lua/modules/markdown_lists.lua
 -- See: https://github.com/stevearc/conform.nvim
 
-local autoformat = require("shared.autoformat")
+local autoformat = require("lib.autoformat")
 
 vim.keymap.set("n", "<leader>k", function()
 	require("conform").format({ async = true, lsp_format = "fallback" })

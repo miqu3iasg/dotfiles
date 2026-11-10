@@ -7,12 +7,12 @@
 -- monorepos through the `workingDirectory` mode.
 --
 -- `LspEslintFixAll` runs before conform formats. The hook is registered below,
--- and it respects the autoformat toggle from `lua/shared/autoformat.lua`.
+-- and it respects the autoformat toggle from `lua/lib/autoformat.lua`.
 --
 -- :MasonInstall eslint-lsp
 --
 -- See: lua/plugins/formatting.lua
--- See: lua/shared/autoformat.lua
+-- See: lua/lib/autoformat.lua
 -- See: https://github.com/microsoft/vscode-eslint
 
 ---@type UserLspServerModule
@@ -36,7 +36,7 @@ return {
 			group = vim.api.nvim_create_augroup("EslintFix" .. bufnr, { clear = true }),
 			buffer = bufnr,
 			callback = function()
-				if require("shared.autoformat").enabled(bufnr) then
+				if require("lib.autoformat").enabled(bufnr) then
 					vim.cmd("silent! LspEslintFixAll")
 				end
 			end,

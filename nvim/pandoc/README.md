@@ -8,7 +8,7 @@ A Neovim configuration for writing Markdown, with Obsidian integration and Pando
 after/ftplugin/markdown.lua
 lua/plugins/completions.lua
 lua/plugins/obsidian.lua
-lua/shared/exports.lua
+lua/lib/exports.lua
 lua/modules/pandoc.lua
 pandoc/defaults.yaml
 pandoc/metadata.yaml
@@ -28,7 +28,7 @@ sudo pacman -S texlive-xetex texlive-latex texlive-latexextra texlive-latexrecom
 
 ## Where exports go
 
-Every note format shares one convention, defined in `lua/shared/exports.lua`. Final documents go to `exports/` at the root of the project, whether they came from Pandoc, VimTeX or Tinymist, so a repo that mixes Markdown, LaTeX and Typst notes ends up with a single folder of PDFs. Compilation byproducts, such as the auxiliary files, logs and SyncTeX data that latexmk produces, stay in a hidden `.build/` folder at the same root, organized by the note's subfolder and name. Pandoc writes no intermediate files, so it only uses `exports/`.
+Every note format shares one convention, defined in `lua/lib/exports.lua`. Final documents go to `exports/` at the root of the project, whether they came from Pandoc, VimTeX or Tinymist, so a repo that mixes Markdown, LaTeX and Typst notes ends up with a single folder of PDFs. Compilation byproducts, such as the auxiliary files, logs and SyncTeX data that latexmk produces, stay in a hidden `.build/` folder at the same root, organized by the note's subfolder and name. Pandoc writes no intermediate files, so it only uses `exports/`.
 
 The project root is found by looking for markers in order of priority. A `.exports-root` file, which you can create on purpose in any folder, wins over everything. Next comes version control (`.git`, `.jj`, `.hg` or `.svn`), which gives the real repo root even when a subfolder has its own README. Only when no repository is found do weaker hints apply, such as `.obsidian`, a README, a LICENSE or a Makefile. If nothing matches, the note's own folder is used. To force a single global folder for everything, set `vim.g.exports_root`, for example `vim.g.exports_root = "~/exports"`.
 

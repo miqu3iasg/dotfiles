@@ -2,7 +2,7 @@
 
 -- Declares and installs the eager plugins through Neovim's built-in package
 -- manager (`vim.pack`). Lazy plugins are not declared here, since each one
--- registers itself from its own file in `lua/plugins/` through `utils.lazy`.
+-- registers itself from its own file in `lua/plugins/` through `lib.lazy`.
 --
 -- The `PackChanged` autocmd must be created before `vim.pack.add`, because it
 -- runs the post-install steps that some plugins need: `:TSUpdate` for
@@ -15,7 +15,7 @@
 --
 -- :lua vim.pack.update()
 --
--- See: lua/utils/lazy.lua
+-- See: lua/lib/lazy.lua
 -- See: lua/config/keymaps/pack.lua
 -- See: https://fredrikaverpil.github.io/blog/2026/04/15/from-lazy.nvim-to-vim.pack/
 

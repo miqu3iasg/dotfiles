@@ -32,11 +32,11 @@
 --
 -- $ sudo pacman -S texlive-xetex texlive-latex texlive-latexextra texlive-latexrecommended texlive-fontsrecommended texlive-langportuguese
 --
--- See: lua/shared/exports.lua
+-- See: lua/lib/exports.lua
 -- See: https://pandoc.org/MANUAL.html
 -- See: :help vim.system()
 
-local exports = require("shared.exports")
+local exports = require("lib.exports")
 
 ---@class SharedPandoc
 ---@field formats string[] Supported export formats.

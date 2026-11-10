@@ -77,7 +77,7 @@ return {
 			group = vim.api.nvim_create_augroup("VtslsOrganize" .. bufnr, { clear = true }),
 			buffer = bufnr,
 			callback = function()
-				if require("shared.autoformat").enabled(bufnr) then
+				if require("lib.autoformat").enabled(bufnr) then
 					vim.lsp.buf.code_action({ context = { only = { "source.organizeImports" } }, apply = true })
 				end
 			end,

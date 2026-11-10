@@ -1,4 +1,4 @@
--- lua/utils/substitute.lua
+-- lua/lib/substitute.lua
 
 -- Helpers that pre-fill the command line with a `:substitute` or a project-wide
 -- substitution and leave the cursor between the pattern and the replacement.

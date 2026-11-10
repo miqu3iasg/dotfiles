@@ -1,4 +1,4 @@
--- lua/utils/buffers.lua
+-- lua/lib/buffers.lua
 
 -- Helpers for inspecting, saving and deleting buffers without breaking the
 -- window layout.

@@ -2,10 +2,10 @@
 
 -- Keymaps for editing code.
 --
--- See: lua/utils/substitute.lua
+-- See: lua/lib/substitute.lua
 
 local km = vim.keymap.set
-local substitute = require("utils.substitute")
+local substitute = require("lib.substitute")
 
 ---Clamp a destination line to the buffer range.
 ---@param dest integer

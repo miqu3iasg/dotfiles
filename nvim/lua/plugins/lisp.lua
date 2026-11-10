@@ -36,7 +36,7 @@
 -- $ cd ~/.cache/yay/mit-scheme
 -- $ makepkg -si
 --
--- See: lua/utils/lazy.lua
+-- See: lua/lib/lazy.lua
 -- See: lua/plugins/treesitter.lua
 -- See: https://github.com/Olical/conjure
 -- See: https://web.mit.edu/scheme/current/doc/mit-scheme-user/Introduction.html
@@ -46,7 +46,7 @@
 
 local M = {}
 
----Set the Conjure globals. Called once per session by `utils.lazy`, before
+---Set the Conjure globals. Called once per session by `lib.lazy`, before
 ---Conjure is loaded.
 function M.configure()
 	-- The local leader must be set before Conjure defines its mappings.
@@ -116,7 +116,7 @@ function M.configure()
 	})
 end
 
-require("utils.lazy").setup({
+require("lib.lazy").setup({
 	src = "https://github.com/Olical/conjure",
 	filetypes = { "scheme", "lisp", "racket", "clojure" },
 	configure = M.configure,

@@ -1,4 +1,4 @@
--- lua/utils/system.lua
+-- lua/lib/system.lua
 
 -- Information about the host system.
 

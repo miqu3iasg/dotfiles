@@ -25,8 +25,8 @@
 -- $ sudo pacman -S libxcrypt-compat
 --
 -- See: after/ftplugin/tex.lua
--- See: lua/utils/lazy.lua
--- See: lua/shared/exports.lua
+-- See: lua/lib/lazy.lua
+-- See: lua/lib/exports.lua
 -- See: https://github.com/lervag/vimtex
 -- See: https://github.com/cmhughes/latexindent.pl
 -- See: https://github.com/latex3/latex2e
@@ -38,10 +38,10 @@ local M = {}
 -- is not on the runtimepath at detection time, so it is set here.
 vim.g.tex_flavor = "latex"
 
----Set the VimTeX globals. Called once per session by `utils.lazy`, before VimTeX
+---Set the VimTeX globals. Called once per session by `lib.lazy`, before VimTeX
 ---is loaded.
 function M.configure()
-	local exports = require("shared.exports")
+	local exports = require("lib.exports")
 
 	vim.g.vimtex_view_method = "zathura"
 	vim.g.vimtex_compiler_method = "latexmk"
@@ -80,7 +80,7 @@ vim.api.nvim_create_autocmd("User", {
 	pattern = "VimtexEventCompileSuccess",
 	group = vim.api.nvim_create_augroup("latex_export_pdf", { clear = true }),
 	callback = function()
-		local exports = require("shared.exports")
+		local exports = require("lib.exports")
 		local state = vim.b.vimtex
 		local tex_file = (state and state.tex) or vim.fn.expand("%:p")
 
@@ -107,7 +107,7 @@ vim.api.nvim_create_autocmd("User", {
 	end,
 })
 
-require("utils.lazy").setup({
+require("lib.lazy").setup({
 	src = "https://github.com/lervag/vimtex",
 	filetypes = { "tex", "latex" },
 	configure = M.configure,

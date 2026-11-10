@@ -1,4 +1,4 @@
--- lua/utils/lazy.lua
+-- lua/lib/lazy.lua
 
 -- Filetype-based lazy loading for vim.pack plugins. Each plugin's own file in
 -- `lua/plugins/` declares itself with `setup(spec)`, so `lua/config/pack.lua`

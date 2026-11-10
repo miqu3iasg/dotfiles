@@ -1,4 +1,4 @@
--- lua/shared/exports.lua
+-- lua/lib/exports.lua
 
 -- Single source of truth for where exported documents go, shared by the pandoc,
 -- vimtex and tinymist setups.

@@ -1,4 +1,4 @@
--- lua/utils/bigfile.lua
+-- lua/lib/bigfile.lua
 
 -- Detects big buffers, such as large files or minified output, so other parts of
 -- the config can switch off features that make them sluggish, like Treesitter,
