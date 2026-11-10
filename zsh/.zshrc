@@ -192,6 +192,10 @@ _zcompdump="$_zcache/zcompdump"
 autoload -Uz compinit
 if [[ -n $_zcompdump(#qN.mh+24) ]]; then
     compinit -d "$_zcompdump"
+    # compinit only rewrites the dump when it finds new functions; without
+    # changes on disk the mtime goes stale and full compinit + compaudit
+    # (security scan) would run on every shell start, forever.
+    touch "$_zcompdump"
 else
     compinit -C -d "$_zcompdump"
 fi
