@@ -254,7 +254,7 @@ format = "[ ssh]($style)"
 [env_var.AWS_PROFILE]
 variable = "AWS_PROFILE"
 style = "fg:fg"
-format = "[ aws:($value)]($style)"
+format = "[ aws:$env_value]($style)"
 
 [status]
 disabled = false
