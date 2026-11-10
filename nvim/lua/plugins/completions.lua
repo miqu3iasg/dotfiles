@@ -229,7 +229,8 @@ map("i", "<CR>", function()
 end, { expr = true, desc = "Accept completion or newline" })
 
 -- The choice change is scheduled to avoid a re-entrant jump out of the expr
--- mapping.
+-- mapping. Without a visible popup the keys move the cursor by line, and never
+-- start native keyword completion.
 local function select_item(dir)
 	return function()
 		if luasnip.choice_active() then
@@ -238,12 +239,15 @@ local function select_item(dir)
 			end)
 			return ""
 		end
-		return dir == 1 and "<C-n>" or "<C-p>"
+		if vim.fn.pumvisible() == 1 then
+			return dir == 1 and "<C-n>" or "<C-p>"
+		end
+		return dir == 1 and "<Down>" or "<Up>"
 	end
 end
 
-map("i", "<C-n>", select_item(1), { expr = true, desc = "Next completion item / cycle snippet choice" })
-map("i", "<C-p>", select_item(-1), { expr = true, desc = "Prev completion item / cycle snippet choice" })
+map("i", "<C-n>", select_item(1), { expr = true, desc = "Next completion item / cycle snippet choice / line down" })
+map("i", "<C-p>", select_item(-1), { expr = true, desc = "Prev completion item / cycle snippet choice / line up" })
 
 -- A single expr mapping, so the checks run in order and fall through.
 map("i", "<Tab>", function()
@@ -266,8 +270,9 @@ map("i", "<S-Tab>", function()
 	if luasnip.jumpable(-1) then
 		return "<cmd>lua require('luasnip').jump(-1)<cr>"
 	end
-	return "<S-Tab>"
-end, { expr = true, desc = "Prev completion item or previous placeholder" })
+	-- Native dedent
+	return "<C-d>"
+end, { expr = true, desc = "Prev completion item, previous placeholder or dedent" })
 
 map("i", "<C-q>", function()
 	if luasnip.in_snippet() then
