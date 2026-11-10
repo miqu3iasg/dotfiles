@@ -25,13 +25,17 @@
 -- The configuration requests the installation of the language servers at
 -- startup. They can also be installed manually from Neovim:
 --
--- :MasonInstall css-lsp emmet-language-server eslint-lsp html-lsp marksman tailwindcss-language-server texlab tinymist vtsls jdtls
+-- :MasonInstall css-lsp emmet-language-server eslint-lsp html-lsp lua-language-server marksman tailwindcss-language-server texlab tinymist vtsls jdtls
 --
 -- Tinymist uses `typstyle` for formatting, and its PDF export also requires the
 -- `typst` executable. Mason only installs the servers, so each one is still
 -- configured individually in `lua/lsp/servers/`, and only the servers declared
 -- below are enabled.
 --
+-- lua_ls serves the Neovim configuration itself, with the Neovim API types
+-- provided by lazydev.nvim.
+--
+-- See: lua/lsp/servers/lua_ls.lua
 -- See: lua/shared/exports.lua
 -- See: https://github.com/mason-org/mason.nvim
 -- See: https://github.com/mason-org/mason-lspconfig.nvim
@@ -48,6 +52,7 @@ local modules = {
 	"emmet_language_server",
 	"eslint",
 	"html",
+	"lua_ls",
 	"marksman",
 	"tailwindcss",
 	"texlab",
