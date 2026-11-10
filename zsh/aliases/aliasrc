@@ -1,4 +1,20 @@
 # zsh/aliases/aliasrc
+#
+# General-purpose replacements and small helpers: smarter cat/ls, safety
+# rails for destructive commands, file and content search, navigation,
+# viewing and opening tools, archive extraction, note taking, Neovim
+# profiles and quick access to the standard library sources of the
+# installed toolchains.
+#
+# Plain aliases hold one-liner replacements; anything that needs
+# arguments, branching or fzf becomes a shell function.
+#
+# Sourced by conf.d/aliases.zsh after the plugins, so every helper here can
+# rely on fzf, fd, rg, zoxide and the rest of the palette.
+#
+# See: conf.d/aliases.zsh (source order)
+# See: aliases/gitrc (git-specific set)
+# See: functions/wvim (jump to the definition of any entry here)
 
 # General replacements
 alias cat='bat'                     # cat with syntax highlighting
@@ -111,13 +127,13 @@ nvr() {
 
 # Quick config editing
 alias cfg='nvim ~/.config/'
-alias cfa='nvim ~/.config/zsh/aliasrc'                                  # this file
-alias cfz='nvim "${ZDOTDIR:-$HOME}/.zshrc"'
+alias cfa='nvim $ZDOTDIR/aliases/aliasrc'           # this file
+alias cfz='nvim "$ZDOTDIR"/.zshrc'                  # zsh orchestrator
 alias cfk='nvim ~/.config/kitty/kitty.conf'
 alias cfi='nvim ~/.config/i3/config'
 alias cft='nvim ~/.config/tmux/tmux.conf'
 alias cfn='nvim ~/.config/nvim/init.lua'
-alias cfs='nvim ~/.config/starship.toml'
+alias cfs='nvim ~/.config/starship.toml'            # starship config (symlink)
 
 # File search
 
@@ -314,13 +330,13 @@ y() {
     rm -f -- "$tmp"
 }
 
-# Terminal quick reference no terminal
+# Terminal quick reference (cheat.sh)
 cheat() {
     [[ -z "$1" ]] && echo "usage: cheat <topic>" ||
         curl -s "cheat.sh/$1" | bat --style=plain
 }
 
-# Pesquisar histórico com fzf e copar pro clipboard
+# Search the history with fzf and copy the selection to the clipboard
 alias cpcmd='history | cut -c 8- | uniq | fzf | xclip -i -r -sel clipboard'
 
 # Standard library source

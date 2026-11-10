@@ -1,6 +1,22 @@
 # zsh/aliases/gitrc
+#
+# Git aliases and interactive pickers: status/diff/commit shortcuts, fzf
+# staging (gaf), interactive branch switching (gsws), log browsing (gl),
+# dangling commits (gfc), stashes (gstl), worktrees (gwa/gwc/gwr) and WIP
+# commit helpers (gwip/gunwip).
+#
+# Interactive functions check that the shell is inside a work tree before
+# doing anything, and hand control to fzf/less with the repository colors
+# enabled.
+#
+# Sourced by conf.d/aliases.zsh after the plugins.
+#
+# See: conf.d/aliases.zsh (source order)
+# See: aliases/aliasrc (general-purpose set)
+# See: conf.d/git-widgets.zsh (fzf pickers bound to Ctrl+G chords)
+# See: functions/wvim (jump to the definition of any entry here)
 
-# Git aliases
+# Status / commit
 # See: https://stackoverflow.com/a/12538667
 
 alias gs='git status'
@@ -53,7 +69,7 @@ git diff --color=always --no-index -- /dev/null {2} | less -c -i --incsearch --s
 git diff --color=always -- {2} | less -c -i --incsearch --search-options=W -g -R \
 }"
 
-  # Referenes:
+  # References:
   #   - https://stackoverflow.com/a/3527985
   #   - `man git-diff` (EXAMPLES section)
   local diff_staged='git diff --color=always --cached -- {2} | less -c -i --incsearch --search-options=W -g -R'
