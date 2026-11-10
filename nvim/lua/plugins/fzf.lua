@@ -178,12 +178,12 @@ km("n", "<leader>fd", "<cmd>FzfLua files cwd=%:p:h<cr>", { desc = "Fzf: find fil
 km("n", "<leader>fz", "<cmd>FzfLua zoxide<cr>", { desc = "Fzf: jump to a frequent directory (zoxide)" })
 
 km("n", "<leader>fr", function()
-	fzf.files({ cwd = vim.fn.expand("~/repos") })
-end, { desc = "Fzf: find files in ~/repos" })
+	fzf.files({ cwd = vim.fn.expand("~/dev/repos") })
+end, { desc = "Fzf: find files in ~/dev/repos" })
 
 km("n", "<leader>fn", function()
-	fzf.files({ cwd = vim.fn.expand("~/.config/nvim") })
-end, { desc = "Fzf: find files in ~/.config/nvim" })
+	fzf.files({ cwd = vim.fn.expand("~/dotfiles/nvim") })
+end, { desc = "Fzf: find files in ~/dotfiles/nvim" })
 
 km("n", "<leader>fb", "<cmd>FzfLua buffers<cr>", { desc = "Fzf: switch between open buffers" })
 km("n", "<leader>fo", "<cmd>FzfLua oldfiles<cr>", { desc = "Fzf: reopen recently edited files" })
