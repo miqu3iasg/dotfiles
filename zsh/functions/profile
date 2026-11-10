@@ -1,0 +1,8 @@
+# zsh/functions/profile
+#
+# Open the zsh configuration tree in $EDITOR. Starts at the orchestrator;
+# everything lives next to it (conf.d/, functions/, aliases/).
+#
+# See: .zshrc
+
+${=EDITOR:-nvim} $ZDOTDIR

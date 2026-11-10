@@ -1,0 +1,14 @@
+# zsh/functions/fzf-git-commits
+#
+# Pick one or more commits (inserts the short hashes) from the last 50 with
+# fzf and insert the selection into the command line.
+#
+# See: conf.d/git-widgets.zsh (binding: Ctrl+G Ctrl+G)
+
+local sel
+
+sel=$(git log --color=always --oneline --decorate -50 2>/dev/null |
+    fzf --ansi --reverse --no-sort --multi | cut -d' ' -f1 | paste -sd' ' -)
+
+LBUFFER+="$sel"
+zle reset-prompt

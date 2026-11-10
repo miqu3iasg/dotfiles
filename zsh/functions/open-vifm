@@ -1,0 +1,10 @@
+# zsh/functions/open-vifm
+#
+# Open vifm without touching the current command line or the history.
+#
+# See: conf.d/widgets.zsh (binding: Ctrl+X Ctrl+I)
+# See: conf.d/fzf.zsh (inline file/directory pickers)
+
+zle -I
+vifm </dev/tty
+zle reset-prompt

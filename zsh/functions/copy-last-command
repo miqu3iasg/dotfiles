@@ -1,0 +1,19 @@
+# zsh/functions/copy-last-command
+#
+# Copy the last executed command to the clipboard.
+# Prefers Wayland (wl-copy), falls back to X11 (xclip).
+#
+# See: conf.d/widgets.zsh (binding: Ctrl+X Ctrl+Y)
+
+local cmd=${$(fc -ln -1)## }
+
+if (( $+commands[xclip] )); then
+    print -rn -- "$cmd" | xclip -selection clipboard
+elif (( $+commands[wl-copy] )); then
+    print -rn -- "$cmd" | wl-copy
+else
+    zle -M "copy-last-command: xclip or wl-copy not found"
+    return 1
+fi
+
+zle -M "Copied: $cmd"

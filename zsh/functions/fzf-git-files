@@ -1,0 +1,14 @@
+# zsh/functions/fzf-git-files
+#
+# Pick one or more files from `git status` with fzf and insert the
+# selection into the command line.
+#
+# See: conf.d/git-widgets.zsh (binding: Ctrl+G Ctrl+F)
+
+local sel
+
+sel=$(git -c color.status=always status --short 2>/dev/null |
+    fzf --ansi --reverse --no-sort --multi | cut -c4- | paste -sd' ' -)
+
+LBUFFER+="$sel"
+zle reset-prompt

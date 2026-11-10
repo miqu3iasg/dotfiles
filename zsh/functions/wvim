@@ -1,0 +1,47 @@
+# zsh/functions/wvim
+#
+# Open the definition of an alias, function or script in $EDITOR, at the
+# right line. Searches the whole config tree (conf.d/, functions/,
+# aliases/) instead of hardcoded file names.
+#
+# Usage: wvim <name>
+#
+# See: conf.d/completion.zsh (Tab completion: compdef wvim=which)
+# See: conf.d/aliases.zsh
+
+local name=$1 kind pattern hit
+
+[[ -z $name ]] && { echo "usage: wvim <name>" >&2; return 1; }
+
+kind=${$(whence -w -- $name)##*: }
+
+case $kind in
+    alias)
+        pattern="^[[:space:]]*(alias[[:space:]]+)?${name}="
+        local -a files=($ZDOTDIR/aliases/*.zsh(N) $ZDOTDIR/conf.d/*.zsh(N))
+        ;;
+    function)
+        # Functions of this config live in one file each under functions/;
+        # open it directly when it exists, otherwise fall back to a text
+        # search for functions defined inline (e.g. completion widgets).
+        local f=$ZDOTDIR/functions/$name
+        if [[ -r $f ]]; then
+            ${=EDITOR} "$f"
+            return
+        fi
+        pattern="^[[:space:]]*(function[[:space:]]+)?${name}[[:space:]]*\\(\\)"
+        local -a files=($ZDOTDIR/conf.d/*.zsh(N) $ZDOTDIR/.zshrc(N))
+        ;;
+    command)
+        ${=EDITOR} "$(whence -p -- $name)"
+        return ;;
+    *)
+        echo "\"$name\" not found" >&2
+        return 1 ;;
+esac
+
+hit=$(grep -HnEm1 -- "$pattern" $files 2>/dev/null)
+
+[[ -z $hit ]] && { echo "definition of \"$name\" not found" >&2; return 1; }
+
+${=EDITOR} "${hit%%:*}" "+${${hit#*:}%%:*}"

@@ -1,0 +1,25 @@
+# zsh/functions/list-files-inline
+#
+# List files without interrupting the current command line: prints the
+# contents of the directory under the cursor (or of the typed directory)
+# inline, below the prompt.
+#
+# See: conf.d/widgets.zsh (binding: Ctrl+X Ctrl+U)
+
+local -a words
+local word="" dir="."
+
+words=("${(@z)LBUFFER}")
+[[ $LBUFFER != *[[:space:]] ]] && word="${(Q)words[-1]}"
+word="${word/#\~/$HOME}"
+
+if [[ -n $word ]]; then
+    if [[ -d $word ]]; then
+        dir="$word"
+    elif [[ -d ${word:h} ]]; then
+        dir="${word:h}"
+    fi
+fi
+
+zle -I
+command ls --color=auto -- "$dir"

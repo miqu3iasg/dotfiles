@@ -1,0 +1,15 @@
+# zsh/functions/fzf-git-branches
+#
+# Pick one or more branches (excluding the current and the main ones) with
+# fzf and insert the selection into the command line.
+#
+# See: conf.d/git-widgets.zsh (binding: Ctrl+G Ctrl+B)
+
+local sel
+
+sel=$(git for-each-ref --sort=-committerdate --format='%(refname:short)' refs/heads 2>/dev/null |
+    grep -vxE "$(git branch --show-current 2>/dev/null)|main|master|develop|development" |
+    fzf --reverse --multi --select-1 | paste -sd' ' -)
+
+LBUFFER+="$sel"
+zle reset-prompt

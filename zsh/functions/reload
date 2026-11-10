@@ -1,0 +1,8 @@
+# zsh/functions/reload
+#
+# Reload the current shell configuration.
+#
+# `exec` replaces the process, so hooks and precmd functions are registered
+# exactly once instead of accumulating over successive reloads.
+
+exec zsh
