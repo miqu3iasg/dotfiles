@@ -18,9 +18,10 @@
 --
 -- The vault is `$ARCANUM_DIR`, or `~/dev/arcanum` when unset. Notes live
 -- directly in its root. `_templates/` holds the templates and `attachments/`
--- the pasted images. Creating a note only offers templates named after a
--- valid type, while insertion lists every `.md` there. The pickers use
--- `fzf-lua` when it is installed and fall back to `vim.ui.select`.
+-- the pasted images. Valid type names drive the pickers: creating a note and
+-- inserting into a vault note only offer templates named after a valid type,
+-- while inserting into a note outside the vault lists every `.md` there. The
+-- pickers use `fzf-lua` when it is installed and fall back to `vim.ui.select`.
 --
 -- `setup()` must be called once to register the commands and autocmds. The
 -- keymaps are defined in `lua/plugins/markdown.lua`.
@@ -794,14 +795,17 @@ local function insert_template(buf, name)
 end
 
 ---Pick a template and insert its body into the current note. Works on any
----Markdown file on disk, inside or outside the vault.
+---Markdown file on disk. Inside the vault only valid types are offered, with
+---their descriptions, and outside it every template is.
 function M.template()
 	local buf = vim.api.nvim_get_current_buf()
 	if not is_markdown_buf(buf) then
 		notify("Not a Markdown file", vim.log.levels.WARN)
 		return
 	end
-	local names = M.all_templates()
+	local path = vim.api.nvim_buf_get_name(buf)
+	local in_vault = M.is_note_path(path)
+	local names = in_vault and M.templates() or M.all_templates()
 	if #names == 0 then
 		notify("No templates found in " .. template_dir(), vim.log.levels.WARN)
 		return
@@ -812,7 +816,7 @@ function M.template()
 				insert_template(buf, name)
 			end
 		end)
-	end, "<enter> accept")
+	end, in_vault and types_header(names) or "<enter> accept")
 end
 
 -- Search
