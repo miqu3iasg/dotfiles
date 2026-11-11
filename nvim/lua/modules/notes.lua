@@ -4,19 +4,23 @@
 -- creates quick drafts and typed notes from user-maintained templates,
 -- inserts a template into an existing note, searches by name and by content,
 -- and reopens the last note. The vault is just a folder: the system works
--- with any of them, and only the path below points at one.
+-- with any of them, and only the path below points at one. Creation is bound
+-- to the vault, but a template can be inserted into any Markdown file on
+-- disk, inside or outside it.
 --
 -- Note types, the file name `TYPE-YYYYMMDD-HHmmss[-SLUG].md`, and the slug and
 -- collision rules follow the vault's `README.md`. A draft gets `id`,
 -- `description`, `aliases` and `date` (creation time), and the template
 -- placeholders are `{{title}}`, `{{date}}`, `{{id}}` and `{{adr_number}}`.
+-- A note whose frontmatter has no `title` feeds the file name instead.
 -- Renaming a note is left to obsidian.nvim (`:Obsidian rename`), which also
 -- fixes the backlinks.
 --
 -- The vault is `$ARCANUM_DIR`, or `~/dev/arcanum` when unset. Notes live
 -- directly in its root. `_templates/` holds the templates and `attachments/`
--- the pasted images. The pickers use `fzf-lua` when it is installed and fall
--- back to `vim.ui.select`.
+-- the pasted images. Creating a note only offers templates named after a
+-- valid type, while insertion lists every `.md` there. The pickers use
+-- `fzf-lua` when it is installed and fall back to `vim.ui.select`.
 --
 -- `setup()` must be called once to register the commands and autocmds. The
 -- keymaps are defined in `lua/plugins/markdown.lua`.
