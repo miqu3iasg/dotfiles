@@ -413,11 +413,11 @@ function M.all_templates()
 	return names
 end
 
----@param type_ string
+---@param name string template name, with or without a valid type
 ---@return string? content
 ---@return string? err
-local function read_template(type_)
-	local path = ("%s/%s.md"):format(template_dir(), type_)
+local function read_template(name)
+	local path = ("%s/%s.md"):format(template_dir(), name)
 	local content = read_file(path)
 	if not content then
 		return nil, "Template not found: " .. path
