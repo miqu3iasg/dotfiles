@@ -718,14 +718,28 @@ end
 
 -- Templates in existing notes
 
+---True for a real Markdown buffer backed by a file on disk. Special buffers
+---(fzf, help, nofile) and unsaved files are not editable notes. Unlike
+---`is_note_path`, the file may be anywhere: template insertion is not bound
+---to the vault.
+---@param buf integer
+---@return boolean
+local function is_markdown_buf(buf)
+	if vim.bo[buf].buftype ~= "" or vim.bo[buf].filetype ~= "markdown" then
+		return false
+	end
+	local path = vim.api.nvim_buf_get_name(buf)
+	return path ~= "" and uv.fs_stat(path) ~= nil
+end
+
 ---Apply a template to the current note. The frontmatter of the note, if any, is
 ---replaced by the one from the template, and the body of the template is
 ---inserted below the cursor. The existing body is never replaced. The note's
 ---own `title` and `date` feed the placeholders, so its creation date is kept.
 ---@param buf integer
----@param type_ string
-local function insert_template(buf, type_)
-	local template, err = read_template(type_)
+---@param name string template name, with or without a valid type
+local function insert_template(buf, name)
+	local template, err = read_template(name)
 	if not template then
 		notify(err --[[@as string]], vim.log.levels.ERROR)
 		return
@@ -770,25 +784,26 @@ local function insert_template(buf, type_)
 	vim.api.nvim_buf_set_lines(buf, 0, old_len, false, fm_lines)
 end
 
----Pick a template and insert its body into the current note.
+---Pick a template and insert its body into the current note. Works on any
+---Markdown file on disk, inside or outside the vault.
 function M.template()
 	local buf = vim.api.nvim_get_current_buf()
-	if not M.is_note_path(vim.api.nvim_buf_get_name(buf)) then
-		notify("Not a vault note", vim.log.levels.WARN)
+	if not is_markdown_buf(buf) then
+		notify("Not a Markdown file", vim.log.levels.WARN)
 		return
 	end
-	local types = M.templates()
-	if #types == 0 then
+	local names = M.all_templates()
+	if #names == 0 then
 		notify("No templates found in " .. template_dir(), vim.log.levels.WARN)
 		return
 	end
-	pick(types, "Insert template", function(type_)
+	pick(names, "Insert template", function(name)
 		vim.schedule(function()
 			if vim.api.nvim_buf_is_valid(buf) then
-				insert_template(buf, type_)
+				insert_template(buf, name)
 			end
 		end)
-	end, types_header(types))
+	end, "<enter> accept")
 end
 
 -- Search
