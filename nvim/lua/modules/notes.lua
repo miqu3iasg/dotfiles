@@ -736,6 +736,7 @@ end
 ---replaced by the one from the template, and the body of the template is
 ---inserted below the cursor. The existing body is never replaced. The note's
 ---own `title` and `date` feed the placeholders, so its creation date is kept.
+---A missing `title` falls back to the file name without the extension.
 ---@param buf integer
 ---@param name string template name, with or without a valid type
 local function insert_template(buf, name)
@@ -757,8 +758,12 @@ local function insert_template(buf, name)
 	local _, iso = now()
 	local date = fm_get(old_fm, "date") or iso
 	local id = fm_get(old_fm, "id")
+	local title = fm_get(old_fm, "title")
+	if not title or title == "" then
+		title = vim.fs.basename(vim.api.nvim_buf_get_name(buf)):gsub("%.md$", "")
+	end
 	local rendered = ensure_date(
-		render(template, { title = fm_get(old_fm, "title") or "", date = date, id = id ~= "" and id or nil }),
+		render(template, { title = title, date = date, id = id ~= "" and id or nil }),
 		date
 	)
 	local new_fm, tbody = fm_split(rendered)
