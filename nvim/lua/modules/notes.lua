@@ -379,7 +379,8 @@ local function template_dir()
 end
 
 ---Template types that exist on disk. The templates are discovered, never
----listed, and a file only counts when its name is a valid type.
+---listed, and a file only counts when its name is a valid type. Used for
+---creating notes: insertion is not limited to valid types.
 ---@return string[]
 function M.templates()
 	local found = {}
@@ -393,6 +394,19 @@ function M.templates()
 		end
 	end
 	return types
+end
+
+---Every template on disk, name without extension, sorted. Unlike `templates`,
+---the name does not have to be a valid type, so generic templates such as
+---`meeting` are included.
+---@return string[]
+function M.all_templates()
+	local names = {}
+	for _, name in ipairs(list_md(template_dir())) do
+		table.insert(names, name:gsub("%.md$", ""))
+	end
+	table.sort(names)
+	return names
 end
 
 ---@param type_ string
