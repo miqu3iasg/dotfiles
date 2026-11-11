@@ -5,8 +5,8 @@
 --
 -- Conform runs external formatter executables, so they must be on PATH. Mason
 -- can install many of them, such as stylua, ruff, rustfmt, google-java-format,
--- fourmolu, yamlfmt, ktlint, swiftformat and zigfmt, but the ones below may
--- need to be installed manually.
+-- fourmolu, yamlfmt, ktlint, swiftformat, zigfmt and asmfmt, but the ones below
+-- may need to be installed manually.
 --
 -- On Arch Linux, most system-level formatters come from pacman: Node.js for the
 -- web formatters, clang-format for C and C++, Go, a TeX distribution with
@@ -43,6 +43,11 @@
 -- tooling, such as `mix format` with Elixir and `terraform fmt` with Terraform.
 -- The binaries for Julia (runic), Clojure (cljfmt) and Dockerfile (dockerfmt)
 -- must be installed by hand or through Mason.
+--
+-- Assembly follows asmfmt, which lays out assembler files the way gofmt lays
+-- out Go: tabs for indentation, labels at column zero and comments aligned
+-- within each block. It only understands assembler files, so it is bound to the
+-- `asm` filetype. See: after/ftplugin/asm.lua
 --
 -- See: lua/lib/autoformat.lua
 -- See: lua/modules/markdown_lists.lua
