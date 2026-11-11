@@ -407,7 +407,7 @@ end
 function M.all_templates()
 	local names = {}
 	for _, name in ipairs(list_md(template_dir())) do
-		table.insert(names, name:gsub("%.md$", ""))
+		table.insert(names, (name:gsub("%.md$", "")))
 	end
 	table.sort(names)
 	return names
