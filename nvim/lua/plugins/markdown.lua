@@ -4,8 +4,8 @@
 -- obsidian.nvim provides wikilink navigation, completion and the other
 -- Obsidian features. Everything that creates, names, renames or searches notes
 -- lives in `lua/modules/notes.lua`, and the keymaps below only delegate to it.
--- Creation stays inside the vault, while `<leader>ot` inserts a template into
--- any Markdown file on disk.
+-- Creation stays inside the vault, while template insertion works on any
+-- Markdown file on disk.
 --
 -- The vault is `$ARCANUM_DIR`, or `~/dev/arcanum` when unset. It must already
 -- exist. Notes live directly in its root, templates in `_templates/` and
