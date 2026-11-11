@@ -61,13 +61,19 @@ local TYPE_HELP = {
 	content = "content draft",
 }
 
----Header for the type picker, listing only the given types.
+---Header for the template pickers: `<enter> accept`, then every given type,
+---with its description when it has one.
 ---@param types string[]
 ---@return string
 local function types_header(types)
 	local parts = { "<enter> accept" }
 	for _, t in ipairs(types) do
-		table.insert(parts, ("%s (%s)"):format(t, TYPE_HELP[t] or t))
+		local help = TYPE_HELP[t]
+		if help then
+			table.insert(parts, ("%s (%s)"):format(t, help))
+		else
+			table.insert(parts, t)
+		end
 	end
 	return table.concat(parts, " | ")
 end
@@ -795,8 +801,8 @@ local function insert_template(buf, name)
 end
 
 ---Pick a template and insert its body into the current note. Works on any
----Markdown file on disk. Inside the vault only valid types are offered, with
----their descriptions, and outside it every template is.
+---Markdown file on disk. Inside the vault only valid types are offered, and
+---outside it every template is. The header describes the types it knows.
 function M.template()
 	local buf = vim.api.nvim_get_current_buf()
 	if not is_markdown_buf(buf) then
@@ -804,8 +810,7 @@ function M.template()
 		return
 	end
 	local path = vim.api.nvim_buf_get_name(buf)
-	local in_vault = M.is_note_path(path)
-	local names = in_vault and M.templates() or M.all_templates()
+	local names = M.is_note_path(path) and M.templates() or M.all_templates()
 	if #names == 0 then
 		notify("No templates found in " .. template_dir(), vim.log.levels.WARN)
 		return
@@ -816,7 +821,7 @@ function M.template()
 				insert_template(buf, name)
 			end
 		end)
-	end, in_vault and types_header(names) or "<enter> accept")
+	end, types_header(names))
 end
 
 -- Search
