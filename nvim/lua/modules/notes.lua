@@ -61,18 +61,15 @@ local TYPE_HELP = {
 	content = "content draft",
 }
 
----Header for the template pickers: `<enter> accept`, then every given type,
----with its description when it has one.
+---Header for the template pickers: `<enter> accept`, then every given type
+---that has a description. Generic templates are left out.
 ---@param types string[]
 ---@return string
 local function types_header(types)
 	local parts = { "<enter> accept" }
 	for _, t in ipairs(types) do
-		local help = TYPE_HELP[t]
-		if help then
-			table.insert(parts, ("%s (%s)"):format(t, help))
-		else
-			table.insert(parts, t)
+		if TYPE_HELP[t] then
+			table.insert(parts, ("%s (%s)"):format(t, TYPE_HELP[t]))
 		end
 	end
 	return table.concat(parts, " | ")
@@ -802,7 +799,7 @@ end
 
 ---Pick a template and insert its body into the current note. Works on any
 ---Markdown file on disk. Inside the vault only valid types are offered, and
----outside it every template is. The header describes the types it knows.
+---outside it every template is. The header lists only the classified types.
 function M.template()
 	local buf = vim.api.nvim_get_current_buf()
 	if not is_markdown_buf(buf) then
