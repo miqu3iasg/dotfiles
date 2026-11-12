@@ -1,4 +1,4 @@
-scan_timeout = 300
+scan_timeout = 1000
 command_timeout = 1000
 add_newline = false
 
@@ -16,7 +16,6 @@ $git_state\
 ${custom.git_worktree}\
 ${custom.vpn}\
 ${custom.proxy}\
-${custom.net_open}\
 ${custom.offline}\
 ${env_var.SSH_CONNECTION}\
 ${env_var.AWS_PROFILE}\
@@ -229,6 +228,7 @@ style = "fg:yellow"
 format = "[ $output]($style)"
 
 [custom.net_open]
+disabled = true
 description = "connected to an open/unencrypted Wi-Fi network"
 when = '''
 grep -q . /proc/net/wireless 2>/dev/null &&
