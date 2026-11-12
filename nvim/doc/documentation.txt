@@ -1,0 +1,199 @@
+DOCUMENTATION(7)                dotfiles/nvim              DOCUMENTATION(7)
+
+NAME
+    documentation - the documentation standard of this Neovim config
+
+SYNOPSIS
+    man -l doc/documentation.txt
+    :read !man -l doc/documentation.txt
+
+DESCRIPTION
+    Documentation in this config is an engineering artifact, not
+    decoration. It exists so that a future reader - usually the author,
+    six months later - can understand a module's purpose, its decisions
+    and its external requirements without opening a single other file.
+
+    Three principles govern it:
+
+        1.  The code is the primary documentation. Comments explain
+            why, not what; the what is the code itself.
+        2.  Every file is self-contained. A reader of a file should not
+            need to open others to know what it does; instead of
+            narrating elsewhere, cross-reference with `See:`.
+        3.  Documentation lives next to the thing it documents. There
+            is no parallel manual to keep in sync; the headers of the
+            files are the manual, and the pages in doc/ are only
+            overviews of it.
+
+THE LAYERS
+    Documentation exists in three layers, from nearest to farthest:
+
+        Header comments   every file under lua/ and after/ftplugin/
+                          opens with a comment block describing itself.
+                          This is the primary and most detailed layer.
+
+        doc/ man pages    overviews for a reader new to the config:
+                          what exists, where it lives, how the pieces
+                          relate. Never a substitute for the headers.
+                          Formatted as man pages (see MAN PAGES).
+
+        README.md         the repo-level overview: structure,
+                          conventions, how to add things, requirements.
+                          One dense paragraph per topic, no fluff.
+
+FILE HEADERS
+    Every file starts with a path comment and a header block:
+
+        -- lua/modules/compile.lua
+
+        -- Native, Emacs-like `:Compile` that runs a build command
+        -- asynchronously and streams its output into a `*compilation*`
+        -- buffer in a bottom split. When the command fails, the output
+        -- is parsed into the quickfix list.
+        --
+        -- [behavior details, state model, decisions]
+        --
+        -- The `go` CLI comes from the distribution:
+        --
+        -- $ sudo pacman -S go
+        --
+        -- See: lua/config/autocmds.lua
+        -- See: :help quickfix
+
+    The rules of the header:
+
+        - Line 1 is the file's own path: `-- lua/<path>.lua`, or
+          `-- after/ftplugin/python.lua` for ftplugins.
+        - One blank line, then the header block.
+        - The first paragraph answers "what is this and why does it
+          exist". Behavior details follow as more paragraphs, one
+          concern per paragraph.
+        - Decisions are stated with their reasons: "on purpose",
+          "because", "so that". A reader should be able to distinguish
+          a choice from an accident.
+        - Facts that live in another file are not restated; they are
+          referenced (see CROSS-REFERENCES).
+        - External tool requirements are documented in the header of
+          the file that uses them, as shell lines (`$ sudo pacman -S
+          ...`) or Mason commands (`:MasonInstall ...`). Requirements
+          are never collected in a distant requirements file only;
+          the header is where they are found.
+        - If a module exposes setup() and owns its state, the header
+          says so, and any init-order constraint (like "must be called
+          before pack.lua") is stated explicitly.
+
+CROSS-REFERENCES
+    Any pointer to related material is a `See:` line, grouped at the
+    bottom of the header (or after the relevant paragraph when the
+    reference is local to one concern):
+
+        -- See: lua/config/pack.lua        a file, from the repo root
+        -- See: :help lsp                  a help tag
+        -- See: man:rg                     a man page
+        -- See: https://github.com/...     an external source
+
+    Conventions:
+
+        - File paths are relative to the repo root and are written in
+          full (`lua/lib/buffers.lua`), never as bare file names.
+        - References are symmetric when it makes sense: if A's header
+          says "See: B", B's header usually says "See: A". The goal is
+          that a reader can traverse the whole feature from any of its
+          files.
+        - Inline `See:` comments in the body mark the spot where a
+          dependency matters, e.g. above a sessionoptions line that
+          must match modules/sessions.lua.
+        - Trivial, adjacent references are omitted. Not everything is
+          linked; only what a reader would otherwise miss.
+
+FORMATTING AND STYLE
+    - Language: English, present tense, third person. "The module
+      saves the session", not "we save".
+    - Code identifiers (`option`, `function`, `Command`) are quoted in
+      backticks.
+    - Wrapping: comments wrap around column 78, aligned with the file
+      body.
+    - The buffer-local `opt_local`, global `vim.opt` and window
+      `vim.wo` scopes are named when the distinction matters.
+    - TODO comments state the missing thing and its context, not a
+      mood.
+    - Deprecation: modules that fall out of use move to lua/archived/,
+      outside lua/ and off the runtimepath, with their header intact.
+
+MAN PAGES IN doc/
+    The pages in doc/ are plain text in the layout of manual pages, so
+    they read well both in a terminal and inside Neovim:
+
+        man -l doc/kickstart.txt
+        :read !man -l doc/kickstart.txt
+
+    Their structure:
+
+        NAME        one line: page name - short description
+        SYNOPSIS    how to read the page
+        DESCRIPTION what the subject is
+        ...         topic sections, in reading order
+        FILES       related files
+        SEE ALSO    other pages and help tags
+
+    Rules for these pages:
+
+        - 80 columns, hard-wrapped; definition lists are indented one
+          tab with the label first, in the spirit of .TP.
+        - Section headers in uppercase, body indented one tab.
+        - No keymaps. They change too often; a stale keymap list is
+          worse than none. Pages describe features, commands, files
+          and behavior, and point to the keymap files for the rest.
+        - Commands are documented with their arguments, even when a
+          keymap also triggers them: commands are stable, keymaps are
+          not.
+        - Dates or version numbers in headers rot; the footer date and
+          the git history cover that.
+
+KEYMAPS
+    Keymaps are the deliberate exception to "document everything":
+
+        - They are never listed in doc/ or in the README.
+        - The keymap files under lua/config/keymaps/ have minimal
+          headers (a sentence about the group's scope) and rely on
+          `vim.keymap.set` desc fields, which surface in the shortlist
+          and `:map`, as the documentation.
+        - A keymap that only makes sense inside one plugin lives in
+          that plugin's file; all others live in the matching theme
+          file under lua/config/keymaps/.
+        - When a feature page (e.g. COMPILATION in kickstart.txt) needs
+          a trigger documented, the user command is documented instead.
+
+KEEPING DOCS CURRENT
+    Documentation is part of the change:
+
+        - A behavior change updates the header of the file that owns
+          it, in the same commit. A decision added to code without its
+          reason in the header is half a change.
+        - When moving a feature between layers, its `See:` web moves
+          with it; dead references are bugs.
+        - When adding a new module kind or a new convention, document
+          it here, in this page.
+        - The README is updated only for structural or requirement
+          changes, not for every small edit.
+
+    Review checklist for a doc-affecting patch:
+
+        1.  Does the file header still describe what the file does?
+        2.  Do new decisions carry their reasons?
+        3.  Are new external tools documented with their install
+            command in the header?
+        4.  Are `See:` references added, and none left dangling?
+        5.  Do the doc/ pages contradict the code anywhere?
+
+FILES
+    README.md             repo overview
+    doc/kickstart.txt     full guide to the config
+    doc/documentation.txt this page
+    doc/development.txt   how to extend the config
+
+SEE ALSO
+    man -l doc/kickstart.txt
+    man -l doc/development.txt
+
+nvim config                        2026                 DOCUMENTATION(7)
