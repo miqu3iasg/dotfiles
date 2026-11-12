@@ -8,40 +8,69 @@ SYNOPSIS
     doc/reading.txt                         how to read the pages
 
 DESCRIPTION
-    lua/lib/ holds everything that exists to be required by other modules: reusable helpers, shared state and domain logic that more than one feature needs. It is the bottom of the layer stack (init.lua > config > plugins > modules > lib) and nothing in it requires upwards, ever.
+    lua/lib/ holds everything that exists to be required by other modules: reusable helpers, shared state and domain
+    logic that more than one feature needs. It is the bottom of the layer stack (init.lua > config > plugins > modules >
+    lib) and nothing in it requires upwards, ever.
 
-    The criterion is binary: a file that exposes commands, autocmds or keymaps is a module (lua/modules/), anything else is a lib. Two consequences shape the layer:
+    The criterion is binary: a file that exposes commands, autocmds or keymaps is a module (lua/modules/), anything else
+    is a lib. Two consequences shape the layer:
 
-        - lib files register nothing global by default. The one exception is lib/lazy.lua, which registers a single FileType autocmd as its whole job and owns it completely - the documented exception, not a loophole.
-        - Shared state lives here when several features must agree on it, with one file as its single source of truth (lib/autoformat.lua and lib/exports.lua are the examples).
+        - lib files register nothing global by default. The one exception is lib/lazy.lua, which registers a single
+        FileType autocmd as its whole job and owns it completely - the documented exception, not a loophole.
+        - Shared state lives here when several features must agree on it, with one file as its single source of truth
+        (lib/autoformat.lua and lib/exports.lua are the examples).
 
 THE LIBRARIES
     buffers
-        Helpers to inspect, save and delete buffers without breaking the window layout. A buffer is saved only when it has unsaved changes and a real file name; deleting a buffer keeps every window that showed it, each switching to the most recently used buffer or a fresh empty one; bulk deletes save first and keep anything whose save failed, reporting the count. API: M.is_terminal, M.is_normal_window, M.save_if_modified, M.delete, M.pick_replacement, M.delete_keep_layout, M.delete_where.
+        Helpers to inspect, save and delete buffers without breaking the window layout. A buffer is saved only when it
+        has unsaved changes and a real file name; deleting a buffer keeps every window that showed it, each switching to
+        the most recently used buffer or a fresh empty one; bulk deletes save first and keep anything whose save failed,
+        reporting the count. API: M.is_terminal, M.is_normal_window, M.save_if_modified, M.delete, M.pick_replacement,
+        M.delete_keep_layout, M.delete_where.
 
     bigfile
-        Decides whether a buffer is big (1.5 MiB file size or 1000-character lines, sampled over 200 lines) and caches the verdict in vim.b.bigfile. Every feature that needs to switch off on big buffers asks this module, so the thresholds are defined once. API: M.is_big.
+        Decides whether a buffer is big (1.5 MiB file size or 1000-character lines, sampled over 200 lines) and caches
+        the verdict in vim.b.bigfile. Every feature that needs to switch off on big buffers asks this module, so the
+        thresholds are defined once. API: M.is_big.
 
     lazy
-        The filetype-based lazy loader for vim.pack plugins, the only indirection in the config. Plugins declare themselves through M.setup{ src, filetypes, version, configure, after }; the plugin is installed at startup, but its plugin/ scripts only run when the first buffer of a declared filetype appears. Loading runs configure, then :packadd, then after, then fires the FileType event again for the triggering buffer. Inspect every lazy plugin with `:autocmd LazyPack`. API: M.setup, M.load.
+        The filetype-based lazy loader for vim.pack plugins, the only indirection in the config. Plugins declare
+        themselves through M.setup{ src, filetypes, version, configure, after }; the plugin is installed at startup, but
+        its plugin/ scripts only run when the first buffer of a declared filetype appears. Loading runs configure, then
+        :packadd, then after, then fires the FileType event again for the triggering buffer. Inspect every lazy plugin
+        with `:autocmd LazyPack`. API: M.setup, M.load.
 
     autoformat
-        Single source of truth of the autoformat-on-save state, with two scopes: global (vim.g.disable_autoformat) and buffer-local (vim.b.disable_autoformat); formatting runs only when neither disables it. The buffer-local scope is the buffer override, set by per-filetype opt-outs; :FormatEnable and :FormatDisable act on the global scope. API: M.enabled, M.enable, M.disable, M.toggle.
+        Single source of truth of the autoformat-on-save state, with two scopes: global (vim.g.disable_autoformat) and
+        buffer-local (vim.b.disable_autoformat); formatting runs only when neither disables it. The buffer-local scope
+        is the buffer override, set by per-filetype opt-outs; :FormatEnable and :FormatDisable act on the global scope.
+        API: M.enabled, M.enable, M.disable, M.toggle.
 
     substitute
-        Builds :substitute command lines: escapes patterns, reads the visual selection and pre-fills the command line with either a buffer substitution or a project-wide one (the latter needs ripgrep as 'grepprg'). The editing keymaps call this from config/keymaps/. API: M.escape_pattern, M.prompt, M.project, M.selection, M.get_visual.
+        Builds :substitute command lines: escapes patterns, reads the visual selection and pre-fills the command line
+        with either a buffer substitution or a project-wide one (the latter needs ripgrep as 'grepprg'). The editing
+        keymaps call this from config/keymaps/. API: M.escape_pattern, M.prompt, M.project, M.selection, M.get_visual.
 
     exports
-        Single source of truth for where exported documents go, shared by the pandoc, vimtex and tinymist setups, so three features write to the same layout. Documents go to <root>/exports/<reldir>/<name>.<ext> and latexmk byproducts to <root>/.build/<reldir>/<name>/; <root> is found through the project markers in M.markers, falling back to the file's own folder, or forced globally with vim.g.exports_root. An unnamed buffer is treated as a file called `scratch`. API: M.root, M.basename, M.exports_dir, M.reldir, M.output_path, M.output_pattern, M.build_dir.
+        Single source of truth for where exported documents go, shared by the pandoc, vimtex and tinymist setups, so
+        three features write to the same layout. Documents go to <root>/exports/<reldir>/<name>.<ext> and latexmk
+        byproducts to <root>/.build/<reldir>/<name>/; <root> is found through the project markers in M.markers, falling
+        back to the file's own folder, or forced globally with vim.g.exports_root. An unnamed buffer is treated as a
+        file called `scratch`. API: M.root, M.basename, M.exports_dir, M.reldir, M.output_path,
+        M.output_pattern, M.build_dir.
 
     system
-        Host system detection: M.get_os returns "windows", "mac" or "linux" (everything that is neither, including the BSDs), so OS-specific behavior is asked, not guessed per file.
+        Host system detection: M.get_os returns "windows", "mac" or "linux" (everything that is neither, including the
+        BSDs), so OS-specific behavior is asked, not guessed per file.
 
 USING LIB WELL
     - Before writing a helper, look here first; a duplicated helper is a layer violation waiting to happen.
-    - When two features disagree about a piece of state, the fix is not a flag: move the state into a lib file as its single source of truth and let both ask it (the autoformat module exists for exactly this reason).
-    - When a lib helper starts wanting a command or an autocmd of its own, that is the signal it became a feature: move it to modules/.
-    - Keep the header standard (see doc/documentation.txt): a lib file is read by strangers more often than any other file.
+    - When two features disagree about a piece of state, the fix is not a flag: move the state into a lib file as its
+    single source of truth and let both ask it (the autoformat module exists for exactly this reason).
+    - When a lib helper starts wanting a command or an autocmd of its own, that is the signal it became a feature: move
+    it to modules/.
+    - Keep the header standard (see doc/documentation.txt): a lib file is read by strangers more often than any
+    other file.
 
 FILES
     doc/reading.txt           how to read the pages

@@ -8,22 +8,29 @@ SYNOPSIS
     doc/reading.txt                         how to read the pages
 
 DESCRIPTION
-    Documentation in this config is an engineering artifact, not decoration. It exists so that a future reader - usually the author, six months later - can understand a module's purpose, its decisions and its external requirements without opening a single other file.
+    Documentation in this config is an engineering artifact, not decoration. It exists so that a future reader - usually
+    the author, six months later - can understand a module's purpose, its decisions and its external requirements
+    without opening a single other file.
 
     Three principles govern it:
 
         1.  The code is the primary documentation. Comments explain why, not what; the what is the code itself.
-        2.  Every file is self-contained. A reader of a file should not need to open others to know what it does; instead of narrating elsewhere, cross-reference with `See:`.
-        3.  Documentation lives next to the thing it documents. There is no parallel manual to keep in sync; the headers of the files are the manual, and the pages in doc/ are only overviews of it.
+        2.  Every file is self-contained. A reader of a file should not need to open others to know what it does;
+        instead of narrating elsewhere, cross-reference with `See:`.
+        3.  Documentation lives next to the thing it documents. There is no parallel manual to keep in sync; the headers
+        of the files are the manual, and the pages in doc/ are only overviews of it.
 
 THE LAYERS
     Documentation exists in three layers, from nearest to farthest:
 
-        Header comments    every file under lua/ and after/ftplugin/ opens with a comment block describing itself. This is the primary and most detailed layer.
+        Header comments    every file under lua/ and after/ftplugin/ opens with a comment block describing itself. This
+        is the primary and most detailed layer.
 
-        doc/ pages         overviews for a reader new to the config: what exists, where it lives, how the pieces relate. Never a substitute for the headers. Formatted as man pages (see THE TWO FORMATS OF THE PAGES below).
+        doc/ pages         overviews for a reader new to the config: what exists, where it lives, how the pieces relate.
+        Never a substitute for the headers. Formatted as man pages (see THE TWO FORMATS OF THE PAGES below).
 
-        README.md          the repo-level overview: structure, conventions, how to add things, requirements. One dense paragraph per topic, no fluff.
+        README.md          the repo-level overview: structure, conventions, how to add things, requirements. One dense
+        paragraph per topic, no fluff.
 
 FILE HEADERS
     Every file starts with a path comment and a header block:
@@ -48,14 +55,20 @@ FILE HEADERS
 
         - Line 1 is the file's own path: `-- lua/<path>.lua`, or `-- after/ftplugin/python.lua` for ftplugins.
         - One blank line, then the header block.
-        - The first paragraph answers "what is this and why does it exist". Behavior details follow as more paragraphs, one concern per paragraph.
-        - Decisions are stated with their reasons: "on purpose", "because", "so that". A reader should be able to distinguish a choice from an accident.
+        - The first paragraph answers "what is this and why does it exist". Behavior details follow as more paragraphs,
+        one concern per paragraph.
+        - Decisions are stated with their reasons: "on purpose", "because", "so that". A reader should be able to
+        distinguish a choice from an accident.
         - Facts that live in another file are not restated; they are referenced (see CROSS-REFERENCES below).
-        - External tool requirements are documented in the header of the file that uses them, as shell lines (`$ sudo pacman -S ...`) or Mason commands (`:MasonInstall ...`). Requirements are never collected in a distant requirements file only; the header is where they are found.
-        - If a module exposes setup() and owns its state, the header says so, and any init-order constraint (like "must be called before pack.lua") is stated explicitly.
+        - External tool requirements are documented in the header of the file that uses them, as shell lines (`$ sudo
+        pacman -S ...`) or Mason commands (`:MasonInstall ...`). Requirements are never collected in a distant
+        requirements file only; the header is where they are found.
+        - If a module exposes setup() and owns its state, the header says so, and any init-order constraint (like "must
+        be called before pack.lua") is stated explicitly.
 
 CROSS-REFERENCES
-    Any pointer to related material is a `See:` line, grouped at the bottom of the header (or after the relevant paragraph when the reference is local to one concern):
+    Any pointer to related material is a `See:` line, grouped at the bottom of the header (or after the relevant
+    paragraph when the reference is local to one concern):
 
         -- See: lua/config/pack.lua        a file, from the repo root
         -- See: :help lsp                  a help tag
@@ -64,9 +77,12 @@ CROSS-REFERENCES
 
     Conventions:
 
-        - File paths are relative to the repo root and are written in full (lua/lib/buffers.lua), never as bare file names.
-        - References are symmetric when it makes sense: if A's header says "See: B", B's header usually says "See: A". The goal is that a reader can traverse the whole feature from any of its files.
-        - Inline `See:` comments in the body mark the spot where a dependency matters, e.g. above a sessionoptions line that must match modules/sessions.lua.
+        - File paths are relative to the repo root and are written in full (lua/lib/buffers.lua), never as bare
+        file names.
+        - References are symmetric when it makes sense: if A's header says "See: B", B's header usually says "See: A".
+        The goal is that a reader can traverse the whole feature from any of its files.
+        - Inline `See:` comments in the body mark the spot where a dependency matters, e.g. above a sessionoptions line
+        that must match modules/sessions.lua.
         - Trivial, adjacent references are omitted. Not everything is linked; only what a reader would otherwise miss.
 
 FORMATTING AND STYLE
@@ -75,14 +91,18 @@ FORMATTING AND STYLE
     - Wrapping: comments wrap around column 78, aligned with the file body.
     - The buffer-local `opt_local`, global `vim.opt` and window `vim.wo` scopes are named when the distinction matters.
     - TODO comments state the missing thing and its context, not a mood.
-    - Deprecation: modules that fall out of use move to lua/archived/, outside lua/ and off the runtimepath, with their header intact.
+    - Deprecation: modules that fall out of use move to lua/archived/, outside lua/ and off the runtimepath, with their
+    header intact.
 
 THE TWO FORMATS OF THE PAGES
     Each page exists twice, and the two copies say the same thing:
 
-        doc/pages/<name>.txt   the roff source, written with the man(7) macros. `man` reflows it to the available width of the terminal. This is the canonical copy, and the only one with the NAME(7) header and footer.
+        doc/pages/<name>.txt   the roff source, written with the man(7) macros. `man` reflows it to the available width
+        of the terminal. This is the canonical copy, and the only one with the NAME(7) header and footer.
 
-        doc/<name>.txt         a plain-text mirror of the style, not of the rendering: the same sections and lists, but paragraphs written at full width, left to the editor's wrap, with no macros, no bold and no page header or footer. It is what gets updated first when a page changes.
+        doc/<name>.txt         a plain-text mirror of the style, not of the rendering: the same sections and lists, but
+        paragraphs written at full width, left to the editor's wrap, with no macros, no bold and no page header or
+        footer. It is what gets updated first when a page changes.
 
     doc/reading.txt explains how to read both formats and lists the commands. The roff pages are rendered like this:
 
@@ -100,23 +120,32 @@ THE TWO FORMATS OF THE PAGES
 
     Rules for these pages:
 
-        - The roff source is written in man(7): `.TH`, `.SH`, `.PP`, `.TP`, `.IP bu`, `.B`/`.I`. Paragraph text is filled by groff, so no hard wrapping; preformatted blocks (code, trees, shell commands) are wrapped in `.nf`/`.fi`. The plain-text mirror follows the same section order, writes each paragraph as a single full-width line for the editor to wrap, and marks emphasis only with quotes.
-        - No keymaps. They change too often; a stale keymap list is worse than none. Pages describe features, commands, files and behavior, and point to the keymap files for the rest.
-        - Commands are documented with their arguments, even when a keymap also triggers them: commands are stable, keymaps are not.
+        - The roff source is written in man(7): `.TH`, `.SH`, `.PP`, `.TP`, `.IP bu`, `.B`/`.I`. Paragraph text is
+        filled by groff, so no hard wrapping; preformatted blocks (code, trees, shell commands) are wrapped in
+        `.nf`/`.fi`. The plain-text mirror follows the same section order, writes each paragraph as a single full-width
+        line for the editor to wrap, and marks emphasis only with quotes.
+        - No keymaps. They change too often; a stale keymap list is worse than none. Pages describe features, commands,
+        files and behavior, and point to the keymap files for the rest.
+        - Commands are documented with their arguments, even when a keymap also triggers them: commands are stable,
+        keymaps are not.
         - Dates or version numbers in headers rot; the footer date and the git history cover that.
 
 KEYMAPS
     Keymaps are the deliberate exception to "document everything":
 
         - They are never listed in doc/ or in the README.
-        - The keymap files under lua/config/keymaps/ have minimal headers (a sentence about the group's scope) and rely on `vim.keymap.set` desc fields, which surface in the shortlist and `:map`, as the documentation.
-        - A keymap that only makes sense inside one plugin lives in that plugin's file; all others live in the matching theme file under lua/config/keymaps/.
-        - When a feature page (e.g. COMPILATION in kickstart.txt) needs a trigger documented, the user command is documented instead.
+        - The keymap files under lua/config/keymaps/ have minimal headers (a sentence about the group's scope) and rely
+        on `vim.keymap.set` desc fields, which surface in the shortlist and `:map`, as the documentation.
+        - A keymap that only makes sense inside one plugin lives in that plugin's file; all others live in the matching
+        theme file under lua/config/keymaps/.
+        - When a feature page (e.g. COMPILATION in kickstart.txt) needs a trigger documented, the user command is
+        documented instead.
 
 KEEPING DOCS CURRENT
     Documentation is part of the change:
 
-        - A behavior change updates the header of the file that owns it, in the same commit. A decision added to code without its reason in the header is half a change.
+        - A behavior change updates the header of the file that owns it, in the same commit. A decision added to code
+        without its reason in the header is half a change.
         - When moving a feature between layers, its `See:` web moves with it; dead references are bugs.
         - When adding a new module kind or a new convention, document it here, in this page.
         - The README is updated only for structural or requirement changes, not for every small edit.
