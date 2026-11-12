@@ -1,0 +1,65 @@
+NAME
+    philosophy - why this config builds its own features from scratch
+
+SYNOPSIS
+    man -l doc/pages/philosophy.txt         read as a man page (roff)
+    :read !man -l doc/pages/philosophy.txt
+    doc/philosophy.txt                      this plain-text mirror
+    doc/reading.txt                         how to read the pages
+
+DESCRIPTION
+    This is not a distribution and not a starting point meant to grow into one. It is a personal editor, shaped by one workflow, and the guiding choice behind it is simple: when a feature is central to the workflow, we build it ourselves, from scratch, so that it does exactly what the workflow needs - nothing more, nothing less - and so that we understand every line of it.
+
+WHY BUILD FROM SCRATCH
+    Fit. A plugin solves the author's problem of many users; a hand-written module solves our problem. The result is smaller, and its behavior is a decision we can point to instead of an option list we memorized. Examples of what that produced:
+
+        - A statusline as a string in the 'statusline' option: shows exactly what this workflow reads - mode, search and selection state, git branch, diagnostics, macro recording - and costs no plugin, no redraw overhead and no update churn.
+        - Per-directory sessions with :mksession: automatic, tmux-only, one file per cwd, saved on exit and restored on entry. A session plugin would offer trees of scopes and loaders; what the workflow needs is "reopen this folder where I left it".
+        - A scratch buffer that replaces the current window's buffer and restores it on leave, because the layout must never move. Prescribed plugins float windows; this one does not.
+        - A compile runner that streams output into a bottom split and fills the quickfix on failure - :make with the parts of :make we use, none of the parts we don't.
+        - A lazy loader of about 150 lines in lib/lazy.lua, instead of a plugin-loading framework: filetype triggers, configure/after hooks, one autocmd, done.
+        - A notes module that enforces the vault's own file naming (TYPE-YYYYMMDD-HHmmss-SLUG.md) instead of hoping a plugin grows it.
+        - Markdown list editing, assembly alignment, Fugitive view closing: small, sharp editors' conveniences that no plugin did the way the workflow wanted.
+
+    Understanding. Every feature the config owns can be debugged, changed and deleted in an afternoon. That is worth more than a feature list: the editor stays a tool we hold, not one we rent.
+
+    Startup cost. Building lean is also building fast: no distribution, no lazy-loading framework, every require explicit - startup stays around 70-80 ms with the eager plugin set intact.
+
+WHERE THE LINE DRAWS
+    Not everything is rebuilt. The line is drawn between editor glue and engineering the config should not own:
+
+        - We do not write parsers: Tree-sitter is used, and parser management stays with nvim-treesitter.
+        - We do not write fuzzy finders: fzf-lua wraps fzf.
+        - We do not write Git: Fugitive and gitsigns are the interface.
+        - We do not write formatters: conform runs external ones.
+        - We do not write language servers: the native LSP stack and Mason manage them.
+
+    The rule of thumb: use a plugin when the work is peripheral or industrial (parsers, finders, formatters, servers); write a module when the work is the shape of the workflow itself (sessions, scratch, compile, notes, export paths). Building something by hand is justified by fit and understanding, never by novelty - and a plugin is chosen over a module whenever the workflow genuinely benefits from a maintained tool.
+
+    The same thinking decides within a feature: conform formats, so language servers keep their formatters off; the LSP feeds diagnostics, so ruff runs beside it through nvim-lint rather than a second server; exports paths live once in lib/exports.lua so pandoc, VimTeX and tinymist cannot drift apart.
+
+NATIVE OVER WRAPPED
+    When Neovim ships it, the config uses it: vim.pack over a plugin manager, vim.lsp.config and vim.lsp.enable over an LSP wrapper, native LSP completion over a completion plugin, vim.loader for fast startup, built-in terminal, undotree, quickfix. Wrappers are removed as Neovim grows, not kept out of habit - :PackDel and :PackUpdate already exist as commands to bridge 0.12 to the built-ins arriving in 0.13.
+
+ADAPTED TO A WORKFLOW
+    The workflow assumptions are visible everywhere, and they are the point:
+
+        - tmux is the session manager, so sessions save per directory inside tmux only, and splits share navigation with tmux panes.
+        - A single notes vault rules note creation, naming, templates and search.
+        - Documents are exported to exports/ and built to .build/, whatever produced them.
+        - Linux is the host (lib/system.lua still reports the others, but the tooling assumes pacman, zathura, xdg-open).
+
+    When the workflow changes, the modules change with it - that is the trade this config makes on purpose, and the price of it is maintenance, which is accepted as part of the deal.
+
+    What this philosophy asks in return is honesty in the code: every module starts with a header that says what it does and why (see doc/documentation.txt), so the next reader can judge the choice, keep it, or replace it.
+
+FILES
+    doc/reading.txt           how to read the pages
+    doc/pages/kickstart.txt   full guide to the config
+    doc/pages/structure.txt   the folder structure
+    doc/pages/modules.txt     the features built from scratch
+    doc/pages/lib.txt         the shared helpers underneath them
+    doc/pages/philosophy.txt  this page, as a man page (roff)
+
+SEE ALSO
+    kickstart(7), modules(7), documentation(7).

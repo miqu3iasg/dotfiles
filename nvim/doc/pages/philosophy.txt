@@ -1,0 +1,145 @@
+.TH PHILOSOPHY 7 "2026" "nvim config"
+.SH NAME
+philosophy \- why this config builds its own features from scratch
+.SH SYNOPSIS
+.nf
+man \-l doc/pages/philosophy.txt
+:read !man \-l doc/pages/philosophy.txt
+.fi
+.SH DESCRIPTION
+.PP
+This is not a distribution and not a starting point meant to grow
+into one. It is a personal editor, shaped by one workflow, and the
+guiding choice behind it is simple: when a feature is central to the
+workflow, we build it ourselves, from scratch, so that it does
+exactly what the workflow needs \- nothing more, nothing less \- and
+so that we understand every line of it.
+.SH WHY BUILD FROM SCRATCH
+.PP
+Fit. A plugin solves the author's problem of many users; a
+hand-written module solves our problem. The result is smaller, and
+its behavior is a decision we can point to instead of an option list
+we memorized. Examples of what that produced:
+.IP \(bu 2
+A statusline as a string in the
+.B statusline
+option: shows exactly what this workflow reads \- mode, search and
+selection state, git branch, diagnostics, macro recording \- and
+costs no plugin, no redraw overhead and no update churn.
+.IP \(bu 2
+Per-directory sessions with \fB:mksession\fR: automatic, tmux-only,
+one file per cwd, saved on exit and restored on entry. A session
+plugin would offer trees of scopes and loaders; what the workflow
+needs is "reopen this folder where I left it".
+.IP \(bu 2
+A scratch buffer that replaces the current window's buffer and
+restores it on leave, because the layout must never move.
+Prescribed plugins float windows; this one does not.
+.IP \(bu 2
+A compile runner that streams output into a bottom split and fills
+the quickfix on failure \- \fB:make\fR with the parts of
+\fB:make\fR we use, none of the parts we don't.
+.IP \(bu 2
+A lazy loader of about 150 lines in \fIlib/lazy.lua\fR, instead of
+a plugin-loading framework: filetype triggers, configure/after
+hooks, one autocmd, done.
+.IP \(bu 2
+A notes module that enforces the vault's own file naming
+(\fITYPE\-YYYYMMDD\-HHmmss\-SLUG.md\fR) instead of hoping a plugin
+grows it.
+.IP \(bu 2
+Markdown list editing, assembly alignment, Fugitive view closing:
+small, sharp editors' conveniences that no plugin did the way the
+workflow wanted.
+.PP
+Understanding. Every feature the config owns can be debugged,
+changed and deleted in an afternoon. That is worth more than a
+feature list: the editor stays a tool we hold, not one we rent.
+.PP
+Startup cost. Building lean is also building fast: no distribution,
+no lazy-loading framework, every require explicit \- startup stays
+around 70\-80 ms with the eager plugin set intact.
+.SH WHERE THE LINE DRAWS
+.PP
+Not everything is rebuilt. The line is drawn between editor glue
+and engineering the config should not own:
+.IP \(bu 2
+We do not write parsers: Tree-sitter is used, and parser management
+stays with nvim-treesitter.
+.IP \(bu 2
+We do not write fuzzy finders: fzf-lua wraps fzf.
+.IP \(bu 2
+We do not write Git: Fugitive and gitsigns are the interface.
+.IP \(bu 2
+We do not write formatters: conform runs external ones.
+.IP \(bu 2
+We do not write language servers: the native LSP stack and Mason
+manage them.
+.PP
+The rule of thumb: use a plugin when the work is peripheral or
+industrial (parsers, finders, formatters, servers); write a module
+when the work is the shape of the workflow itself (sessions,
+scratch, compile, notes, export paths). Building something by hand
+is justified by fit and understanding, never by novelty \- and a
+plugin is chosen over a module whenever the workflow genuinely
+benefits from a maintained tool.
+.PP
+The same thinking decides within a feature: conform formats, so
+language servers keep their formatters off; the LSP feeds
+diagnostics, so ruff runs beside it through nvim-lint rather than a
+second server; exports paths live once in \fIlib/exports.lua\fR so
+pandoc, VimTeX and tinymist cannot drift apart.
+.SH NATIVE OVER WRAPPED
+.PP
+When Neovim ships it, the config uses it: \fBvim.pack\fR over a
+plugin manager, \fBvim.lsp.config\fR and \fBvim.lsp.enable\fR over
+an LSP wrapper, native LSP completion over a completion plugin,
+\fBvim.loader\fR for fast startup, built-in terminal, undotree,
+quickfix. Wrappers are removed as Neovim grows, not kept out of
+habit \- \fB:PackDel\fR and \fB:PackUpdate\fR already exist as
+commands to bridge 0.12 to the built-ins arriving in 0.13.
+.SH ADAPTED TO A WORKFLOW
+.PP
+The workflow assumptions are visible everywhere, and they are the
+point:
+.IP \(bu 2
+tmux is the session manager, so sessions save per directory inside
+tmux only, and splits share navigation with tmux panes.
+.IP \(bu 2
+A single notes vault rules note creation, naming, templates and
+search.
+.IP \(bu 2
+Documents are exported to \fIexports/\fR and built to \fI.build/\fR,
+whatever produced them.
+.IP \(bu 2
+Linux is the host (\fIlib/system.lua\fR still reports the others,
+but the tooling assumes pacman, zathura, xdg-open).
+.PP
+When the workflow changes, the modules change with it \- that is
+the trade this config makes on purpose, and the price of it is
+maintenance, which is accepted as part of the deal.
+.PP
+What this philosophy asks in return is honesty in the code: every
+module starts with a header that says what it does and why (see
+\fIdoc/pages/documentation.txt\fR), so the next reader can judge the
+choice, keep it, or replace it.
+.SH FILES
+.TP
+.I doc/reading.txt
+how to read the pages
+.TP
+.I doc/pages/kickstart.txt
+full guide to the config
+.TP
+.I doc/pages/structure.txt
+the folder structure
+.TP
+.I doc/pages/modules.txt
+the features built from scratch
+.TP
+.I doc/pages/lib.txt
+the shared helpers underneath them
+.SH SEE ALSO
+.BR kickstart (7),
+.BR modules (7),
+.BR documentation (7)

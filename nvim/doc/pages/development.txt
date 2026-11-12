@@ -1,0 +1,207 @@
+.TH DEVELOPMENT 7 "2026" "nvim config"
+.SH NAME
+development \- how to extend this Neovim configuration
+.SH SYNOPSIS
+.nf
+man \-l doc/pages/development.txt
+:read !man \-l doc/pages/development.txt
+.fi
+.SH DESCRIPTION
+.PP
+This page is a recipe book for changing the config. The design goal
+is that removing or adding a feature is a local operation: a feature
+is one file, plus at most one entry elsewhere. Anything that breaks
+that rule should be fixed before growing it.
+.PP
+Read \fIkickstart.txt\fR first for the vocabulary (layers, lazy
+loading, module/lib split).
+.SH THE ONE RULE
+.PP
+A layer may only require the layers below it: \fIinit.lua\fR, then
+\fIconfig\fR, \fIplugins\fR, \fImodules\fR and \fIlib\fR. Nothing in
+\fIlib/\fR requires upwards. When a change wants to violate the rule,
+the shape to prefer is: move the domain logic into \fIlib/\fR, let
+the caller pass the state in, or merge the two layers into one.
+.SH ADDING A PLUGIN, EAGER
+.PP
+Eager plugins load at startup. Three steps:
+.IP 1.
+Declare it in \fIlua/config/pack.lua\fR with a \fIsrc\fR URL and a
+short comment above it explaining what it is. If it needs a build
+step, handle the PackChanged autocmd in the same file (existing
+examples: TSUpdate for treesitter, make install_jsregexp for
+LuaSnip).
+.IP 2.
+Create \fIlua/plugins/<name>.lua\fR, its adapter file, starting with
+the standard header (see \fIdocumentation.txt\fR).
+.IP 3.
+Register the module in the load list of \fIlua/plugins/init.lua\fR,
+in dependency order (e.g. fzf before markdown). The list loads each
+module inside pcall, so a broken one notifies instead of aborting
+startup.
+.PP
+Removing an eager plugin is the same list backwards: delete the
+adapter file, its pack.lua entry, its init.lua entry, and its keymaps
+if they live in the adapter.
+.SH ADDING A PLUGIN, LAZY
+.PP
+Use lazy loading when the plugin is only useful for specific
+filetypes and its \fIplugin/\fR scripts are heavy on startup:
+.IP 1.
+Create \fIlua/plugins/<name>.lua\fR.
+.IP 2.
+At the bottom of the file declare it through lib.lazy:
+.nf
+.IP
+require("lib.lazy").setup{
+    src = "https://github.com/...",
+    filetypes = { "tex" },
+    configure = function() ... end,  -- before :packadd
+    after = function() ... end,      -- after :packadd
+}
+.fi
+.IP
+Globals the plugin reads while loading go into \fIconfigure\fR;
+anything that needs the plugin already loaded goes into
+\fIafter\fR. The plugin name is derived from \fIsrc\fR and must
+match the directory vim.pack installs.
+.IP 3.
+Nothing else: no pack.lua entry, no init.lua entry. The lazy plugin
+is fully self-declared and disappears with its file.
+.PP
+Caveats, documented in \fIlua/lib/lazy.lua\fR: a filetype whose
+detection depends on a global owned by the plugin must set that
+global at the top level of the adapter file, because the plugin is
+not on the runtimepath at detection time. Buffers already open when
+the adapter runs still trigger the load.
+.SH ADDING A LANGUAGE SERVER
+.PP
+One module per server under
+\fIlua/language/servers/<name>.lua\fR, following the
+\fIUserLspServerModule\fR contract in
+\fIlua/language/types.lua\fR:
+.IP \(bu 2
+a \fIconfig\fR table, passed to \fBvim.lsp.config(name, config)\fR;
+.IP \(bu 2
+an optional \fIon_attach(client, bufnr)\fR hook, run by the
+LspAttach autocmd in \fIlua/language/init.lua\fR when the client
+attaches.
+.PP
+Then:
+.IP 1.
+Add the server name to the \fImodules\fR list in
+\fIlua/language/init.lua\fR. The order is meaningless.
+.IP 2.
+Mason installs it at startup (scheduled). To install manually:
+\fB:MasonInstall <server>\fR.
+.IP 3.
+If the server is only ever started elsewhere (like jdtls), put it in
+\fIinstall_only\fR instead; the LSP toggle leaves those alone.
+.IP 4.
+A malformed module fails startup with the server's name, thanks to
+the shape validation in types.lua; keep the contract exact.
+.PP
+Formatting stays out of the servers: conform owns it. Diagnostics
+display is global and starts off; servers only feed results.
+.SH ADDING A FORMATTER OR LINTER
+.PP
+Formatters: add an entry to \fIformatters_by_ft\fR in
+\fIlua/plugins/formatting.lua\fR, ordered as the chain should run.
+Formatter-specific flags go in the per-formatter config below the
+table. Document any executable that Mason cannot install in that
+file's header, with the pacman/npm line, like the others.
+.PP
+Linters: nvim-lint (\fIlua/language/lint.lua\fR) runs command-line
+tools on demand and attaches plain diagnostics. Python/ruff is the
+current example and the template: a lint table entry, an autocmd,
+and its own toggle.
+.SH ADDING SNIPPETS
+.PP
+One file per filetype in \fIlua/snippets/<ft>.lua\fR, returning the
+snippets. Shared helpers and filetype-adaptive snippets live in
+\fIlua/snippets/common.lua\fR. Register the new filetype (and its
+inheritances) in \fIlua/plugins/completions.lua\fR, which loads
+snippet modules lazily by filetype.
+.SH ADDING FILETYPE OPTIONS
+.PP
+Buffer-local options for one filetype go in
+\fIafter/ftplugin/<ft>.lua\fR, applied after the runtime ftplugins,
+so overrides stick. Rules:
+.IP \(bu 2
+Keep it options-first. If a mapping is needed and it is shared,
+prefer a small lib/ helper; a feature module that needs commands or
+autocmds belongs in \fIlua/modules/\fR.
+.IP \(bu 2
+Logic needed by two or more filetypes goes in \fIlib/\fR, never
+copy-pasted between ftplugins.
+.IP \(bu 2
+Document style decisions by name: "PEP 8 style", "gofmt style", with
+a \fBSee:\fR to the formatter and the server involved.
+.SH ADDING KEYMAPS
+.PP
+New keymaps go in the matching theme file under
+\fIlua/config/keymaps/\fR, following its existing <leader> groups; a
+keymap that only makes sense for one plugin lives in that plugin's
+adapter file. Note that keymaps are deliberately not documented in
+\fIdoc/\fR: the desc field of the mapping is its documentation (see
+\fIdocumentation.txt\fR,
+.B KEYMAPS
+section).
+.SH ADDING A MODULE
+.PP
+Decide the layer first, by the binary criterion: something that
+exposes commands, autocmds or keymaps is a module (\fIlua/modules/\fR);
+anything else is a lib helper (\fIlua/lib/\fR).
+.PP
+A module:
+.IP \(bu 2
+opens with the standard header;
+.IP \(bu 2
+exposes setup() when it must register commands, autocmds or keymaps;
+.IP \(bu 2
+owns its own state and exposes it only through its API \- state is
+never written from another file;
+.IP \(bu 2
+gets called from \fIinit.lua\fR (feature at startup, like statusline
+and scratch) or from the file that triggers it.
+.SH ADDING A COLORSCHEME
+.PP
+Custom schemes live in \fIcolors/<name>.lua\fR and are activated
+with \fBvim.cmd.colorscheme\fR. Third-party schemes are installed
+from pack.lua, as plain src entries.
+.SH VERSIONING AND LOCK
+.PP
+Plugin revisions are pinned by \fInvim-pack-lock.json\fR, written by
+vim.pack. Treat it as generated: update plugins through
+\fB:PackUpdate\fR, not by hand. Neovim 0.12 is the floor; \fB:PackDel\fR
+and \fB:PackUpdate\fR become built-ins in 0.13, and the user
+commands exist to keep the same names working across both.
+.SH FILES
+.TP
+.I doc/reading.txt
+how to read the pages
+.TP
+.I doc/pages/kickstart.txt
+full guide to the config
+.TP
+.I doc/pages/structure.txt
+the folder structure
+.TP
+.I doc/pages/modules.txt
+the modules layer
+.TP
+.I doc/pages/lib.txt
+the lib layer
+.TP
+.I doc/pages/philosophy.txt
+why the config builds from scratch
+.TP
+.I doc/pages/documentation.txt
+the documentation standard
+.TP
+.I doc/pages/development.txt
+this page
+.SH SEE ALSO
+.BR kickstart (7),
+.BR documentation (7),
+.BR structure (7)

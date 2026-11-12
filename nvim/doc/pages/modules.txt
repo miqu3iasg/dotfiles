@@ -1,0 +1,174 @@
+.TH MODULES 7 "2026" "nvim config"
+.SH NAME
+modules \- the lua/modules/ layer: whole features built for this
+config
+.SH SYNOPSIS
+.nf
+man \-l doc/pages/modules.txt
+:read !man \-l doc/pages/modules.txt
+.fi
+.SH DESCRIPTION
+.PP
+\fIlua/modules/\fR holds the features this config writes for itself,
+instead of delegating to a plugin: the statusline, per-directory
+sessions, the scratch buffer, the compile runner, the Pandoc export,
+the notes workflow and a handful of editors' conveniences. Together
+they are the most opinionated part of the config, and the part most
+adapted to the author's workflow.
+.PP
+A module is a whole feature, not a utility. The contract:
+.IP \(bu 2
+One file per feature, opened with the standard header.
+.IP \(bu 2
+Each exposes setup() when it must register commands, autocmds or
+keymaps. Feature-level setup is called from \fIinit.lua\fR in a
+fixed order; module-specific commands that only make sense for the
+module are registered inside it.
+.IP \(bu 2
+State is module-owned. It lives in the module's locals and is
+reached only through its API; no other file writes it. This is what
+keeps a module replaceable without a project-wide search.
+.IP \(bu 2
+A module never reaches into a plugin's internals when a public API
+exists, and never duplicates what \fIconfig/\fR already provides \- it
+requires \fIlib/\fR helpers instead.
+.SH THE MODULES
+.TP
+.I statusline
+A native statusline built on the
+.B statusline
+option, no plugin. The active window shows editor state, position,
+search and selection info, git branch, diagnostics and macro
+recording; inactive windows get a reduced version. Costly or
+asynchronous pieces are cached in \fBvim.g.sl_mode\fR,
+\fBvim.b.git_branch\fR (looked up asynchronously, cached per
+directory) and \fBvim.b.sl_file_size\fR (read from disk, so stale
+until save). API: M.lead, M.major, M.diag, M.selection, M.search
+and M.setup, rendered through the
+.B statusline
+option.
+.TP
+.I sessions
+Minimal, fully automatic, per-directory session management on
+\fB:mksession\fR and \fB:source\fR, active only inside tmux. On
+VimEnter with no file arguments it restores the session of the
+directory; on exit it saves it. Files live in
+\fIstdpath("state")/sessions/\fR, one per cwd. A save happens only
+when at least one real file buffer is open, so browsing alone never
+overwrites a stored session. API: M.enabled, M.path, M.load,
+M.save. \fBsessionoptions\fR in \fIconfig/options.lua\fR must match
+what it saves.
+.TP
+.I scratch
+A single persistent scratch buffer for throwaway notes and pastes.
+Toggling replaces the buffer of the current window (special buffers
+such as Oil, terminals and Fugitive views get a vertical split
+instead) and leaving it restores the previous buffer, so the layout
+never changes. The buffer is hidden, not wiped, and survives every
+toggle until \fB:Scratch!\fR deletes it. API: M.toggle, M.split,
+M.leave, M.wipe, M.setup. Commands: \fB:Scratch\fR,
+\fB:ScratchSplit\fR, \fB:Scratch!\fR.
+.TP
+.I compile
+An Emacs-like compile runner: runs a build command asynchronously
+through \fBsh \-c\fR and streams the output into a
+\fB*compilation*\fR buffer in a bottom split; on nonzero exit the
+output is parsed into the quickfix list (gcc/clang, javac and Python
+tracebacks). State is per working directory, so a new compile kills
+the previous one. API: M.command, M.prompt, M.recompile,
+M.interrupt, M.setup. Commands: \fB:Compile\fR, \fB:Recompile\fR,
+\fB:CompileInterrupt\fR.
+.TP
+.I pandoc
+Exports the current Markdown buffer to PDF, EPUB, DOCX or HTML by
+running pandoc asynchronously, through stdin, so unsaved changes are
+exported too. Preview mode rebuilds on every save. The pipeline
+itself is data: \fIpandoc/defaults.yaml\fR,
+\fIpandoc/metadata.yaml\fR, per-folder defaults, \fIprofiles/\fR and
+\fIfilters/\fR. Results go where \fIlib/exports.lua\fR points and
+open in zathura or xdg-open. API: M.build, M.open, M.preview,
+M.setup. Buffer-local commands: \fB:Pandoc\fR, \fB:PandocPreview\fR.
+.TP
+.I notes
+A flat vault of Markdown notes managed from Neovim: quick drafts
+and typed notes from user-maintained templates, template insertion,
+search by name and content, reopening the last note. The vault is
+just a folder: \fB$ARCANUM_DIR\fR, or \fI~/dev/arcanum\fR when
+unset. File names follow the vault's
+\fITYPE\-YYYYMMDD\-HHmmss[\-SLUG].md\fR rule. The largest module in
+the config, and a good example of state ownership: the template
+list, the name parser and the history all live here.
+API: M.vault, M.create, M.new_draft, M.new_note, M.template,
+M.find_files, M.grep, M.last, M.open_vault, M.setup. Commands:
+\fB:NotesDraft\fR, \fB:NotesNew\fR, \fB:NotesTemplate\fR,
+\fB:NotesFiles\fR, \fB:NotesGrep\fR, \fB:NotesLast\fR,
+\fB:NotesOpen\fR.
+.TP
+.I window_zoom
+Zooms the focused window by showing it as the only window of a new
+tab, the original layout staying intact in its own tab. Toggling
+again closes the zoom tab. The state is the tabpage-local
+\fBt:zoomed\fR, read by the statusline; closing the tab by any
+other means also ends the zoom. API: M.is_zoomed, M.toggle.
+.TP
+.I close_view
+Closes Fugitive views (index, status, blame, commit buffers)
+without ever quitting Neovim; closing a commit buffer discards it
+and aborts the commit. Buffer-local mappings are installed by
+autocmds, so setup() runs once at startup. API: M.close_diff,
+M.close_view, M.map_close, M.setup.
+.TP
+.I markdown_lists
+Native list editing for Markdown buffers: toggling markers and
+checklists, cycling list types, renumbering, promotion and
+demotion, on the current line or the selection, with formatter
+helpers that keep markers and indentation as written.
+API: M.toggle, M.toggle_checklist, M.cycle, M.clear,
+M.cycle_marker, M.renumber and the formatting helpers.
+.TP
+.I asm_align
+Column alignment for assembly buffers, a direct port of the layout
+asmfmt produces: tabs for indentation, spaces for alignment,
+per-block operand columns, end-of-line comments aligned to one
+column. Lines are never added, removed or reordered; structural
+changes are left to asmfmt, which conform runs on format.
+API: M.align, M.block, M.range, M.action.
+.SH WHO CALLS MODULES
+.PP
+Feature-level modules (statusline, scratch, compile) are set up
+directly by \fIinit.lua\fR, in the startup order. Modules scoped to
+a context are set up by the code that owns the context: pandoc and
+notes register buffer-local commands and autocmds from their
+setup(), called by \fIinit.lua\fR; close_view and markdown_lists are
+wired by the filetypes and keymap files that use them. A module
+that needs shared logic requires it from \fIlib/\fR, never the
+other way around.
+.SH WRITING A NEW MODULE
+.PP
+See \fIdoc/pages/development.txt\fR
+.B (ADDING A MODULE).
+The short version: if it exposes commands, autocmds or keymaps, it
+is a module; give it the standard header, make setup() register
+what it owns, keep its state private behind its API, and require
+\fIlib/\fR for anything another file also needs.
+.SH FILES
+.TP
+.I doc/reading.txt
+how to read the pages
+.TP
+.I lua/modules/
+the modules
+.TP
+.I doc/pages/structure.txt
+the folder structure
+.TP
+.I doc/pages/lib.txt
+the shared-helpers layer
+.TP
+.I doc/pages/philosophy.txt
+why the config builds features from scratch
+.SH SEE ALSO
+.BR structure (7),
+.BR lib (7),
+.BR philosophy (7),
+.BR development (7)

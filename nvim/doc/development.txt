@@ -1,50 +1,31 @@
-DEVELOPMENT(7)                  dotfiles/nvim                DEVELOPMENT(7)
-
 NAME
     development - how to extend this Neovim configuration
 
 SYNOPSIS
-    man -l doc/development.txt
-    :read !man -l doc/development.txt
+    man -l doc/pages/development.txt        read as a man page (roff)
+    :read !man -l doc/pages/development.txt
+    doc/development.txt                     this plain-text mirror
+    doc/reading.txt                         how to read the pages
 
 DESCRIPTION
-    This page is a recipe book for changing the config. The design goal
-    is that removing or adding a feature is a local operation: a
-    feature is one file, plus at most one entry elsewhere. Anything
-    that breaks that rule should be fixed before growing it.
+    This page is a recipe book for changing the config. The design goal is that removing or adding a feature is a local operation: a feature is one file, plus at most one entry elsewhere. Anything that breaks that rule should be fixed before growing it.
 
-    Read kickstart.txt first for the vocabulary (layers, lazy loading,
-    module/lib split).
+    Read kickstart.txt first for the vocabulary (layers, lazy loading, module/lib split).
 
 THE ONE RULE
-    A layer may only require the layers below it: init.lua, then
-    config, plugins, modules and lib. Nothing in lib/ requires upwards.
-    When a change wants to violate the rule, the shape to prefer is:
-    move the domain logic into lib/, let the caller pass the state in,
-    or merge the two layers into one.
+    A layer may only require the layers below it: init.lua, then config, plugins, modules and lib. Nothing in lib/ requires upwards. When a change wants to violate the rule, the shape to prefer is: move the domain logic into lib/, let the caller pass the state in, or merge the two layers into one.
 
 ADDING A PLUGIN, EAGER
     Eager plugins load at startup. Three steps:
 
-        1.  Declare it in lua/config/pack.lua with a `src` URL and a
-            short comment above it explaining what it is. If it needs a
-            build step, handle the `PackChanged` autocmd in the same
-            file (existing examples: TSUpdate for treesitter, make
-            install_jsregexp for LuaSnip).
-        2.  Create lua/plugins/<name>.lua, its adapter file, starting
-            with the standard header (see documentation.txt).
-        3.  Register the module in the load list of
-            lua/plugins/init.lua, in dependency order (e.g. fzf before
-            markdown). The list loads each module inside pcall, so a
-            broken one notifies instead of aborting startup.
+        1.  Declare it in lua/config/pack.lua with a `src` URL and a short comment above it explaining what it is. If it needs a build step, handle the `PackChanged` autocmd in the same file (existing examples: `TSUpdate` for treesitter, `make install_jsregexp` for LuaSnip).
+        2.  Create lua/plugins/<name>.lua, its adapter file, starting with the standard header (see documentation.txt).
+        3.  Register the module in the load list of lua/plugins/init.lua, in dependency order (e.g. fzf before markdown). The list loads each module inside pcall, so a broken one notifies instead of aborting startup.
 
-    Removing an eager plugin is the same list backwards: delete the
-    adapter file, its pack.lua entry, its init.lua entry, and its
-    keymaps if they live in the adapter.
+    Removing an eager plugin is the same list backwards: delete the adapter file, its pack.lua entry, its init.lua entry, and its keymaps if they live in the adapter.
 
 ADDING A PLUGIN, LAZY
-    Use lazy loading when the plugin is only useful for specific
-    filetypes and its plugin/ scripts are heavy on startup:
+    Use lazy loading when the plugin is only useful for specific filetypes and its plugin/ scripts are heavy on startup:
 
         1.  Create lua/plugins/<name>.lua.
         2.  At the bottom of the file declare it through lib.lazy:
@@ -56,119 +37,69 @@ ADDING A PLUGIN, LAZY
                     after = function() ... end,      -- after :packadd
                 }
 
-            Globals the plugin reads while loading go into `configure`;
-            anything that needs the plugin already loaded goes into
-            `after`. The plugin name is derived from `src` and must
-            match the directory vim.pack installs.
-        3.  Nothing else: no pack.lua entry, no init.lua entry. The
-            lazy plugin is fully self-declared and disappears with its
-            file.
+            Globals the plugin reads while loading go into `configure`; anything that needs the plugin already loaded goes into `after`. The plugin name is derived from `src` and must match the directory vim.pack installs.
+        3.  Nothing else: no pack.lua entry, no init.lua entry. The lazy plugin is fully self-declared and disappears with its file.
 
-    Caveats, documented in lua/lib/lazy.lua: a filetype whose detection
-    depends on a global owned by the plugin must set that global at the
-    top level of the adapter file, because the plugin is not on the
-    runtimepath at detection time. Buffers already open when the
-    adapter runs still trigger the load.
+    Caveats, documented in lua/lib/lazy.lua: a filetype whose detection depends on a global owned by the plugin must set that global at the top level of the adapter file, because the plugin is not on the runtimepath at detection time. Buffers already open when the adapter runs still trigger the load.
 
 ADDING A LANGUAGE SERVER
-    One module per server under lua/language/servers/<name>.lua,
-    following the UserLspServerModule contract in lua/language/types.lua:
+    One module per server under lua/language/servers/<name>.lua, following the UserLspServerModule contract in lua/language/types.lua:
 
-        - a `config` table, passed to vim.lsp.config(name, config);
-        - an optional `on_attach(client, bufnr)` hook, run by the
-          LspAttach autocmd in lua/language/init.lua when the client
-          attaches.
+        - a `config` table, passed to `vim.lsp.config(name, config)`;
+        - an optional `on_attach(client, bufnr)` hook, run by the LspAttach autocmd in lua/language/init.lua when the client attaches.
 
     Then:
 
-        1.  Add the server name to the `modules` list in
-            lua/language/init.lua. The order is meaningless.
-        2.  Mason installs it at startup (scheduled). To install
-            manually: :MasonInstall <server>.
-        3.  If the server is only ever started elsewhere (like jdtls),
-            put it in `install_only` instead; the LSP toggle leaves
-            those alone.
-        4.  A malformed module fails startup with the server's name,
-            thanks to the shape validation in types.lua; keep the
-            contract exact.
+        1.  Add the server name to the `modules` list in lua/language/init.lua. The order is meaningless.
+        2.  Mason installs it at startup (scheduled). To install manually: `:MasonInstall <server>`.
+        3.  If the server is only ever started elsewhere (like jdtls), put it in `install_only` instead; the LSP toggle leaves those alone.
+        4.  A malformed module fails startup with the server's name, thanks to the shape validation in types.lua; keep the contract exact.
 
-    Formatting stays out of the servers: conform owns it. Diagnostics
-    display is global and starts off; servers only feed results.
+    Formatting stays out of the servers: conform owns it. Diagnostics display is global and starts off; servers only feed results.
 
 ADDING A FORMATTER OR LINTER
-    Formatters: add an entry to `formatters_by_ft` in
-    lua/plugins/formatting.lua, ordered as the chain should run.
-    Formatter-specific flags go in the per-formatter config below the
-    table. Document any executable that Mason cannot install in that
-    file's header, with the pacman/npm line, like the others.
+    Formatters: add an entry to `formatters_by_ft` in lua/plugins/formatting.lua, ordered as the chain should run. Formatter-specific flags go in the per-formatter config below the table. Document any executable that Mason cannot install in that file's header, with the pacman/npm line, like the others.
 
-    Linters: nvim-lint (lua/language/lint.lua) runs command-line tools
-    on demand and attaches plain diagnostics. Python/ruff is the
-    current example and the template: a lint table entry, an autocmd,
-    and its own toggle.
+    Linters: nvim-lint (lua/language/lint.lua) runs command-line tools on demand and attaches plain diagnostics. Python/ruff is the current example and the template: a lint table entry, an autocmd, and its own toggle.
 
 ADDING SNIPPETS
-    One file per filetype in lua/snippets/<ft>.lua, returning the
-    snippets. Shared helpers and filetype-adaptive snippets live in
-    lua/snippets/common.lua. Register the new filetype (and its
-    inheritances) in lua/plugins/completions.lua, which loads snippet
-    modules lazily by filetype.
+    One file per filetype in lua/snippets/<ft>.lua, returning the snippets. Shared helpers and filetype-adaptive snippets live in lua/snippets/common.lua. Register the new filetype (and its inheritances) in lua/plugins/completions.lua, which loads snippet modules lazily by filetype.
 
 ADDING FILETYPE OPTIONS
-    Buffer-local options for one filetype go in after/ftplugin/<ft>.lua,
-    applied after the runtime ftplugins, so overrides stick. Rules:
+    Buffer-local options for one filetype go in after/ftplugin/<ft>.lua, applied after the runtime ftplugins, so overrides stick. Rules:
 
-        - Keep it options-first. If a mapping is needed and it is
-          shared, prefer a small lib/ helper; a feature module that
-          needs commands or autocmds belongs in lua/modules/.
-        - Logic needed by two or more filetypes goes in lib/, never
-          copy-pasted between ftplugins.
-        - Document style decisions by name: "PEP 8 style",
-          "gofmt style", with a See: to the formatter and the server
-          involved.
+        - Keep it options-first. If a mapping is needed and it is shared, prefer a small lib/ helper; a feature module that needs commands or autocmds belongs in lua/modules/.
+        - Logic needed by two or more filetypes goes in lib/, never copy-pasted between ftplugins.
+        - Document style decisions by name: "PEP 8 style", "gofmt style", with a See: to the formatter and the server involved.
 
 ADDING KEYMAPS
-    New keymaps go in the matching theme file under
-    lua/config/keymaps/, following its existing <leader> groups; a
-    keymap that only makes sense for one plugin lives in that plugin's
-    adapter file. Note that keymaps are deliberately not documented in
-    doc/: the desc field of the mapping is its documentation (see
-    documentation.txt, KEYMAPS).
+    New keymaps go in the matching theme file under lua/config/keymaps/, following its existing `<leader>` groups; a keymap that only makes sense for one plugin lives in that plugin's adapter file. Note that keymaps are deliberately not documented in doc/: the desc field of the mapping is its documentation (see documentation.txt, KEYMAPS).
 
 ADDING A MODULE
-    Decide the layer first, by the binary criterion: something that
-    exposes commands, autocmds or keymaps is a module (lua/modules/);
-    anything else is a lib helper (lua/lib/).
+    Decide the layer first, by the binary criterion: something that exposes commands, autocmds or keymaps is a module (lua/modules/); anything else is a lib helper (lua/lib/).
 
     A module:
 
         - opens with the standard header;
-        - exposes setup() when it must register commands, autocmds or
-          keymaps;
-        - owns its own state and exposes it only through its API -
-          state is never written from another file;
-        - gets called from init.lua (feature at startup, like
-          statusline and scratch) or from the file that triggers it.
+        - exposes setup() when it must register commands, autocmds or keymaps;
+        - owns its own state and exposes it only through its API - state is never written from another file;
+        - gets called from init.lua (feature at startup, like statusline and scratch) or from the file that triggers it.
 
 ADDING A COLORSCHEME
-    Custom schemes live in colors/<name>.lua and are activated with
-    `vim.cmd.colorscheme`. Third-party schemes are installed from
-    pack.lua, as plain src entries.
+    Custom schemes live in colors/<name>.lua and are activated with `vim.cmd.colorscheme`. Third-party schemes are installed from pack.lua, as plain src entries.
 
 VERSIONING AND LOCK
-    Plugin revisions are pinned by nvim-pack-lock.json, written by
-    vim.pack. Treat it as generated: update plugins through
-    :PackUpdate, not by hand. Neovim 0.12 is the floor; :PackDel and
-    :PackUpdate become built-ins in 0.13, and the user commands exist
-    to keep the same names working across both.
+    Plugin revisions are pinned by nvim-pack-lock.json, written by vim.pack. Treat it as generated: update plugins through `:PackUpdate`, not by hand. Neovim 0.12 is the floor; `:PackDel` and `:PackUpdate` become built-ins in 0.13, and the user commands exist to keep the same names working across both.
 
 FILES
-    doc/kickstart.txt        full guide to the config
-    doc/documentation.txt    the documentation standard
-    doc/development.txt      this page
+    doc/reading.txt           how to read the pages
+    doc/pages/kickstart.txt   full guide to the config
+    doc/pages/structure.txt   the folder structure
+    doc/pages/modules.txt     the modules layer
+    doc/pages/lib.txt         the lib layer
+    doc/pages/philosophy.txt  why the config builds from scratch
+    doc/pages/documentation.txt   the documentation standard
+    doc/pages/development.txt     this page, as a man page (roff)
 
 SEE ALSO
-    man -l doc/kickstart.txt
-    man -l doc/documentation.txt
-
-nvim config                        2026                  DEVELOPMENT(7)
+    kickstart(7), documentation(7), structure(7).

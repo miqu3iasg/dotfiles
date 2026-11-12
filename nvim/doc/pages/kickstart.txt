@@ -1,0 +1,678 @@
+.TH KICKSTART 7 "2026" "nvim config"
+.SH NAME
+kickstart \- guide to this hand-rolled Neovim configuration
+.SH SYNOPSIS
+.nf
+man \-l doc/pages/kickstart.txt
+:read !man \-l doc/pages/kickstart.txt
+.fi
+.SH DESCRIPTION
+.PP
+A hand-rolled Neovim configuration built on the native plugin manager
+(\fBvim.pack\fR), the native LSP stack (\fBvim.lsp.config\fR /
+\fBvim.lsp.enable\fR) and a small set of deliberately chosen plugins.
+There is no distribution and no lazy-loading framework; the one bit of
+lazy loading (heavy filetype-bound plugins) is a few lines in
+\fIlua/lib/lazy.lua\fR. Every module is small and every
+\fBrequire\fR is explicit, which keeps startup around 70\-80 ms.
+.PP
+Keymaps are deliberately not documented here: they change often, and a
+stale keymap list is worse than none. The live source of truth is the
+matching file in \fIlua/config/keymaps/\fR and \fB:map\fR. Everything
+else about the config is described below.
+.SH STARTUP
+.PP
+\fIinit.lua\fR only fixes the load order:
+.TP
+.B 1.
+\fBvim.loader.enable()\fR, \fBvim.deprecate\fR disabled
+.TP
+.B 2.
+config.options \- global editor options
+.TP
+.B 3.
+config.keymaps \- leader keys and keymap modules
+.TP
+.B 4.
+config.autocmds \- global autocmds
+.TP
+.B 5.
+config.commands \- user commands
+.TP
+.B 6.
+modules.statusline \- native statusline
+.TP
+.B 7.
+modules.scratch \- persistent scratch buffer
+.TP
+.B 8.
+config.pack \- vim.pack plugin declarations
+.TP
+.B 9.
+plugins \- one adapter file per plugin suite
+.TP
+.B 10.
+modules.compile \- :Compile / :Recompile
+.TP
+.B 11.
+colorscheme hollow
+.PP
+Nothing else runs at startup. Lazily loaded plugins attach later, when
+the first buffer of a declared filetype appears (see
+.B LAZY LOADING
+below).
+.SH DIRECTORY LAYOUT
+.TP
+.I init.lua
+load order only
+.TP
+.I colors/
+custom colorschemes
+.TP
+.I after/ftplugin/
+buffer-local options per filetype, applied after the runtime
+ftplugins
+.TP
+.I after/queries/
+Tree-sitter query overrides
+.TP
+.I lua/config/
+editor behavior loaded at startup
+.TP
+.I lua/plugins/
+one adapter file per third-party plugin suite
+.TP
+.I lua/modules/
+self-contained components written for this config; each exposes
+setup() and owns its own state
+.TP
+.I lua/lib/
+helpers and domain logic used by other modules; exposes no commands,
+autocmds or keymaps
+.TP
+.I lua/language/
+language server stack; one module per server under
+.I servers/
+.TP
+.I lua/snippets/
+LuaSnip snippets, one file per filetype
+.TP
+.I lua/archived/
+deprecated modules kept off the runtimepath
+.TP
+.I pandoc/
+Pandoc defaults, metadata, profiles and Lua filters
+.TP
+.I resources/
+example external-tool configuration files
+.TP
+.I spell/
+custom spell files
+.TP
+.I nvim-pack-lock.json
+revision lock file written by vim.pack
+.TP
+.I doc/
+man pages: plain-text mirrors (this folder)
+.TP
+.I doc/pages/
+the roff sources rendered by man
+.PP
+The layer rule is binary: a module that exposes commands, autocmds or
+keymaps goes in \fImodules/\fR; anything else goes in \fIlib/\fR. A
+layer may only require the layers below it: \fIinit.lua\fR, then
+\fIconfig\fR, \fIplugins\fR, \fImodules\fR and \fIlib\fR. Nothing in
+\fIlib/\fR requires upwards. See \fIdoc/pages/structure.txt\fR for the full
+tree, \fIdoc/pages/modules.txt\fR for the feature layer and
+\fIdoc/pages/lib.txt\fR for the helpers.
+.SH OPTIONS
+.PP
+Highlights of \fIlua/config/options.lua\fR. The full list is in the
+file itself; each option's help is available with \fB:help 'name'\fR.
+.SS Editing
+.TP
+.B clipboard
+.B unnamedplus: yanks go to the system clipboard
+.TP
+.B expandtab
+4-space indentation by default; vim-sleuth detects the existing
+style of each file
+.TP
+.B undofile
+persistent undo with 10000 levels; because of it,
+.B swapfile
+and
+.B backup
+are off
+.TP
+.B foldmethod
+manual, every fold starts open
+.TP
+.B nrformats
+octal removed, so Ctrl-A on 007 does not increment to 010
+.SS Search
+.PP
+\fBignorecase\fR/\fBsmartcase\fR: case-insensitive unless the pattern
+has uppercase. Ripgrep is used as \fIgrepprg\fR when installed, which
+the project-wide features rely on.
+.SS Display
+.PP
+\fBlist\fR with tabs, trailing spaces, spaces and non-breaking spaces
+marked; \fBscrolloff\fR 4; no number columns; single window borders;
+block cursor everywhere (\fBguicursor\fR); \fBtermguicolors\fR.
+.SS Navigation
+.PP
+\fBpath\fR includes \fB**\fR, making \fB:find\fR and \fBgf\fR
+recursive; \fBswitchbuf\fR uselast, so buffer jumps reuse the window
+that last showed the buffer; splits go right and below.
+.SS Sessions
+.PP
+\fBsessionoptions\fR is fixed here and must match what
+\fImodules/sessions.lua\fR saves and restores.
+.SH AUTOCMDS
+.PP
+Global autocmds live in \fIlua/config/autocmds.lua\fR, grouped per
+concern with named augroups:
+.TP
+.B VimResized
+keep splits evenly sized after a terminal resize
+.TP
+.B TextYankPost
+highlight yanked text
+.TP
+.B FileType
+do not continue comments on new lines
+.TP
+.B FileType
+disable heavy features on big files (see
+\fIlua/lib/bigfile.lua\fR): Treesitter, completion, diagnostics,
+folds and spell go off
+.TP
+.B BufRead
+.env files get dosini highlighting
+.TP
+.B VimEnter
+startup behavior: inside tmux, restore the session of the directory;
+otherwise open the file explorer, also when launched with a single
+directory argument
+.TP
+.B VimLeavePre
+save the session of the current directory, tmux only
+.TP
+.B BufWritePre
+create missing parent directories on save
+.TP
+.B BufReadPost
+jump to the last cursor position, except in git commit buffers
+.TP
+.B BufWritePre
+strip trailing whitespace, skipping special and non-modifiable
+buffers
+.TP
+.B FileType
+utility buffers (help, quickfix, man, undotree, Fugitive views,
+health, ...) are unlisted and close with \fBq\fR or \fB<Esc>\fR;
+listchars are off in them
+.TP
+.B TermOpen
+terminals start in insert mode with a clean UI
+.TP
+.B FileType
+the built-in undotree opens on the far left with a fixed width of 40
+columns
+.SH USER COMMANDS
+.PP
+Global user commands (\fIlua/config/commands.lua\fR):
+.TP
+.B :Setwd
+change the working directory to the current file's directory
+.TP
+.B :FormatEnable
+re-enable autoformat on save
+.TP
+.B :FormatDisable
+disable autoformat on save
+.TP
+.B :PackAdd {repos}
+add plugins to the session, installing the missing ones
+.TP
+.B :PackDel {names}
+delete plugins by name
+.TP
+.B :PackUpdate [names]
+update all plugins, or only the named ones
+.PP
+Buffer-local and module commands:
+.TP
+.B :Compile [cmd]
+run a build command asynchronously into \fB*compilation*\fR; without
+an argument it prompts pre-filled with the default for the filetype
+(see
+.B COMPILATION
+below)
+.TP
+.B :Recompile
+rerun the last command of this directory
+.TP
+.B :CompileInterrupt
+kill the running command of this directory
+.TP
+.B :Scratch
+toggle the scratch buffer
+.TP
+.B :ScratchSplit
+open the scratch in a vertical split
+.TP
+.B :Scratch!
+wipe the scratch buffer
+.TP
+.B :Pandoc [profile]
+export the current buffer (see
+.B PANDOC
+below), buffer-local
+.TP
+.B :PandocPreview
+export on every save and open the result, buffer-local
+.TP
+.B :NotesDraft
+create a quick draft (see
+.B NOTES
+below)
+.TP
+.B :NotesNew
+create a typed note from a template
+.TP
+.B :NotesTemplate
+insert a template into the current note
+.TP
+.B :NotesFiles
+find notes by name
+.TP
+.B :NotesGrep
+search note contents
+.TP
+.B :NotesLast
+reopen the last visited note
+.TP
+.B :NotesOpen
+open the vault folder
+.SH PLUGIN MANAGEMENT
+.PP
+Plugins are managed by Neovim's built-in package manager,
+\fBvim.pack\fR. There is no third-party plugin manager and no lockfile
+tooling beyond the revision file \fInvim-pack-lock.json\fR that
+vim.pack itself writes.
+.PP
+Eager plugins are declared in \fIlua/config/pack.lua\fR with a short
+comment per plugin. Everything they need at install time runs in a
+PackChanged autocmd created in the same file: nvim-treesitter gets
+\fB:TSUpdate\fR and LuaSnip builds \fBjsregexp\fR with
+\fBmake install_jsregexp\fR, which needs a C toolchain and only warns
+on failure. A plugin that needs a build step must be handled there.
+.PP
+Lazy loading is the only indirection in the config, and it is a
+single helper, \fIlua/lib/lazy.lua\fR. A lazy plugin declares itself
+at the bottom of its own adapter file:
+.nf
+.IP
+require("lib.lazy").setup{
+    src = "https://github.com/...",   -- vim.pack source
+    filetypes = { "tex" },            -- load triggers
+    configure = function() ... end,   -- runs before :packadd
+    after = function() ... end,       -- runs after :packadd
+}
+.fi
+.PP
+The plugin is installed at startup but its \fIplugin/\fR scripts only
+run when the first buffer of one of the filetypes appears. Loading
+runs \fIconfigure\fR, then \fB:packadd\fR, then \fIafter\fR, and then
+fires the FileType event again for the triggering buffer, because the
+plugin was not on the runtimepath when the original event ran. All
+lazy plugins are inspectable in one place with \fB:autocmd
+LazyPack\fR.
+.PP
+To update every plugin: \fB:PackUpdate\fR or \fB:lua
+vim.pack.update()\fR.
+.SH THE PLUGIN SET
+.SS File explorer
+.PP
+canola.nvim, a fork of oil.nvim: the filesystem is edited as a normal
+buffer, replacing netrw. Deletions go to the trash and simple edits
+are applied without confirmation. Entries open with an
+extension-specific viewer (zathura, imv, mpv), falling back to
+xdg-open. See \fIlua/plugins/oil.lua\fR.
+.SS Tree-sitter
+.PP
+nvim-treesitter for syntax-aware parsing and highlighting, plus
+nvim-treesitter-textobjects for motions and selections. Parsers are
+requested for automatic installation in
+\fIlua/plugins/treesitter.lua\fR (max 4 concurrent jobs); highlighting
+per filetype is activated separately. TeX buffers keep Vim's legacy
+syntax engine because VimTeX depends on its highlight groups. Needs
+the tree-sitter CLI on PATH.
+.SS Completion and snippets
+.PP
+No completion plugin: native LSP completion plus LuaSnip. The menu's
+only source is the LSP; LuaSnip's own snippets are expanded by
+trigger, autosnippet or snippet keymaps. The menu opens automatically
+only on the filetypes listed in \fITRIGGER_FILETYPES\fR
+(\fIlua/plugins/completions.lua\fR); elsewhere completion is manual
+and the omnifunc still works. Snippet definitions live in
+\fIlua/snippets/\fR, one file per filetype, loaded lazily; shared
+helpers are in \fIlua/snippets/common.lua\fR.
+.SS Formatting and linting
+.PP
+conform.nvim runs external formatters on demand and on save, with a
+chain per filetype in \fIlua/plugins/formatting.lua\fR: stylua (Lua),
+goimports-reviser + golines (Go), clang-format (C/C++), astyle (Java),
+ruff (Python), prettierd (web), yamlfmt, taplo, sql-formatter,
+latexindent, typstyle, asmfmt and others, with trim_whitespace and
+trim_newlines as the fallback chain for every filetype. The on/off
+state lives in \fIlib/autoformat.lua\fR with global and buffer-local
+scopes (\fB:FormatEnable\fR, \fB:FormatDisable\fR). External linters
+run through nvim-lint (\fIlua/language/lint.lua\fR); Python is linted
+with ruff, which is the same tool conform formats with.
+.SS Language servers
+.PP
+See
+.B LANGUAGE SERVERS
+below.
+.SS Fuzzy finder
+.PP
+fzf-lua wraps fzf for files, buffers, grep, diagnostics, help and LSP
+results. Needs \fBfzf\fR, \fBgrep\fR, \fBripgrep\fR and \fBfd\fR.
+\fIlib/substitute\fR also calls ripgrep directly for project-wide
+substitutions.
+.SS Git
+.PP
+vim-fugitive for repository operations (staging, committing, diffing,
+blaming), vim-rhubarb so \fB:GBrowse\fR builds GitHub URLs, and
+gitsigns.nvim for hunk-level markers, staging and blame. fzf-lua-based
+browsing is registered only when fzf-lua is available. Destructive
+remote operations are left to the terminal. See
+\fIlua/plugins/git.lua\fR.
+.SS Markdown and notes
+.PP
+obsidian.nvim for wikilinks, completion and vault features;
+img-clip.nvim pastes clipboard images into files. The note creation
+and search workflow is a config module, see
+.B NOTES
+below.
+.SS LaTeX
+.PP
+VimTeX, loaded lazily on the first tex buffer: compilation, PDF viewer
+sync, motions, folding, table of contents, and a hook that copies the
+compiled PDF to \fIexports/\fR. Needs a TeX Live installation and a
+SyncTeX viewer (zathura).
+.SS Typst
+.PP
+tinymist, through the LSP stack; PDF export needs the \fBtypst\fR CLI
+and formatting needs \fBtypstyle\fR.
+.SS Lisp
+.PP
+Conjure, loaded lazily for Scheme, Common Lisp, Racket and Clojure,
+configured for MIT Scheme as the REPL.
+.SS Small quality-of-life plugins
+.PP
+\fIlua/plugins/unnecessary-shit.lua\fR: mini.nvim (surround, pairs,
+icons and other small modules), vim-tmux-navigator (splits and tmux
+panes share one navigation, the tmux side needs the matching plugin),
+nvim-colorizer.lua (inline color preview), flash.nvim (label-based
+jumps), vim-sleuth (indentation detection), markdown-preview.nvim
+(browser rendering, used to read documentation with mermaid
+diagrams), lazydev.nvim (Neovim API types for lua_ls).
+.SS Colorschemes
+.PP
+Custom colorschemes live in \fIcolors/\fR: hollow (the default),
+brightburn, classic, artifact, enfocadomod and insanity. Extra
+third-party schemes (fogbell, eyes.nvim, black-metal,
+gruber-darker-renaissance) are installed from pack.lua.
+.SH LANGUAGE SERVERS
+.PP
+The stack is in \fIlua/language/\fR. One module per server under
+\fIservers/\fR:
+.PP
+clangd (C/C++), cssls, emmet_language_server, eslint, gopls (Go),
+html, lua_ls (with lazydev.nvim), marksman (Markdown), pyright
+(Python), tailwindcss, texlab (LaTeX), tinymist (Typst) and vtsls
+(TypeScript/JavaScript).
+.PP
+\fIlua/language/init.lua\fR holds the shared setup: mason.nvim
+installs the servers (scheduled after startup, automatic_enable off),
+the shape of each module is validated (a malformed module becomes a
+startup error instead of a broken attach), each config is passed to
+\fBvim.lsp.config\fR, and one LspAttach autocmd sets the
+buffer-local LSP behavior. Most native LSP mappings are kept as-is; a
+few are replaced by fzf-lua pickers.
+.PP
+Server modules follow the \fIUserLspServerModule\fR contract in
+\fIlua/language/types.lua\fR: a \fIconfig\fR table for
+vim.lsp.config and an optional \fIon_attach(client, bufnr)\fR hook.
+.PP
+Java is special: jdtls is installed through Mason but started by its
+own module, \fIlua/language/servers/jdtls.lua\fR, never by this
+stack, so the LSP toggle leaves it alone.
+.PP
+Other stack-wide decisions:
+.IP \(bu 2
+dynamic workspace file watching is disabled, so servers do not
+register thousands of watchers in large projects;
+.IP \(bu 2
+formatting never goes through the servers, only through conform;
+.IP \(bu 2
+diagnostics start globally disabled: no underlines or signs until the
+display is toggled on;
+.IP \(bu 2
+the whole stack can be enabled/disabled at once (clients are stopped,
+not just detached).
+.PP
+Python is also linted by ruff through nvim-lint, outside the LSP
+stack and with its own toggle (\fIlua/language/lint.lua\fR).
+.SH COMPILATION
+.PP
+\fImodules/compile.lua\fR provides an Emacs-like \fB:Compile\fR. It
+runs a build command asynchronously through \fBsh \-c\fR and streams
+its output into a \fB*compilation*\fR buffer in a bottom 25-line
+split; the buffer gets the \fIqf\fR filetype and shares the
+utility-buffer close behavior. When the command exits nonzero, the
+output is parsed into the quickfix list; gcc/clang, javac and Python
+tracebacks are parsed, anything else still shows in the buffer.
+.PP
+State is per working directory: starting a new compile in the same
+directory kills the previous process, \fB:Recompile\fR reruns the
+last command, \fB:CompileInterrupt\fR kills the current one. Without
+an argument, \fB:Compile\fR prompts pre-filled with the filetype
+default (\fBmake \-k\fR, \fBpython %\fR, \fBcc \-o %:r.out %\fR,
+\fBgo run %\fR, ...).
+.SH SESSIONS
+.PP
+\fImodules/sessions.lua\fR is a minimal, fully automatic,
+per-directory session manager built on \fB:mksession\fR and
+\fB:source\fR, active only inside tmux. On VimEnter with no file
+arguments it restores the session of the directory; on exit it saves
+it. Files live in \fIstdpath("state")/sessions/\fR, one per cwd (the
+path is flattened into a single file name).
+.PP
+A save happens only when at least one real file buffer is open, so
+opening and closing Neovim on the explorer alone never overwrites an
+existing session. gitcommit/gitrebase buffers are ignored and Oil
+buffers are removed before saving. \fBsessionoptions\fR is set once
+in options.lua and must stay in sync with this module.
+.SH SCRATCH BUFFER
+.PP
+\fImodules/scratch.lua\fR keeps a single persistent scratch buffer
+for throwaway notes and pastes. Toggling replaces the buffer of the
+current window (only when it is a regular file buffer; special
+buffers like Oil, terminals and Fugitive views get a vertical split
+instead), and leaving it restores the previous buffer, so the window
+layout never changes. The buffer is hidden, not wiped, and lasts
+until the session ends or \fB:Scratch!\fR deletes it. Inside the
+scratch, \fBq\fR and \fB<Esc>\fR leave it.
+.SH PANDOC
+.PP
+\fImodules/pandoc.lua\fR exports the current Markdown buffer to PDF,
+EPUB, DOCX or HTML by running pandoc asynchronously, so the editor
+never blocks. The buffer is piped through stdin, so unsaved changes
+are exported too. Results go to the exports folder (see
+\fIlib/exports.lua\fR) and open in zathura (PDF/EPUB) or xdg-open
+(DOCX/HTML).
+.PP
+Preview mode builds and opens the document once, then rebuilds it on
+every save; zathura reloads by itself. Each export loads, in order:
+the pipeline in \fIpandoc/defaults.yaml\fR, an optional
+\fIdefaults.yaml\fR in the note's folder or a parent,
+\fIpandoc/metadata.yaml\fR (default layout and language), and a
+profile from \fIpandoc/profiles/\fR when one is named. Filters in
+\fIpandoc/filters/\fR handle wikilinks, metadata blocks and citations
+rendered as plain text; \fIprofiles/abnt.yaml\fR covers ABNT-styled
+documents. Needs \fBpandoc-cli\fR and \fBzathura\fR.
+.SH NOTES
+.PP
+\fImodules/notes.lua\fR is a flat vault of Markdown notes managed
+from Neovim: quick drafts and typed notes from user-maintained
+templates, template insertion into an existing note, search by name
+and by content, and reopening the last note. The vault is just a
+folder: \fB$ARCANUM_DIR\fR, or \fI~/dev/arcanum\fR when unset, and it
+must already exist. Notes live in the vault root, templates in
+\fI_templates/\fR, and pasted images in \fIattachments/\fR.
+.PP
+File names follow \fITYPE\-YYYYMMDD\-HHmmss[\-SLUG].md\fR, defined by
+the vault's own README. Placeholders available to templates:
+\fB{{title}}\fR, \fB{{date}}\fR, \fB{{id}}\fR, \fB{{adr_number}}\fR.
+Creation is bound to the vault, but template insertion works on any
+Markdown file on disk.
+.SH MISC MODULES
+.TP
+.I statusline
+native \fIstatusline\fR, no plugin. The active window shows editor
+state, position, search and selection info, git branch, diagnostics
+and macro recording; inactive windows get a reduced version. Costly
+pieces are cached: mode in \fBvim.g.sl_mode\fR, branch in
+\fBvim.b.git_branch\fR (looked up asynchronously, cached per
+directory), file size in \fBvim.b.sl_file_size\fR (read from disk, so
+it is stale until save).
+.TP
+.I window_zoom
+zooms the focused window by showing it as the only window of a new
+tab, the original layout staying intact in its own tab. Toggling
+again closes the zoom tab. The state is the tabpage-local
+\fBt:zoomed\fR, which the statusline reads, and closing the tab by
+any other means also ends the zoom.
+.TP
+.I close_view
+closes Fugitive views (index, status, blame, commit buffers) without
+ever quitting Neovim; closing a commit buffer discards it and aborts
+the commit.
+.TP
+.I markdown_lists
+native list editing for Markdown buffers: cycling, promoting and
+demoting list items on the current line or selection, with formatter
+helpers that keep markers and indentation as written. The bullet of
+new items is set with \fBvim.g.markdown_list_bullet\fR and the
+delimiter with \fBvim.g.markdown_list_delimiter\fR (buffer-local
+versions take precedence).
+.TP
+.I asm_align
+column alignment for assembly buffers, a direct port of the layout
+asmfmt produces: tabs for indentation, spaces for alignment,
+per-block operand columns and end-of-line comments aligned to one
+column. Lines are never added, removed or reordered; structural
+changes are left to asmfmt, which conform runs on format.
+.SH LIB
+.PP
+\fIlua/lib/\fR holds everything that exists to be required by other
+modules:
+.TP
+.I buffers
+inspect, save and delete buffers without breaking the window layout;
+deleting a buffer keeps its windows, which switch to the most
+recently used buffer
+.TP
+.I bigfile
+decides whether a buffer is big (1.5 MiB size or 1000-character
+lines, sampled over 200 lines); the verdict is cached in
+\fBvim.b.bigfile\fR
+.TP
+.I lazy
+the lazy loader (see
+.B PLUGIN MANAGEMENT
+above)
+.TP
+.I autoformat
+single source of truth of the autoformat state, with global and
+buffer-local scopes
+.TP
+.I substitute
+pre-fills \fB:substitute\fR or a project-wide substitution on the
+command line; needs ripgrep
+.TP
+.I exports
+single source of truth for export paths, shared by pandoc, vimtex and
+tinymist: documents go to \fI<root>/exports/<reldir>/\fR and latexmk
+byproducts to \fI<root>/.build/<reldir>/\fR; <root> is found through
+markers or forced with \fBvim.g.exports_root\fR
+.TP
+.I system
+OS name detection
+.SH FILETYPE OVERRIDES
+.PP
+\fIafter/ftplugin/<ft>.lua\fR holds buffer-local options for each
+filetype, applied after the runtime ftplugins: PEP 8 for Python,
+gofmt style for Go, per-language comment and fold settings, toolchain
+commands, and so on. Logic shared by two or more filetypes goes in
+\fIlib/\fR instead. \fIafter/queries/\fR holds Tree-sitter query
+overrides, such as Markdown text objects.
+.SH REQUIREMENTS
+.PP
+Neovim 0.12 or newer. Everything else is per feature and documented
+in the header of the file that uses it. On Arch Linux:
+.nf
+.IP
+sudo pacman \-S git tmux fzf ripgrep fd nodejs npm jdk21\-openjdk \\
+  clang go typst typstyle texlive\-basic texlive\-latex \\
+  texlive\-latexextra texlive\-binextra pandoc\-cli zathura \\
+  zathura\-pdf\-mupdf
+.fi
+.PP
+Language servers, formatters and linters are installed through Mason
+(\fB:MasonInstall ...\fR), and the requests happen automatically at
+startup for the servers declared in the LSP stack. Notes: LuaSnip
+needs a C toolchain at install time; jdtls needs Python 3;
+Tree-sitter needs the tree-sitter CLI.
+.SH FILES
+.TP
+.I doc/reading.txt
+how to read the pages
+.TP
+.I README.md
+the repo overview
+.TP
+.I doc/pages/kickstart.txt
+this page
+.TP
+.I doc/pages/structure.txt
+the folder structure in depth
+.TP
+.I doc/pages/modules.txt
+the lua/modules/ layer
+.TP
+.I doc/pages/lib.txt
+the lua/lib/ layer
+.TP
+.I doc/pages/philosophy.txt
+why the config builds from scratch
+.TP
+.I doc/pages/documentation.txt
+the documentation standard of this config
+.TP
+.I doc/pages/development.txt
+how to extend the config
+.SH SEE ALSO
+.BR structure (7),
+.BR modules (7),
+.BR lib (7),
+.BR philosophy (7),
+.BR documentation (7),
+.BR development (7)
+.PP
+Also \fB:help vim.pack\fR, \fB:help lsp\fR, \fB:help ftplugin\fR.
