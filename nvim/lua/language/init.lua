@@ -82,8 +82,6 @@ local install_only = { "jdtls" }
 ---@type table<string, UserLspServerModule>
 local servers = {}
 
--- Installation
-
 require("mason").setup()
 
 -- Only used to install servers, so it can wait until startup is done.
@@ -93,8 +91,6 @@ vim.schedule(function()
 		ensure_installed = vim.list_extend(vim.deepcopy(modules), install_only),
 	})
 end)
-
--- Server configuration
 
 -- Disabling dynamic file watching avoids servers registering thousands of
 -- watchers in large projects.
@@ -109,8 +105,6 @@ for _, name in ipairs(modules) do
 	vim.lsp.config(name, mod.config)
 	servers[name] = mod
 end
-
--- Attach
 
 -- Buffer-local mappings set once a server attaches. The native LSP and
 -- diagnostic mappings, such as hover, rename and diagnostic navigation, are
@@ -175,8 +169,6 @@ vim.api.nvim_create_autocmd("LspAttach", {
 	end,
 })
 
--- Diagnostics
-
 vim.diagnostic.config({
 	virtual_text = false,
 	severity_sort = true,
@@ -191,8 +183,6 @@ vim.diagnostic.config({
 -- put on screen (see the server toggle below).
 -- See: lua/config/keymaps/misc.lua
 vim.diagnostic.enable(false)
-
--- Toggle
 
 vim.lsp.enable(modules)
 
@@ -230,6 +220,6 @@ local function toggle_lsp(enable)
 	return lsp_enabled
 end
 
-vim.keymap.set("n", "<leader>ul", function()
+vim.keymap.set("n", "<leader>uls", function()
 	toggle_lsp()
 end, { desc = "Toggle LSP" })

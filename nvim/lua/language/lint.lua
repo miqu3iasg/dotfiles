@@ -76,6 +76,6 @@ vim.api.nvim_create_autocmd({ "BufWritePost", "FileType" }, {
 	callback = try_lint,
 })
 
-vim.keymap.set("n", "<leader>uL", function()
+vim.keymap.set("n", "<leader>uli", function()
 	toggle_lint()
 end, { desc = "Toggle linting" })
