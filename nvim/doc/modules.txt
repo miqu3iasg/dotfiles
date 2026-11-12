@@ -59,11 +59,12 @@ THE MODULES
 
     notes
         A flat vault of Markdown notes managed from Neovim: quick drafts and typed notes from user-maintained templates,
-        template insertion, search by name and content, reopening the last note. The vault is just a folder:
-        $ARCANUM_DIR, or ~/dev/arcanum when unset. File names follow the vault's TYPE-YYYYMMDD-HHmmss[-SLUG].md rule.
-        The largest module in the config, and a good example of state ownership: the template list, the name parser and
-        the history all live here. API: M.vault, M.create, M.new_draft, M.new_note, M.template, M.find_files, M.grep,
-        M.last, M.open_vault, M.setup. Commands: :NotesDraft, :NotesNew, :NotesTemplate, :NotesFiles, :NotesGrep,
+        template insertion, daily notes (daily-YYYYMMDD.md, open-or-create via M.daily / :NotesDaily / <leader>oa),
+        search by name and content, reopening the last note. The vault is just a folder: $ARCANUM_DIR, or ~/dev/arcanum
+        when unset. File names follow the vault's TYPE-YYYYMMDD-HHmmss[-SLUG].md rule. The largest module in the
+        config, and a good example of state ownership: the template list, the name parser and the history all live
+        here. API: M.vault, M.create, M.new_draft, M.new_note, M.daily, M.template, M.find_files, M.grep, M.last,
+        M.open_vault, M.setup. Commands: :NotesDraft, :NotesNew, :NotesDaily, :NotesTemplate, :NotesFiles, :NotesGrep,
         :NotesLast, :NotesOpen.
 
     window_zoom

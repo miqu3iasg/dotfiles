@@ -131,6 +131,7 @@ USER COMMANDS
         :PandocPreview         export on every save and open the result, buffer-local
         :NotesDraft            create a quick draft (see NOTES)
         :NotesNew              create a typed note from a template
+        :NotesDaily            open today's daily note, created when missing
         :NotesTemplate         insert a template into the current note
         :NotesFiles            find notes by name
         :NotesGrep             search note contents
@@ -315,8 +316,12 @@ NOTES
     Notes live in the vault root, templates in _templates/, and pasted images in attachments/.
 
     File names follow TYPE-YYYYMMDD-HHmmss[-SLUG].md, defined by the vault's own README. Placeholders available to
-    templates: {{title}}, {{date}}, {{id}}, {{adr_number}}. Creation is bound to the vault, but template insertion works
-    on any Markdown file on disk.
+    templates: {{title}}, {{date}}, {{date:FMT}} (a moment-like pattern, e.g. {{date:DD/MM/YYYY}}), {{id}},
+    {{adr_number}}. Creation is bound to the vault, but template insertion works on any Markdown file on disk.
+
+    The daily note of a day is daily-YYYYMMDD.md, one per day: <leader>oa (or :NotesDaily) opens today's note and
+    creates it from _templates/daily.md when missing, open-or-create - an existing day is never overwritten. The CLI
+    companion is `nt daily [OFFSET|DATE]`. See the vault README for the daily contract.
 
 MISC MODULES
     statusline       native 'statusline', no plugin. The active window shows editor state, position, search and

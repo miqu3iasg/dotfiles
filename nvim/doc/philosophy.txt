@@ -28,8 +28,8 @@ WHY BUILD FROM SCRATCH
         parts of :make we use, none of the parts we don't.
         - A lazy loader of about 150 lines in lib/lazy.lua, instead of a plugin-loading framework: filetype triggers,
         configure/after hooks, one autocmd, done.
-        - A notes module that enforces the vault's own file naming (TYPE-YYYYMMDD-HHmmss-SLUG.md) instead of hoping a
-        plugin grows it.
+        - A notes module that enforces the vault's own file naming (TYPE-YYYYMMDD-HHmmss-SLUG.md and the daily
+        daily-YYYYMMDD.md) instead of hoping a plugin grows it.
         - Markdown list editing, assembly alignment, Fugitive view closing: small, sharp editors' conveniences that no
         plugin did the way the workflow wanted.
 

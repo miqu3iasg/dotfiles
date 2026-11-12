@@ -4,9 +4,10 @@
 #
 # Single-file Zsh command line for the Arcanum vault, a flat Markdown vault of
 # software-development notes. It captures drafts, creates typed notes from
-# user-maintained templates, and lists, searches, renames, retypes and audits
-# them. Creating a note also opens it in the editor. The tool does not depend
-# on Neovim or on any of its plugins.
+# user-maintained templates, opens the daily note of a day (nt daily), and
+# lists, searches, renames, retypes and audits notes. Creating a note also
+# opens it in the editor. The tool does not depend on Neovim or on any of its
+# plugins.
 #
 # The Neovim integration (lua/modules/notes.lua) and this script implement the
 # same contract, documented in the vault's README.md: types, file names, slugs,
