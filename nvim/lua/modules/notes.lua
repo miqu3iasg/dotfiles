@@ -216,10 +216,32 @@ function M.slugify(title)
 	return s
 end
 
+---True for a valid calendar date, leap years included.
+---@param y integer
+---@param m integer
+---@param d integer
+---@return boolean
+local function valid_date(y, m, d)
+	local dm = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 }
+	if y % 4 == 0 and (y % 100 ~= 0 or y % 400 == 0) then
+		dm[2] = 29
+	end
+	return m >= 1 and m <= 12 and d >= 1 and d <= dm[m]
+end
+
 ---Parse a note file name. Returns nil when it does not follow the convention.
 ---@param name string
 ---@return { type: string, ts: string, slug: string }?
 function M.parse_name(name)
+	local compact = name:match("^daily%-(%d%d%d%d%d%d%d%d)%.md$")
+	if compact then
+		local y, m, d = compact:sub(1, 4) + 0, compact:sub(5, 6) + 0, compact:sub(7, 8) + 0
+		if not valid_date(y, m, d) then
+			return nil
+		end
+		-- Midnight places the daily after the typed notes of its own day.
+		return { type = "daily", ts = compact .. "-000000", slug = "" }
+	end
 	local type_, date, time, rest = name:match("^(%a+)%-(%d%d%d%d%d%d%d%d)%-(%d%d%d%d%d%d)(.*)%.md$")
 	if not type_ or (type_ ~= "draft" and not TYPE_SET[type_]) then
 		return nil
@@ -704,6 +726,88 @@ local function open(path)
 	vim.cmd.edit(vim.fn.fnameescape(path))
 end
 
+-- Daily notes
+--
+-- The daily note of a day is `daily-YYYYMMDD.md`, one per day, defined by the
+-- vault's README. Opening it is open-or-create: the first open of a day
+-- creates the note from the `daily` template and every later one just opens
+-- the file. The template feeds on the regular `{{date}}` (creation time) and
+-- on two creator variables, `previous_note` and `next_note`, the wikilinks of
+-- the neighbouring days. Those links may stay broken until the notes exist.
+
+---File name and compact date of the daily note of `offset` days from today.
+---The arithmetic goes through noon so that DST shifts cannot move the day.
+---@param offset? integer
+---@return string name `daily-YYYYMMDD.md`
+---@return string compact `YYYYMMDD`
+local function daily_name(offset)
+	local off = offset or 0
+	local today = os.date("*t")
+	---@cast today table
+	local t = os.time({
+		year = today.year,
+		month = today.month,
+		day = today.day,
+		hour = 12,
+		min = 0,
+		sec = 0,
+	})
+	local d = os.date("*t", t + off * 86400)
+	---@cast d table
+	local compact = ("%04d%02d%02d"):format(d.year, d.month, d.day)
+	return "daily-" .. compact .. ".md", compact
+end
+
+---Open the daily note of `offset` days from today, creating it from the
+---`daily` template when it does not exist. An existing note is never
+---touched. Returns the path, or nil and a message when the vault or the
+---template is missing.
+---@param offset? integer
+---@return string? path
+---@return string? err
+function M.daily(offset)
+	local dir = require_vault()
+	if not dir then
+		return nil, "vault not found"
+	end
+	local name = daily_name(offset)
+	local path = dir .. "/" .. name
+	if uv.fs_stat(path) then
+		open(path)
+		return path
+	end
+	local template, err = read_template("daily")
+	if not template then
+		notify(err --[[@as string]], vim.log.levels.ERROR)
+		return nil, err
+	end
+	local _, iso = now()
+	local prev = select(2, daily_name((offset or 0) - 1))
+	local next_ = select(2, daily_name((offset or 0) + 1))
+	local content = ensure_date(
+		render(template, {
+			date = iso,
+			vars = {
+				previous_note = "[[daily-" .. prev .. "]]",
+				next_note = "[[daily-" .. next_ .. "]]",
+			},
+		}),
+		iso
+	)
+	local ok, werr = write_exclusive(path, content)
+	if not ok then
+		if werr and werr:find("EEXIST", 1, true) then
+			-- Another session created it first; open theirs.
+			open(path)
+			return path
+		end
+		notify("Could not create " .. path .. ": " .. tostring(werr), vim.log.levels.ERROR)
+		return nil, werr
+	end
+	open(path)
+	return path
+end
+
 ---Run `on_choice` with the item chosen in fzf-lua, or in `vim.ui.select` when
 ---fzf-lua is missing. Cancelling calls nothing.
 ---@param items string[]
@@ -1012,6 +1116,9 @@ function M.setup()
 	local cmd = vim.api.nvim_create_user_command
 	cmd("NotesDraft", M.new_draft, { desc = "Notes: quick draft" })
 	cmd("NotesNew", M.new_note, { desc = "Notes: new note (pick type and title)" })
+	cmd("NotesDaily", function()
+		M.daily()
+	end, { desc = "Notes: open today's daily note" })
 	cmd("NotesTemplate", M.template, { desc = "Notes: insert template into the current note" })
 	cmd("NotesFiles", M.find_files, { desc = "Notes: find notes by name" })
 	cmd("NotesGrep", M.grep, { desc = "Notes: search note contents" })
