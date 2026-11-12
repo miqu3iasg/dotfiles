@@ -619,19 +619,43 @@ _nt_yaml_scalar() {
 	return 0
 }
 
+# Formats an epoch with a moment-like pattern into REPLY. Supported tokens:
+# YYYY YY MM DD HH mm ss; every other character is copied. The tokens run
+# longest first and the strftime outputs are digits, so one pass per token
+# can never feed another one.
+_nt_format_date() {
+	local f=$1 t=${2:-$EPOCHSECONDS} s
+	local -a toks=(YYYY YY MM DD HH mm ss)
+	local -a fmts=(%Y %y %m %d %H %M %S)
+	local -i i
+	for (( i = 1; i <= ${#toks}; i++ )); do
+		strftime -s s $fmts[i] $t
+		f=${f//$toks[i]/$s}
+	done
+	REPLY=$f
+}
+
 # Substitutes the known placeholders literally and leaves any other double
-# braces untouched. Arguments: content and title. {{date}} is the creation
-# time; {{id}} is a random UUID; {{adr_number}} counts the existing ADR
-# notes. Every value is computed at most once, and the lazy ones ({{id}} and
-# {{adr_number}}) only when the template uses them.
+# braces untouched. Arguments: content, title and optional VAR=VALUE pairs
+# merged over the built-ins (the daily note passes previous_note and
+# next_note). {{date}} is the creation time; {{date:FMT}} formats it with a
+# moment-like pattern ({{date:DD/MM/YYYY}}); {{id}} is a random UUID;
+# {{adr_number}} counts the existing ADR notes. Every value is computed at
+# most once, and the lazy ones ({{id}} and {{adr_number}}) only when the
+# template uses them.
 #
 # In the frontmatter, a line whose whole value is a quoted placeholder
 # ("title: \"{{title}}\"") is written without the quotes: they only keep the
 # template valid YAML. They come back when the value needs them.
 _nt_render() {
-	local c=$1 out rest name ph sval q line key var
+	local c=$1 out rest name ph sval q line key var fmt e qt
 	local -a names=(title date id adr_number)
-	local -A vars=(title ${2-} date $NOW_ISO)
+	local -A vars=(title "${2-}" date $NOW_ISO)
+	for e in "${@:3}"; do
+		[[ $e == *=* ]] || { _nt_warn "ignoring invalid extra variable: $e"; continue }
+		vars[${e%%=*}]=${e#*=}
+		names+=(${e%%=*})
+	done
 	local -a lines
 	local -i i
 
@@ -644,15 +668,17 @@ _nt_render() {
 		for (( i = 1; i <= ${#lines}; i++ )); do
 			line=$lines[i]
 			q=
-			local qt
 			for qt in '"' "'"; do
-				if [[ $line == (#b)([[:alnum:]_-]##:)[[:space:]]#${qt}\{\{([[:alnum:]_]##)\}\}${qt} ]]; then
+				# The optional :FMT part is matched with =~: an optional group
+				# inside a glob (#b) pattern does not match reliably. The key
+				# group keeps the colon, as in the frontmatter line.
+				if [[ $line =~ "^([[:alnum:]_-]+:)[[:space:]]*${qt}\{\{([[:alnum:]_]+)(:([^}]*))?\}\}${qt}\$" ]]; then
 					q=$qt
 					break
 				fi
 			done
 			[[ -n $q ]] || continue
-			key=$match[1] var=$match[2]
+			key=$match[1] var=$match[2] fmt=${match[4]-}
 			(( ${names[(Ie)$var]} )) || continue
 			if [[ -z ${vars[$var]+x} ]]; then
 				case $var in
@@ -661,9 +687,14 @@ _nt_render() {
 				esac
 				vars[$var]=$REPLY
 			fi
-			# The date field is always written plain, like the RAW_VARS
-			# behavior of the Neovim side.
-			if [[ $var == date ]]; then
+			if [[ -n $fmt ]]; then
+				# A format only makes sense on {{date:FMT}}.
+				if [[ $var != date ]]; then continue; fi
+				_nt_format_date $fmt
+				sval=$REPLY
+			elif [[ $var == date ]]; then
+				# The date field is always written plain, like the RAW_VARS
+				# behavior of the Neovim side.
 				sval=${vars[$var]}
 			else
 				_nt_yaml_scalar ${vars[$var]}
@@ -691,6 +722,16 @@ _nt_render() {
 			rest=${rest#*"$ph"}
 		done
 		c=$out$rest
+	done
+
+	# {{date:FMT}} in the body, one occurrence per pass. The guard keeps a
+	# pathological format from looping forever. The whole match is $MATCH
+	# ($match is one-based and holds the groups only).
+	local -i guard=0
+	while [[ $c =~ '\{\{date:([^}]*)\}\}' ]]; do
+		(( guard++ > 32 )) && break
+		_nt_format_date $match[1]
+		c=${c//"$MATCH"/$REPLY}
 	done
 
 	REPLY=$c
@@ -1070,15 +1111,22 @@ typeset -gA H_DESC H_SYNTAX H_ARGS H_BEHAVIOR H_EXAMPLES H_ERRORS
 H_DESC[new]='Create a classified note from a template and open it.'
 H_SYNTAX[new]='nt new <TYPE> [TITLE...]'
 H_ARGS[new]=$'TYPE      one of: script snippet doc bug adr idea content\nTITLE     optional; the words are joined with spaces'
-H_BEHAVIOR[new]=$'Validates TYPE, the editor and _templates/<TYPE>.md first, so a missing\ntemplate or editor never leaves a partial note. Replaces {{title}},\n{{date}}, {{id}} and {{adr_number}}, keeps every other double brace,\ndrops the quotes of a whole-value quoted placeholder when the value does\nnot need them, creates the file in the vault root, prints its path and\nopens it in ${VISUAL:-${EDITOR:-nvim}}.'
+H_BEHAVIOR[new]=$'Validates TYPE, the editor and _templates/<TYPE>.md first, so a missing\ntemplate or editor never leaves a partial note. Replaces {{title}},\n{{date}}, {{date:FMT}}, {{id}} and {{adr_number}}, keeps every other\ndouble brace, drops the quotes of a whole-value quoted placeholder when\nthe value does not need them, creates the file in the vault root, prints\nits path and opens it in ${VISUAL:-${EDITOR:-nvim}}.'
 H_EXAMPLES[new]=$'nt new bug "Login failure"\nnt new snippet "Java stream filter"'
 H_ERRORS[new]=$'2 missing type or bad arguments, 3 invalid type, 4 template missing,\n5 collision after 99 attempts, 7 editor missing, 8 read/write failure'
 
+H_DESC[daily]='Open the daily note of a day, creating it when missing.'
+H_SYNTAX[daily]='nt daily [OFFSET|DATE]'
+H_ARGS[daily]=$'OFFSET    integer days from today; -1 is yesterday, +1 is tomorrow\nDATE      YYYY-MM-DD or YYYYMMDD; the day is explicit\n(none)    today'
+H_BEHAVIOR[daily]=$'Opening an existing day just opens its note: a daily is created once\nand never overwritten. A missing day is created from\n_templates/daily.md, which receives the creation time ({{date}}),\nformatted dates ({{date:FMT}}), the previous_note and next_note\nvariables (wikilinks to the neighbouring days, possibly broken until\nthose notes exist), {{id}} and {{adr_number}}. Prints the path when it\ncreates the note and opens it in ${VISUAL:-${EDITOR:-nvim}}.'
+H_EXAMPLES[daily]=$'nt daily\nnt daily -1\nnt daily 2026-11-12'
+H_ERRORS[daily]=$'2 bad arguments or invalid date, 4 template missing, 7 editor missing,\n8 read/write failure'
+
 H_DESC[ls]='List notes by creation time (newest first).'
-H_SYNTAX[ls]='nt ls [TYPE|draft] [-i|--interactive]'
-H_ARGS[ls]=$'TYPE      one of the seven types, or "draft", to filter\n-i        pick one with fzf (preview included) and open it'
+H_SYNTAX[ls]='nt ls [TYPE|draft|daily] [-i|--interactive]'
+H_ARGS[ls]=$'TYPE      one of the seven types, or "draft" or "daily", to filter\n-i        pick one with fzf (preview included) and open it'
 H_BEHAVIOR[ls]=$'Lists the .md files in the vault root, ordered by the timestamp in the\nname, one file name per line, so it is safe in pipelines. Notes whose\nname breaks the convention come last; "nt check" explains them.'
-H_EXAMPLES[ls]=$'nt ls\nnt ls bug\nnt ls draft\nnt ls bug --interactive'
+H_EXAMPLES[ls]=$'nt ls\nnt ls bug\nnt ls draft\nnt ls daily\nnt ls bug --interactive'
 H_ERRORS[ls]=$'2 bad arguments, 3 invalid type, 6 nothing to select, 7 fzf missing\nwith -i'
 
 H_DESC[recent]='List the most recently modified notes.'
@@ -1126,14 +1174,14 @@ H_ERRORS[last]='6 no history, or the recorded note no longer exists, 7 editor mi
 H_DESC[mv]='Rename a note by changing its title.'
 H_SYNTAX[mv]='nt mv [NOTE] [NEW_TITLE...]'
 H_ARGS[mv]=$'NOTE        file name or path; fzf when omitted\nNEW_TITLE   new title; asked on the terminal when omitted'
-H_BEHAVIOR[mv]=$'Keeps the type and the timestamp, builds a new slug, never overwrites\n(a counter is appended on collision) and updates the "title" field when it\nexists. Wikilinks to the note in the other notes are rewritten. The\noriginal is preserved if anything fails.'
+H_BEHAVIOR[mv]=$'Keeps the type and the timestamp, builds a new slug, never overwrites\n(a counter is appended on collision) and updates the "title" field when it\nexists. Wikilinks to the note in the other notes are rewritten. The\noriginal is preserved if anything fails. Daily notes are rejected: the\ndate is their identity.'
 H_EXAMPLES[mv]=$'nt mv bug-20261108-153012-old.md "Authentication validation failure"\nnt mv'
 H_ERRORS[mv]='2 missing title, 5 collision, 6 note not found, 7 fzf missing, 8 write failure'
 
 H_DESC[retype]='Change the type of a note.'
 H_SYNTAX[retype]='nt retype [NOTE] [TYPE]'
 H_ARGS[retype]=$'NOTE      file name or path; fzf when omitted\nTYPE      one of the seven types; fzf when omitted ("draft" is not accepted)'
-H_BEHAVIOR[retype]=$'Renames the file and updates the "type" field when it exists. The\ntimestamp, slug, body and frontmatter are kept; no template is applied.\nRetyping a draft is how it becomes a classified note. When anything was\nchosen interactively it asks for confirmation. Links to the note are\nrewritten as in "nt mv".'
+H_BEHAVIOR[retype]=$'Renames the file and updates the "type" field when it exists. The\ntimestamp, slug, body and frontmatter are kept; no template is applied.\nRetyping a draft is how it becomes a classified note. When anything was\nchosen interactively it asks for confirmation. Links to the note are\nrewritten as in "nt mv". Daily notes are rejected: the date is their\nidentity.'
 H_EXAMPLES[retype]=$'nt retype bug-20261108-153012-login-error.md content\nnt retype'
 H_ERRORS[retype]='2 bad arguments, 3 invalid type, 5 collision, 6 note not found, 7 fzf missing'
 
@@ -1154,7 +1202,7 @@ H_ERRORS[template]='2 bad arguments, 3 invalid type, 4 template missing'
 H_DESC[stats]='Print statistics computed from the files.'
 H_SYNTAX[stats]='nt stats'
 H_ARGS[stats]='(none)'
-H_BEHAVIOR[stats]=$'Totals, drafts, classified notes, count per type, available templates,\nthe newest note by name and the most recently modified one. No index or\ndatabase is used.'
+H_BEHAVIOR[stats]=$'Totals, drafts, dailies, classified notes, count per type, available\ntemplates, the newest note by name and the most recently modified one.\nNo index or database is used.'
 H_EXAMPLES[stats]='nt stats'
 H_ERRORS[stats]='8 vault unreadable'
 
@@ -1233,6 +1281,81 @@ cmd_new() {
 	fi
 	_nt_clean_title "$*"
 	_nt_create_and_open $type "$REPLY"
+}
+
+# Resolves the argument of `nt daily` into a YYYYMMDD date in REPLY. Nothing
+# is today; YYYY-MM-DD and YYYYMMDD are explicit dates (checked before the
+# numeric offset, which also matches eight digits); an integer is an offset
+# in days from today. Bad arguments exit with the usage status.
+_nt_daily_arg() {
+	local a=${1-}
+	if [[ -z $a ]]; then
+		REPLY=$(strftime '%Y%m%d' $EPOCHSECONDS)
+		return 0
+	fi
+	if [[ $a == [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9] ]]; then
+		a=${a//-/}
+	fi
+	if [[ $a == [0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9] ]]; then
+		_nt_valid_ts $a 000000 || _nt_die $EX_USAGE "invalid date: $1"
+		REPLY=$a
+		return 0
+	fi
+	if [[ $a == [+-]<-> || $a == <-> ]]; then
+		local off=$(( 10#${a##[-+]} ))
+		[[ $a == -* ]] && off=$((-off))
+		_nt_civil_to_days $(strftime '%Y%m%d' $EPOCHSECONDS)
+		_nt_days_to_civil $(( REPLY + off ))
+		return 0
+	fi
+	_nt_usage_err daily "expected an offset or a date, got: $a"
+}
+
+# Opens the daily note of a day, creating it from the daily template when it
+# does not exist. An existing day is never overwritten: creating is
+# open-or-create, so a concurrent creation by another session is opened
+# instead of rewritten.
+cmd_daily() {
+	_nt_require_vault
+	(( $# <= 1 )) || _nt_usage_err daily "too many arguments"
+	_nt_daily_arg ${1-}
+	local compact=$REPLY
+	local name=daily-$compact.md target=$VAULT/daily-$compact.md
+
+	_nt_editor || exit $?
+
+	if [[ -f $target ]]; then
+		_nt_open $target || exit $?
+		return 0
+	fi
+
+	_nt_require_template daily || exit $?
+	local content=$mapfile[$REPLY]
+
+	# The neighbouring days come from the target day itself, not from today.
+	_nt_civil_to_days $compact
+	local day=$REPLY
+	_nt_days_to_civil $(( day - 1 ))
+	local prev=$REPLY
+	_nt_days_to_civil $(( day + 1 ))
+	local next=$REPLY
+
+	_nt_now
+	_nt_render "$content" "" previous_note="[[daily-$prev]]" next_note="[[daily-$next]]"
+	content=$REPLY
+
+	_nt_write_tmp "$content" || { _nt_err "could not write in $VAULT"; exit $EX_IO }
+	local tmp=$REPLY
+	_nt_copy_mode $tmp
+	_nt_move_noclobber $tmp $target
+	local rc=$?
+	if (( rc == EX_COLLISION )); then
+		_nt_open $target || exit $?
+		return 0
+	fi
+	(( rc != 0 )) && { _nt_err "could not create $target"; exit $rc }
+	print -r -- "${C_GREEN}Created${C_RESET}: $target"
+	_nt_open $target || exit $?
 }
 
 cmd_ls() {
