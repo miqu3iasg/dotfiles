@@ -486,6 +486,33 @@ end
 
 local unpack = table.unpack or unpack
 
+---Formatting tokens of `{{date:FMT}}`, longest first so that `YY` never eats
+---part of a `YYYY`. The values are digits, so they can never match a token:
+---one sequential pass per token is enough.
+---@type string[]
+local DATE_TOKENS = { "YYYY", "YY", "MM", "DD", "HH", "mm", "ss" }
+
+---Format a date with a moment-like pattern. Only the tokens above are
+---replaced; every other character is copied as it is.
+---@param fmt string
+---@param parts { year: integer, month: integer, day: integer, hour: integer, min: integer, sec: integer }
+---@return string
+local function format_date(fmt, parts)
+	local values = {
+		YYYY = ("%04d"):format(parts.year),
+		YY = ("%02d"):format(parts.year % 100),
+		MM = ("%02d"):format(parts.month),
+		DD = ("%02d"):format(parts.day),
+		HH = ("%02d"):format(parts.hour),
+		mm = ("%02d"):format(parts.min),
+		ss = ("%02d"):format(parts.sec),
+	}
+	for _, token in ipairs(DATE_TOKENS) do
+		fmt = fmt:gsub(token, values[token])
+	end
+	return fmt
+end
+
 ---Random (version 4) UUID, e.g. `3f2b8c1e-5d4a-4b7e-9c1d-2a6f0e8b7d35`.
 ---@return string
 local function uuid()
@@ -505,16 +532,19 @@ local function uuid()
 	return ("%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x"):format(unpack(b))
 end
 
----Substitute `{{title}}`, `{{date}}`, `{{id}}` and `{{adr_number}}`,
----literally, and leave any other double braces alone. Every
----value is computed at most once, and the lazy ones (`id`, `adr_number`) only
----when the template uses them.
+---Substitute the template variables, literally, and leave any other double
+---braces alone. The built-in variables are `{{title}}`, `{{date}}`,
+---`{{date:FMT}}`, `{{id}}` and `{{adr_number}}`; `FMT` is a moment-like
+---pattern (`{{date:DD/MM/YYYY}}`), and extra variables come from `ctx.vars`
+---(`previous_note` and `next_note` for daily notes). Every value is computed
+---at most once, and the lazy ones (`id`, `adr_number`) only when the
+---template uses them.
 ---
 ---In the frontmatter, a line whose whole value is a quoted placeholder
 ---(`title: "{{title}}"`) is written without the quotes: they only keep the
 ---template valid YAML. They come back when the value needs them.
 ---@param content string
----@param ctx { title: string, date: string, id: string? } `id` keeps an existing id; one is generated when nil
+---@param ctx { title: string, date: string, id: string?, vars: table<string, string>? } `id` keeps an existing id; one is generated when nil
 ---@return string
 local function render(content, ctx)
 	local vars = {
@@ -527,6 +557,27 @@ local function render(content, ctx)
 			return next_number("adr")
 		end,
 	}
+	for name, extra in pairs(ctx.vars or {}) do
+		vars[name] = extra
+	end
+
+	---The `date` of the context as a date table, for `{{date:FMT}}`.
+	---@return { year: integer, month: integer, day: integer, hour: integer, min: integer, sec: integer }?
+	local function date_parts()
+		local y, mo, d, h, mi, s =
+			ctx.date:match("^(%d%d%d%d)%-(%d%d)%-(%d%d)T(%d%d):(%d%d):(%d%d)$")
+		if not y then
+			return nil
+		end
+		return {
+			year = y + 0,
+			month = mo + 0,
+			day = d + 0,
+			hour = h + 0,
+			min = mi + 0,
+			sec = s + 0,
+		}
+	end
 
 	local cache = {}
 	---@param name string
@@ -546,8 +597,18 @@ local function render(content, ctx)
 	local fm = fm_split(content)
 	if fm then
 		local cut = 4 + #fm
-		local head = content:sub(1, cut):gsub("(\n[%w_%-]+:)[ \t]*([\"'])%{%{([%w_]+)%}%}%2", function(key, _, name)
-			local v = value(name)
+		local head = content:sub(1, cut):gsub("(\n[%w_%-]+:)[ \t]*([\"'])%{%{([%w_]+)([^}]*)%}%}%2", function(key, _, name, fmt)
+			local v
+			if fmt ~= "" then
+				-- A format only makes sense on `{{date:FMT}}`.
+				if name ~= "date" or fmt:sub(1, 1) ~= ":" then
+					return nil
+				end
+				local parts = date_parts()
+				v = parts and format_date(fmt:sub(2), parts)
+			else
+				v = value(name)
+			end
 			if v == nil then
 				return nil
 			end
@@ -558,8 +619,20 @@ local function render(content, ctx)
 	end
 
 	-- Everything else, in a single pass. Unknown names are kept as they are.
-	return (content:gsub("%{%{([%w_]+)%}%}", function(name)
-		return value(name)
+	return (content:gsub("%{%{([%w_]+)([^}]*)%}%}", function(name, fmt)
+		local v = value(name)
+		if v == nil then
+			return nil
+		end
+		if fmt ~= "" then
+			-- A format only makes sense on `{{date:FMT}}`.
+			if name ~= "date" or fmt:sub(1, 1) ~= ":" then
+				return nil
+			end
+			local parts = date_parts()
+			return parts and format_date(fmt:sub(2), parts)
+		end
+		return v
 	end))
 end
 
