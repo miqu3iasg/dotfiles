@@ -40,10 +40,12 @@ typeset -gr NT_TITLE="Notes CLI"
 typeset -gr NT_SELF=${${(%):-%x}:A}
 
 typeset -gra NT_TYPES=(script snippet doc bug adr idea content)
-typeset -gra NT_COMMANDS=(new ls recent find open preview path last mv retype backlinks template stats check doctor help)
+typeset -gra NT_COMMANDS=(daily new ls recent find open preview path last mv retype backlinks template stats check doctor help)
 
 # Strict note file name: TYPE-YYYYMMDD-HHmmss[-SLUG].md.
 typeset -gr NAME_RE='^(draft|script|snippet|doc|bug|adr|idea|content)-([0-9]{8})-([0-9]{6})(-([a-z0-9]+(-[a-z0-9]+)*))?\.md$'
+# Daily note file name: daily-YYYYMMDD.md, one per day.
+typeset -gr DAILY_RE='^daily-([0-9]{8})\.md$'
 # Loose shape of a note name, used by `check` to explain why a name is wrong.
 typeset -gr LOOSE_RE='^([A-Za-z0-9_]+)-([0-9]{8})-([0-9]{6})(-(.*))?\.md$'
 typeset -gr SLUG_RE='^[a-z0-9]+(-[a-z0-9]+)*$'
@@ -263,6 +265,34 @@ _nt_valid_ts() {
 	(( m >= 1 && m <= 12 && d >= 1 && d <= dm[m] && H < 24 && M < 60 && S < 60 ))
 }
 
+# Converts a YYYYMMDD date into a day number (days since 1970-01-01) into
+# REPLY, Howard Hinnant's civil algorithm. No time of day is involved, so
+# neighbouring days are exact without external date(1) and without DST.
+_nt_civil_to_days() {
+	local y=$((10#${1[1,4]})) m=$((10#${1[5,6]})) d=$((10#${1[7,8]}))
+	(( m <= 2 )) && (( y-- ))
+	local era=$(( (y >= 0 ? y : y - 399) / 400 ))
+	local yoe=$(( y - era * 400 ))
+	local doy=$(( (153 * (m + (m > 2 ? -3 : 9)) + 2) / 5 + d - 1 ))
+	local doe=$(( yoe * 365 + yoe / 4 - yoe / 100 + doy ))
+	REPLY=$(( era * 146097 + doe - 719468 ))
+}
+
+# The inverse: a day number into a YYYYMMDD date in REPLY.
+_nt_days_to_civil() {
+	local z=$(($1 + 719468))
+	local era=$(( (z >= 0 ? z : z - 146096) / 146097 ))
+	local doe=$(( z - era * 146097 ))
+	local yoe=$(( (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365 ))
+	local y=$(( yoe + era * 400 ))
+	local doy=$(( doe - (365 * yoe + yoe / 4 - yoe / 100) ))
+	local mp=$(( (5 * doy + 2) / 153 ))
+	local d=$(( doy - (153 * mp + 2) / 5 + 1 ))
+	local m=$(( mp + (mp < 10 ? 3 : -9) ))
+	(( m <= 2 )) && (( y++ ))
+	printf -v REPLY '%04d%02d%02d' $y $m $d
+}
+
 # Asks a yes/no question on the terminal. The default answer is no.
 _nt_confirm() {
 	local reply
@@ -306,6 +336,9 @@ _nt_sorted_notes() {
 	for n in $NOTES; do
 		if [[ $n =~ $NAME_RE ]]; then
 			printf -v inv '%014d' $(( 99999999999999 - 10#$match[2]$match[3] ))
+		elif [[ $n =~ $DAILY_RE ]]; then
+			# Midnight places the daily after the typed notes of its own day.
+			printf -v inv '%014d' $(( 99999999999999 - 10#${match[1]}000000 ))
 		else
 			inv=99999999999999
 		fi
@@ -952,8 +985,10 @@ _nt_check_note() {
 	local name=$1 content type date time slug line target rest
 	local -i rc ln base
 
-	if [[ ! $name =~ $LOOSE_RE ]]; then
-		_nt_issue $name '' error "name does not follow TYPE-YYYYMMDD-HHmmss[-SLUG].md"
+	if [[ $name =~ $DAILY_RE ]]; then
+		_nt_valid_ts $match[1] 000000 || _nt_issue $name '' error "invalid date $match[1]"
+	elif [[ ! $name =~ $LOOSE_RE ]]; then
+		_nt_issue $name '' error "name does not follow TYPE-YYYYMMDD-HHmmss[-SLUG].md or daily-YYYYMMDD.md"
 	else
 		type=$match[1] date=$match[2] time=$match[3] slug=$match[5]
 		if [[ $type != draft ]] && ! _nt_is_type $type; then
@@ -1008,7 +1043,7 @@ _nt_check_note() {
 			target=$match[1]
 			rest=${rest:$MEND}
 			target=${target%.md}
-			[[ $target =~ '^(draft|script|snippet|doc|bug|adr|idea|content)-[0-9]{8}-[0-9]{6}' ]] || continue
+			[[ $target =~ '^(daily-[0-9]{8}|(draft|script|snippet|doc|bug|adr|idea|content)-[0-9]{8}-[0-9]{6})' ]] || continue
 			[[ -f $VAULT/$target.md ]] || _nt_issue $name $ln warning "broken link [[$target]]"
 		done
 	done
@@ -1212,15 +1247,19 @@ cmd_ls() {
 			*) [[ -z $filter ]] || _nt_usage_err ls "too many arguments"; filter=$a ;;
 		esac
 	done
-	if [[ -n $filter && $filter != draft ]] && ! _nt_is_type $filter; then
+	if [[ -n $filter && $filter != draft && $filter != daily ]] && ! _nt_is_type $filter; then
 		_nt_err "invalid type: $filter"
-		print -ru2 -- "valid filters: ${NT_TYPES} draft"
+		print -ru2 -- "valid filters: ${NT_TYPES} draft daily"
 		exit $EX_TYPE
 	fi
 	_nt_sorted_notes
 	if [[ -n $filter ]]; then
 		for n in $SORTED; do
-			[[ $n =~ $NAME_RE && $match[1] == $filter ]] && out+=($n)
+			if [[ $n =~ $NAME_RE && $match[1] == $filter ]]; then
+				out+=($n)
+			elif [[ $filter == daily && $n =~ $DAILY_RE ]]; then
+				out+=($n)
+			fi
 		done
 	else
 		out=($SORTED)
@@ -1351,6 +1390,10 @@ cmd_mv() {
 		title=$REPLY
 		[[ -n $title ]] || exit $EX_OK
 	fi
+	if [[ $name =~ $DAILY_RE ]]; then
+		_nt_err "daily notes cannot be renamed: the date is their identity (see the vault README)"
+		exit $EX_ERROR
+	fi
 	if [[ ! $name =~ $NAME_RE ]]; then
 		_nt_err "$name does not follow the naming convention; run 'nt check $name'"
 		exit $EX_ERROR
@@ -1383,6 +1426,10 @@ cmd_retype() {
 		interactive=1
 		_nt_note_arg || exit $?
 		name=$REPLY
+	fi
+	if [[ $name =~ $DAILY_RE ]]; then
+		_nt_err "daily notes cannot be retyped: the date is their identity (see the vault README)"
+		exit $EX_ERROR
 	fi
 	if [[ ! $name =~ $NAME_RE ]]; then
 		_nt_err "$name does not follow the naming convention; run 'nt check $name'"
@@ -1488,12 +1535,14 @@ cmd_stats() {
 	(( $# == 0 )) || _nt_usage_err stats "this command takes no arguments"
 	[[ -r $VAULT ]] || _nt_die $EX_IO "cannot read $VAULT"
 	local n t
-	local -i drafts=0 classified=0 other=0
+	local -i drafts=0 classified=0 dailies=0 other=0
 	local -a tpls=() lines=()
 	_nt_sorted_notes
 	for n in $NOTES; do
 		if [[ $n =~ $NAME_RE ]]; then
 			if [[ $match[1] == draft ]]; then (( drafts++ )); else (( classified++ )); fi
+		elif [[ $n =~ $DAILY_RE ]]; then
+			(( dailies++ ))
 		else
 			(( other++ ))
 		fi
@@ -1506,6 +1555,7 @@ cmd_stats() {
 	print
 	print -r -- "  $(_nt_kv Notes) ${#NOTES}"
 	print -r -- "  $(_nt_kv Drafts) $drafts"
+	print -r -- "  $(_nt_kv Daily) $dailies"
 	print -r -- "  $(_nt_kv Classified) $classified"
 	(( other )) && print -r -- "  $(_nt_kv Other) $other  (outside the naming convention)"
 	print
