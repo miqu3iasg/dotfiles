@@ -115,9 +115,7 @@ vim.api.nvim_create_autocmd("FileType", {
 
 km("n", "<leader>od", notes.new_draft, { desc = "Quick draft" })
 km("n", "<leader>on", notes.new_note, { desc = "New note (pick type and title)" })
-km("n", "<leader>oa", function()
-	notes.daily()
-end, { desc = "Open today's daily note" })
+km("n", "<leader>oa", notes.daily, { desc = "Open today's daily note" })
 km("n", "<leader>ot", notes.template, { desc = "Insert template" })
 km("n", "<leader>of", notes.find_files, { desc = "Find notes by name" })
 km("n", "<leader>og", notes.grep, { desc = "Search note contents" })

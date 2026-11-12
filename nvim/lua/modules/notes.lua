@@ -1116,6 +1116,8 @@ function M.setup()
 	local cmd = vim.api.nvim_create_user_command
 	cmd("NotesDraft", M.new_draft, { desc = "Notes: quick draft" })
 	cmd("NotesNew", M.new_note, { desc = "Notes: new note (pick type and title)" })
+	-- The command callback receives the command table, which M.daily would
+	-- take as the offset; discard it and open today's note.
 	cmd("NotesDaily", function()
 		M.daily()
 	end, { desc = "Notes: open today's daily note" })
