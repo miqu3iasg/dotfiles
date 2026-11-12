@@ -2,9 +2,7 @@ NAME
     documentation - the documentation standard of this Neovim config
 
 SYNOPSIS
-    man -l doc/pages/documentation.txt      read as a man page (roff)
-    :read !man -l doc/pages/documentation.txt
-    doc/documentation.txt                   this plain-text mirror
+    doc/documentation.txt                   this page
     doc/reading.txt                         how to read the pages
 
 DESCRIPTION
@@ -27,7 +25,8 @@ THE LAYERS
         is the primary and most detailed layer.
 
         doc/ pages         overviews for a reader new to the config: what exists, where it lives, how the pieces relate.
-        Never a substitute for the headers. Formatted as man pages (see THE TWO FORMATS OF THE PAGES below).
+        Never a substitute for the headers. Written as plain text in the style of a man page (see THE FORMAT OF THE
+        PAGES below).
 
         README.md          the repo-level overview: structure, conventions, how to add things, requirements. One dense
         paragraph per topic, no fluff.
@@ -94,22 +93,13 @@ FORMATTING AND STYLE
     - Deprecation: modules that fall out of use move to lua/archived/, outside lua/ and off the runtimepath, with their
     header intact.
 
-THE TWO FORMATS OF THE PAGES
-    Each page exists twice, and the two copies say the same thing:
+THE FORMAT OF THE PAGES
+    Each page is a single plain-text file in the style of a man page:
 
-        doc/pages/<name>.txt   the roff source, written with the man(7) macros. `man` reflows it to the available width
-        of the terminal. This is the canonical copy, and the only one with the NAME(7) header and footer.
+        doc/<name>.txt         plain text: the same sections and lists a man page has, but paragraphs written at full
+        width, left to the editor's wrap, with no macros, no bold and no page header or footer.
 
-        doc/<name>.txt         a plain-text mirror of the style, not of the rendering: the same sections and lists, but
-        paragraphs written at full width, left to the editor's wrap, with no macros, no bold and no page header or
-        footer. It is what gets updated first when a page changes.
-
-    doc/reading.txt explains how to read both formats and lists the commands. The roff pages are rendered like this:
-
-        man -l doc/pages/kickstart.txt
-        :read !man -l doc/pages/kickstart.txt
-
-    Their structure:
+    doc/reading.txt explains how to read the pages. Their structure:
 
         NAME         one line: page name - short description
         SYNOPSIS     how to read the page
@@ -120,15 +110,14 @@ THE TWO FORMATS OF THE PAGES
 
     Rules for these pages:
 
-        - The roff source is written in man(7): `.TH`, `.SH`, `.PP`, `.TP`, `.IP bu`, `.B`/`.I`. Paragraph text is
-        filled by groff, so no hard wrapping; preformatted blocks (code, trees, shell commands) are wrapped in
-        `.nf`/`.fi`. The plain-text mirror follows the same section order, writes each paragraph as a single full-width
-        line for the editor to wrap, and marks emphasis only with quotes.
+        - Pages are plain text. Paragraph text is written as a single full-width line for the editor to wrap;
+        preformatted blocks (code, trees, shell commands) are written as indented literal lines. Emphasis is marked
+        only with quotes.
         - No keymaps. They change too often; a stale keymap list is worse than none. Pages describe features, commands,
         files and behavior, and point to the keymap files for the rest.
         - Commands are documented with their arguments, even when a keymap also triggers them: commands are stable,
         keymaps are not.
-        - Dates or version numbers in headers rot; the footer date and the git history cover that.
+        - Dates or version numbers in headers rot; the git history covers that.
 
 KEYMAPS
     Keymaps are the deliberate exception to "document everything":
@@ -161,14 +150,14 @@ KEEPING DOCS CURRENT
 FILES
     doc/reading.txt                  how to read the pages
     README.md                        repo overview
-    doc/pages/kickstart.txt          full guide to the config
-    doc/<name>.txt                   the full-width plain-text mirror of each page
-    doc/pages/structure.txt          the folder structure
-    doc/pages/modules.txt            the modules layer
-    doc/pages/lib.txt                the lib layer
-    doc/pages/philosophy.txt         why the config builds from scratch
-    doc/pages/documentation.txt      this page, as a man page (roff)
-    doc/pages/development.txt        how to extend the config
+    doc/kickstart.txt                full guide to the config
+    doc/<name>.txt                   each page, written at full width for the editor to wrap
+    doc/structure.txt                the folder structure
+    doc/modules.txt                  the modules layer
+    doc/lib.txt                      the lib layer
+    doc/philosophy.txt               why the config builds from scratch
+    doc/documentation.txt            this page
+    doc/development.txt              how to extend the config
 
 SEE ALSO
     kickstart(7), structure(7), modules(7), lib(7), philosophy(7), development(7).

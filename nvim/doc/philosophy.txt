@@ -2,9 +2,7 @@ NAME
     philosophy - why this config builds its own features from scratch
 
 SYNOPSIS
-    man -l doc/pages/philosophy.txt         read as a man page (roff)
-    :read !man -l doc/pages/philosophy.txt
-    doc/philosophy.txt                      this plain-text mirror
+    doc/philosophy.txt                      this page
     doc/reading.txt                         how to read the pages
 
 DESCRIPTION
@@ -83,11 +81,11 @@ ADAPTED TO A WORKFLOW
 
 FILES
     doc/reading.txt           how to read the pages
-    doc/pages/kickstart.txt   full guide to the config
-    doc/pages/structure.txt   the folder structure
-    doc/pages/modules.txt     the features built from scratch
-    doc/pages/lib.txt         the shared helpers underneath them
-    doc/pages/philosophy.txt  this page, as a man page (roff)
+    doc/kickstart.txt         full guide to the config
+    doc/structure.txt         the folder structure
+    doc/modules.txt           the features built from scratch
+    doc/lib.txt               the shared helpers underneath them
+    doc/philosophy.txt        this page
 
 SEE ALSO
     kickstart(7), modules(7), documentation(7).

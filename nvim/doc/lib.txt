@@ -2,9 +2,7 @@ NAME
     lib - the lua/lib/ layer: shared utilities and domain logic
 
 SYNOPSIS
-    man -l doc/pages/lib.txt                read as a man page (roff)
-    :read !man -l doc/pages/lib.txt
-    doc/lib.txt                             this plain-text mirror
+    doc/lib.txt                             this page
     doc/reading.txt                         how to read the pages
 
 DESCRIPTION
@@ -75,10 +73,10 @@ USING LIB WELL
 FILES
     doc/reading.txt           how to read the pages
     lua/lib/                  the libraries
-    doc/pages/structure.txt   the folder structure
-    doc/pages/modules.txt     the feature layer
-    doc/pages/lib.txt         this page, as a man page (roff)
-    doc/pages/development.txt how to extend the config
+    doc/structure.txt         the folder structure
+    doc/modules.txt           the feature layer
+    doc/lib.txt               this page
+    doc/development.txt       how to extend the config
 
 SEE ALSO
     structure(7), modules(7), development(7).

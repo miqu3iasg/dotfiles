@@ -2,9 +2,7 @@ NAME
     modules - the lua/modules/ layer: whole features built for this config
 
 SYNOPSIS
-    man -l doc/pages/modules.txt            read as a man page (roff)
-    :read !man -l doc/pages/modules.txt
-    doc/modules.txt                         this plain-text mirror
+    doc/modules.txt                         this page
     doc/reading.txt                         how to read the pages
 
 DESCRIPTION
@@ -104,10 +102,10 @@ WRITING A NEW MODULE
 FILES
     doc/reading.txt           how to read the pages
     lua/modules/              the modules
-    doc/pages/structure.txt   the folder structure
-    doc/pages/lib.txt         the shared-helpers layer
-    doc/pages/philosophy.txt  why the config builds features from scratch
-    doc/pages/modules.txt     this page, as a man page (roff)
+    doc/structure.txt         the folder structure
+    doc/lib.txt               the shared-helpers layer
+    doc/philosophy.txt        why the config builds features from scratch
+    doc/modules.txt           this page
 
 SEE ALSO
     structure(7), lib(7), philosophy(7), development(7).

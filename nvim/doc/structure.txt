@@ -2,9 +2,7 @@ NAME
     structure - the folder structure of this Neovim configuration
 
 SYNOPSIS
-    man -l doc/pages/structure.txt          read as a man page (roff)
-    :read !man -l doc/pages/structure.txt
-    doc/structure.txt                       this plain-text mirror
+    doc/structure.txt                       this page
     doc/reading.txt                         how to read the pages
 
 DESCRIPTION
@@ -33,8 +31,7 @@ THE TREE
     |                         and Lua filters
     |- resources/             example configuration for external tools
     |- spell/                 custom spell files
-    |- doc/                   man pages: plain-text mirrors (this folder)
-    |- doc/pages/             the roff sources rendered by man
+    |- doc/                   the doc pages, plain text (this folder)
     |- nvim-pack-lock.json    revision lock file written by vim.pack
     |- LICENSE
 
@@ -59,9 +56,8 @@ TOP-LEVEL FOLDERS
         out of lua/ because they are reference material, never loaded.
 
     doc/
-        Man pages describing the config, in two copies: the roff sources in doc/pages/ and the plain-text mirrors in
-        doc/, written at full width for the editor to wrap. doc/reading.txt explains how to read them; the standard
-        itself is documentation.txt.
+        The doc pages describing the config, plain text in the style of a man page, written at full width for the
+        editor to wrap. doc/reading.txt explains how to read them; the standard itself is documentation.txt.
 
     spell/
         Custom spell dictionaries, loaded by Neovim's spelling machinery directly.
@@ -133,13 +129,13 @@ FINDING THINGS
 
 FILES
     doc/reading.txt               how to read the pages
-    doc/pages/kickstart.txt       full guide to the config
-    doc/pages/modules.txt         the modules layer
-    doc/pages/lib.txt             the lib layer
-    doc/pages/philosophy.txt      why the config builds from scratch
-    doc/pages/structure.txt       this page, as a man page (roff)
-    doc/pages/documentation.txt   the documentation standard
-    doc/pages/development.txt     how to extend the config
+    doc/kickstart.txt             full guide to the config
+    doc/modules.txt               the modules layer
+    doc/lib.txt                   the lib layer
+    doc/philosophy.txt            why the config builds from scratch
+    doc/structure.txt             this page
+    doc/documentation.txt         the documentation standard
+    doc/development.txt           how to extend the config
 
 SEE ALSO
     kickstart(7), modules(7), lib(7), philosophy(7).

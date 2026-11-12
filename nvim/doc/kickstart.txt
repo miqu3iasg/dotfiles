@@ -2,9 +2,7 @@ NAME
     kickstart - guide to this hand-rolled Neovim configuration
 
 SYNOPSIS
-    man -l doc/pages/kickstart.txt          read as a man page (roff)
-    :read !man -l doc/pages/kickstart.txt   read it inside Neovim
-    doc/kickstart.txt                       this plain-text mirror
+    doc/kickstart.txt                       this page
     doc/reading.txt                         how to read the pages
 
 DESCRIPTION
@@ -52,8 +50,7 @@ DIRECTORY LAYOUT
     resources/             example external-tool configuration files
     spell/                 custom spell files
     nvim-pack-lock.json    revision lock file written by vim.pack
-    doc/                   man pages: plain-text mirrors (this folder)
-    doc/pages/             the roff sources rendered by man
+    doc/                   the doc pages, plain text (this folder)
 
     The layer rule is binary: a module that exposes commands, autocmds or keymaps goes in modules/; anything else goes
     in lib/. A layer may only require the layers below it: init.lua, then config, plugins, modules and lib. Nothing in
@@ -380,8 +377,7 @@ REQUIREMENTS
 FILES
     doc/reading.txt          how to read the pages
     README.md                the repo overview
-    doc/pages/kickstart.txt  this page, as a man page (roff)
-    doc/kickstart.txt        this plain-text mirror
+    doc/kickstart.txt        this page
     doc/structure.txt        the folder structure in depth
     doc/modules.txt          the lua/modules/ layer
     doc/lib.txt              the lua/lib/ layer

@@ -1,19 +1,10 @@
 NAME
-    reading - how to read the man pages of this configuration
+    reading - how to read the doc pages of this configuration
 
 DESCRIPTION
-    The documentation pages exist in two places, and each is meant for a different way of reading:
-
-        doc/<name>.txt       plain text in the style of a man page: the same sections and lists, with paragraphs written
-        at full width and left to the editor's wrap. Meant to be read by simply opening the file, in any editor, with
-        nothing rendered.
-
-        doc/pages/<name>.txt the same pages in roff, written with the man(7) macros. Meant to be rendered by man, which
-        reflows the text to the width of the terminal and adds bold, indentation and bullets. This is the canonical
-        copy, and the only one with the page header and footer.
-
-    The two copies say the same thing. Keep them in sync: a change to one is a change to the other
-    (see doc/documentation.txt).
+    The doc pages are plain text, in the style of a man page: the same sections and lists, with paragraphs written at
+    full width and left to the editor's wrap. Meant to be read by simply opening the file, in any editor, with nothing
+    rendered.
 
     The pages, all ending in .txt:
 
@@ -26,68 +17,30 @@ DESCRIPTION
         development.txt     how to extend the config
         reading.txt         this note
 
-READING IN A TERMINAL
-    Render any page with `man -l`, which reads a local file instead of searching the man path:
-
-        man -l doc/pages/kickstart.txt
-
-    The text reflows to the terminal width. To force a width:
-
-        MANWIDTH=100 man -l doc/pages/structure.txt
-
-    To read every page in sequence:
-
-        for p in doc/pages/*.txt; do man -l "$p"; done
-
-    The pager is the one man picks (usually less); `less` closes with `q` and the usual man keys apply, such as space to
-    page down.
-
-READING INSIDE NEOVIM
-    Render a page into the current buffer, splitting it above:
-
-        :read !man -l doc/pages/kickstart.txt
-
-    Or replace the window entirely with the rendered page:
-
-        :enew | 0read !man -l doc/pages/kickstart.txt
-
-    Both run man, capture its output and let it reflow at Neovim's current width; resize the terminal (or set columns)
-    and read again to reflow. Set the width explicitly, ignoring the terminal:
-
-        :read !MANWIDTH=80 man -l doc/pages/kickstart.txt
-
-    To page through it in the terminal pager without leaving Neovim:
-
-        :!man -l doc/pages/kickstart.txt
-
 READING BY OPENING THE FILE
-    The plain-text copies in doc/ are the zero-setup option: open doc/kickstart.txt and read. Paragraphs are written as
-    full-width lines, so the editor's soft wrap decides where each line breaks; long paragraphs are meant to be seen
-    wrapped, not scrolled sideways. The tradeoff is fixed formatting: no bold, no justification, no page header or
-    footer - the man-page style is what you get.
+    Open doc/kickstart.txt and read. Paragraphs are written as full-width lines, so the editor's soft wrap decides
+    where each line breaks; long paragraphs are meant to be seen wrapped, not scrolled sideways. The tradeoff is fixed
+    formatting: no bold, no justification, no page header or footer - the man-page style is what you get.
 
-ROFF IN ONE MINUTE
-    For the days you read the sources in doc/pages/ directly, the macros used are few:
+    To jump straight to a section, search for its heading: `/THE TREE`, `/FILES`, and so on. Headings are unique per
+    page and appear in the order a man page uses: NAME, SYNOPSIS, DESCRIPTION, then topic sections, then FILES and
+    SEE ALSO.
 
-        .TH NAME 7       the page header: name, section, date, source
-        .SH NAME         a section heading
-        .SS Editing      a subsection
-        .PP              a new paragraph
-        .TP              a tagged paragraph: label line, then indented body, repeated per entry
-        .IP bu 2         an indented bullet paragraph
-        .nf / .fi        preformatted block (code, trees, shell) on/off
-        .B, .I, .BR      bold, italic, bold+roman argument (references)
+READING EVERY PAGE IN SEQUENCE
+    In the shell:
 
-    Backslash escapes: \- is a literal hyphen, \(bu the bullet, \(ga the backtick. Lines starting with a dot or quote
-    are requests; everything else is text.
+        for p in doc/*.txt; do $EDITOR "$p"; done
+
+    Inside Neovim, one buffer per page, in sequence:
+
+        :args doc/*.txt | argdo edit
 
 WHICH COPY TO EDIT
-    Edit the roff page first; it is canonical and it is what man renders. Then make the same change in the plain-text
-    mirror. If only one copy changes, the other is lying - treat a divergence like any other bug.
+    There is only one copy: edit doc/<name>.txt directly. If a page contradicts the code or another page, treat the
+    divergence like any other bug.
 
 FILES
-    doc/<name>.txt          the plain-text mirrors
-    doc/pages/<name>.txt    the roff sources rendered by man
+    doc/<name>.txt          the pages
     doc/documentation.txt   the documentation standard
 
 SEE ALSO

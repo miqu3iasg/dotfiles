@@ -2,9 +2,7 @@ NAME
     development - how to extend this Neovim configuration
 
 SYNOPSIS
-    man -l doc/pages/development.txt        read as a man page (roff)
-    :read !man -l doc/pages/development.txt
-    doc/development.txt                     this plain-text mirror
+    doc/development.txt                     this page
     doc/reading.txt                         how to read the pages
 
 DESCRIPTION
@@ -124,13 +122,13 @@ VERSIONING AND LOCK
 
 FILES
     doc/reading.txt              how to read the pages
-    doc/pages/kickstart.txt      full guide to the config
-    doc/pages/structure.txt      the folder structure
-    doc/pages/modules.txt        the modules layer
-    doc/pages/lib.txt            the lib layer
-    doc/pages/philosophy.txt     why the config builds from scratch
-    doc/pages/documentation.txt  the documentation standard
-    doc/pages/development.txt    this page, as a man page (roff)
+    doc/kickstart.txt            full guide to the config
+    doc/structure.txt            the folder structure
+    doc/modules.txt              the modules layer
+    doc/lib.txt                  the lib layer
+    doc/philosophy.txt           why the config builds from scratch
+    doc/documentation.txt        the documentation standard
+    doc/development.txt          this page
 
 SEE ALSO
     kickstart(7), documentation(7), structure(7).
