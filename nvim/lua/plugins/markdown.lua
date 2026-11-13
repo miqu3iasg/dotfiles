@@ -16,11 +16,15 @@
 -- file. obsidian.nvim, img-clip.nvim and plenary.nvim must be installed through
 -- the plugin manager.
 --
--- Markdown preview in the browser comes from markdown-preview.nvim. It is
--- configured through `vim.g.mkdp_*` globals, which must be set before the
--- plugin loads, and it is toggled with `<leader>op`. The plugin needs Node.js
--- and a one-time install step, which the plugin manager must run as its
--- build hook (`:call mkdp#util#install()`).
+-- Markdown preview in the browser comes from markdown-preview.nvim. It is configured
+-- through `vim.g.mkdp_*` globals, which must be set before the plugin loads, and it
+-- is toggled with the defined keymap. The plugin needs Node.js and a one-time install
+-- step that `vim.pack` does not run on its own. After the first install, and after
+-- any update of the plugin, run this manually and restart Neovim, otherwise the
+-- preview does nothing:
+--
+-- :packadd markdown-preview.nvim
+-- :call mkdp#util#install()
 --
 -- Pasted images are saved in `<vault>/attachments`. Inside the vault they use
 -- the wikilink template, and anywhere else they use the standard Markdown
@@ -105,6 +109,7 @@ vim.api.nvim_create_autocmd("FileType", {
 	group = vim.api.nvim_create_augroup("markdown_preview_keymap", { clear = true }),
 	pattern = "markdown",
 	callback = function()
+		-- Requires a manual `:call mkdp#util#install()` after install/update (see header).
 		km("n", "<leader>op", "<cmd>MarkdownPreviewToggle<cr>", {
 			buffer = true,
 			silent = true,
