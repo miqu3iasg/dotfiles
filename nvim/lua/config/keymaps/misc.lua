@@ -85,6 +85,14 @@ map("<leader>vh", function()
 	vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled({ bufnr = 0 }), { bufnr = 0 })
 end, "Toggle inlay hints (buffer)")
 
+map("<leader>vm", function()
+	if vim.wo.colorcolumn ~= "" then
+		vim.wo.colorcolumn = ""
+		return
+	end
+	vim.wo.colorcolumn = vim.bo.textwidth > 0 and "+1" or "80"
+end, "Toggle color column")
+
 -- Line numbers
 map("<leader>vn", function()
 	vim.wo.number = not vim.wo.number
