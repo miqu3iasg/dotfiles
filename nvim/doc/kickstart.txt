@@ -117,6 +117,8 @@ USER COMMANDS
     Global user commands (lua/config/commands.lua):
 
         :Setwd                 change the working directory to the current file's directory
+        :Grep {args}           run the grep program with the arguments and open the quickfix
+        when there are entries; flags of the program are accepted (:Grep -w word)
         :FormatEnable          re-enable autoformat on save
         :FormatDisable         disable autoformat on save
         :PackAdd {repos}       add plugins to the session, installing the missing ones

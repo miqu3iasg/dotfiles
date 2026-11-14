@@ -6,10 +6,22 @@
 -- See: lua/config/pack.lua
 -- See: lua/config/keymaps/pack.lua
 -- See: lua/lib/autoformat.lua
+-- See: lua/lib/search.lua
 
 vim.api.nvim_create_user_command("Setwd", function()
 	vim.cmd.cd(vim.fn.expand("%:p:h"))
 end, { desc = "Change the working directory to the current file's directory" })
+
+-- Runs the grep program directly with the given arguments, so flags such as
+-- `-w` or `-i` can be typed on the command line, where history and `q:`
+-- editing are available. The quickfix window opens through the autocmd.
+-- See: lua/config/autocmds.lua
+vim.api.nvim_create_user_command("Grep", function(opts)
+	vim.cmd(("silent grep! %s"):format(opts.args))
+end, {
+	nargs = "+",
+	desc = "Grep the project for the arguments and open the quickfix (:Grep -w word)",
+})
 
 vim.api.nvim_create_user_command("FormatDisable", function()
 	require("lib.autoformat").disable()
