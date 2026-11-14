@@ -19,8 +19,8 @@ ${custom.proxy}\
 ${custom.offline}\
 ${env_var.SSH_CONNECTION}\
 ${env_var.AWS_PROFILE}\
-$status\
-$jobs\
+${custom.status_soft}\
+${custom.status_err}\
 $character"""
 
 [palettes.mono]
@@ -257,7 +257,7 @@ style = "fg:fg"
 format = "[ aws:$env_value]($style)"
 
 [status]
-disabled = false
+disabled = true
 pipestatus = true
 symbol = ""
 success_symbol = ""
@@ -268,6 +268,18 @@ style = "bold fg:red"
 format = '[ exit $status( $signal_name)]($style)'
 pipestatus_format = '[ \[$pipestatus\] exit $status( $signal_name)]($style)'
 
+[custom.status_soft]
+when = '[ "$STARSHIP_CMD_STATUS" = 147 ] || [ "$STARSHIP_CMD_STATUS" = 130 ]'
+command = 'echo "exit $STARSHIP_CMD_STATUS"'
+style = "fg:fg"
+format = "[ $output]($style)"
+
+[custom.status_err]
+when = '[ -n "$STARSHIP_CMD_STATUS" ] && [ "$STARSHIP_CMD_STATUS" != 0 ] && [ "$STARSHIP_CMD_STATUS" != 147 ] && [ "$STARSHIP_CMD_STATUS" != 130 ]'
+command = 'echo "exit $STARSHIP_CMD_STATUS"'
+style = "bold fg:red"
+format = "[ $output]($style)"
+
 [cmd_duration]
 min_time = 5000
 show_milliseconds = false
@@ -277,8 +289,8 @@ format = "[ $duration]($style)"
 [jobs]
 symbol = ""
 number_threshold = 1
-style = "fg:subtle"
-format = "[ $number job]($style)"
+style = "fg:fg"
+format = "[ $number job ]($style)"
 
 [character]
 success_symbol = "[\\$ ](fg:fg)"
