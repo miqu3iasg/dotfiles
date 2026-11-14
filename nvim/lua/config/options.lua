@@ -6,10 +6,13 @@
 -- See: lua/modules/statusline.lua
 
 -- ripgrep is used as 'grepprg' when it is installed, which the project-wide
--- features rely on.
+-- features rely on. `--smart-case` matches the case rule of the `/` search
+-- below; `lib/substitute.lua` passes `--case-sensitive` explicitly, so a
+-- project substitution stays exact.
+-- See: lua/lib/search.lua
 -- See: lua/lib/substitute.lua
 if vim.fn.executable("rg") == 1 then
-	vim.opt.grepprg = "rg --vimgrep"
+	vim.opt.grepprg = "rg --vimgrep --smart-case"
 end
 
 vim.opt.hidden = true
