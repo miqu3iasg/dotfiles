@@ -39,8 +39,8 @@ return {
 		i(0),
 	}),
 
-	-- Google-style docstring with argument and return sections.
-	-- Remove unused parameter lines or the Returns section as needed.
+	-- Google-style docstring with argument, return, and raises sections.
+	-- Remove unused parameter lines or the Returns/Raises sections as needed.
 	s("doc", {
 		t('"""'),
 		i(1, "Short description."),
@@ -54,6 +54,10 @@ return {
 		i(5, "Description."),
 		t({ "", "", "Returns:", "    " }),
 		i(6, "Description."),
+		t({ "", "", "Raises:", "    " }),
+		i(7, "ValueError"),
+		t(": "),
+		i(8, "When it is raised."),
 		t({ "", '"""' }),
 		-- TODO: add a "Raises" param here as a snippet field
 	}),
