@@ -56,7 +56,7 @@ km("n", "<leader>hl", function()
 	search.flash({ vim.fn.line(".") })
 end, { desc = "Flash current line" })
 
--- `<Esc>` clears the search highlights and the previous match highlight.
+-- <Esc> clears the search highlights.
 km("n", "<Esc>", "<cmd>nohlsearch<cr>", { desc = "Clear search highlights" })
 
 -- Grep in the project (quickfix)

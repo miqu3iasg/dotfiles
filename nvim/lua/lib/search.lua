@@ -69,7 +69,6 @@ end
 ---Run `:vimgrep` in the project, which uses Vim's own regex engine and works
 ---even without ripgrep installed. The quickfix window opens through the
 ---`QuickFixCmdPost` autocmd; this only warns when nothing matched.
--- See: lua/config/autocmds.lua
 ---@param pattern string
 function M.vimgrep(pattern)
 	if pattern == "" then

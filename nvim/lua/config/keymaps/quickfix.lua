@@ -12,16 +12,21 @@ local km = vim.keymap.set
 ---Delete the entry under the cursor from the list that owns the current
 ---window, which is the location list when the window is one. The list is
 ---replaced in place, so the window stays open and the cursor keeps its line.
+---`getqflist` takes no window id, so the two calls cannot be unified.
 local function delete_entry()
 	local win = vim.fn.win_getid()
 	local is_loclist = vim.fn.getwininfo(win)[1].loclist == 1
-	local get = is_loclist and vim.fn.getloclist or vim.fn.getqflist
-	local set = is_loclist and vim.fn.setloclist or vim.fn.setqflist
 
-	local items = get(win)
-	local title = get(win, { title = 0 }).title
+	local items = is_loclist and vim.fn.getloclist(win) or vim.fn.getqflist()
+	local title = is_loclist and vim.fn.getloclist(win, { title = 0 }).title
+		or vim.fn.getqflist({ title = 0 }).title
 	table.remove(items, vim.fn.line("."))
-	set(win, {}, " ", { items = items, title = title })
+
+	if is_loclist then
+		vim.fn.setloclist(win, {}, " ", { items = items, title = title })
+	else
+		vim.fn.setqflist({}, " ", { items = items, title = title })
+	end
 end
 
 -- Navigation from any buffer, recentered on the new entry
