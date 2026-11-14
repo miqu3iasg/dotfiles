@@ -4,8 +4,10 @@
 -- Neovim features: `:grep` (quickfix), `:lvimgrep` (location list) and visual
 -- selections. Call `setup()` once to set the fallback grep program for when
 -- ripgrep is missing, then use the other functions from keymaps or commands.
+-- The quickfix window is opened by a global autocmd, not from here.
 --
 -- See: lua/config/keymaps/search.lua
+-- See: lua/config/autocmds.lua
 
 local M = {}
 
@@ -29,8 +31,9 @@ function M.get_selection()
 	return table.concat(region, "\n")
 end
 
----Run `:grep` in the project and open the quickfix list when there are results.
----The pattern is shell-escaped, so it is safe to pass raw user input.
+---Run `:grep` in the project. The quickfix window opens by itself through the
+---`QuickFixCmdPost` autocmd; this only warns when nothing matched. The pattern
+---is shell-escaped, so it is safe to pass raw user input.
 ---@param pattern string
 ---@param flags? string Extra flags for the grep program, such as `-F -w`.
 function M.grep(pattern, flags)
@@ -43,8 +46,6 @@ function M.grep(pattern, flags)
 
 	if #vim.fn.getqflist() == 0 then
 		vim.notify("No matches for: " .. pattern, vim.log.levels.WARN)
-	else
-		vim.cmd("copen")
 	end
 end
 

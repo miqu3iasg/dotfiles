@@ -94,6 +94,8 @@ AUTOCMDS
         VimResized      keep splits evenly sized after a terminal resize
         TextYankPost    highlight yanked text
         FileType        do not continue comments on new lines
+        QuickFixCmdPost    open the quickfix window when a command filled the list with
+        entries; an empty list keeps the window closed
         FileType        disable heavy features on big files (see lua/lib/bigfile.lua): Treesitter, completion,
         diagnostics, folds and spell go off
         BufRead         .env files get dosini highlighting

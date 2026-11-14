@@ -1,7 +1,7 @@
 -- lua/config/autocmds.lua
 
--- Global autocmds for window layout, editing conveniences, big files, startup
--- and session handling, and utility buffers.
+-- Global autocmds for window layout, editing conveniences, searches, big
+-- files, startup and session handling, and utility buffers.
 
 vim.api.nvim_create_autocmd("VimResized", {
 	group = vim.api.nvim_create_augroup("cg/vim_resized", { clear = true }),
@@ -47,6 +47,20 @@ do
 		end,
 	})
 end
+
+-- The quickfix window opens itself after any command filled the list, so
+-- callers only run the command and report an empty list to the user.
+-- See: lua/lib/search.lua
+vim.api.nvim_create_autocmd("QuickFixCmdPost", {
+	group = vim.api.nvim_create_augroup("cg/quickfix_open", { clear = true }),
+	desc = "Open the quickfix window when the list has entries",
+	pattern = "[^l]*",
+	callback = function()
+		if #vim.fn.getqflist() > 0 then
+			vim.cmd("copen")
+		end
+	end,
+})
 
 vim.api.nvim_create_autocmd("FileType", {
 	group = vim.api.nvim_create_augroup("no_auto_comment", {}),
