@@ -1,10 +1,11 @@
 -- lua/lib/search.lua
 
 -- Helpers for searching the project and the current buffer using only built-in
--- Neovim features: `:grep` (quickfix), `:lvimgrep` (location list) and visual
--- selections. Call `setup()` once to set the fallback grep program for when
--- ripgrep is missing, then use the other functions from keymaps or commands.
--- The quickfix window is opened by a global autocmd, not from here.
+-- Neovim features: `:grep` (quickfix), `:vimgrep` (quickfix, Vim regex),
+-- `:lvimgrep` (location list) and visual selections. Call `setup()` once to
+-- set the fallback grep program for when ripgrep is missing, then use the
+-- other functions from keymaps or commands. The quickfix window is opened by
+-- a global autocmd, not from here.
 --
 -- See: lua/config/keymaps/search.lua
 -- See: lua/config/autocmds.lua
@@ -61,6 +62,22 @@ function M.buffer_grep(pattern)
 	if ok and #vim.fn.getloclist(0) > 0 then
 		vim.cmd("lopen")
 	else
+		vim.notify("No matches for: " .. pattern, vim.log.levels.WARN)
+	end
+end
+
+---Run `:vimgrep` in the project, which uses Vim's own regex engine and works
+---even without ripgrep installed. The quickfix window opens through the
+---`QuickFixCmdPost` autocmd; this only warns when nothing matched.
+-- See: lua/config/autocmds.lua
+---@param pattern string
+function M.vimgrep(pattern)
+	if pattern == "" then
+		return
+	end
+
+	local ok = pcall(vim.cmd, ("silent vimgrep! /%s/j **/*"):format(vim.fn.escape(pattern, "/")))
+	if not ok or #vim.fn.getqflist() == 0 then
 		vim.notify("No matches for: " .. pattern, vim.log.levels.WARN)
 	end
 end

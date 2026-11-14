@@ -85,6 +85,11 @@ km("n", "<leader>sl", function()
 	search.buffer_grep(vim.fn.input("Buffer grep> "))
 end, { desc = "Grep in current buffer (loclist)" })
 
+-- Grep in the project with the Vim regex engine, no ripgrep needed
+km("n", "<leader>sv", function()
+	search.vimgrep(vim.fn.input("Vimgrep> "))
+end, { desc = "Vimgrep in project (Vim regex)" })
+
 -- Lines matching the last search, in the current buffer
 km("n", "<leader>s/", "<cmd>g//#<cr>", { desc = "List lines matching last search" })
 
@@ -97,3 +102,4 @@ km("n", "<leader>su", ":ls<cr>:b<space>", { desc = "Pick buffer" })
 km("n", "<leader>sp", "<cmd>oldfiles<cr>:edit #<", { desc = "Pick recent file" })
 km("n", "<leader>sa", "<cmd>marks<cr>:normal! `", { desc = "Pick mark" })
 km("n", "<leader>sh", ":help ", { desc = "Search help" })
+km("n", "<leader>sH", ":helpgrep ", { desc = "Grep in all help files" })
