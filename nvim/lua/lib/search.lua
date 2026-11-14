@@ -37,7 +37,6 @@ end
 ---window opens through the `QuickFixCmdPost` autocmd, and an empty list
 ---closes the window again and warns. The list is emptied first, because a
 ---failed command would keep the previous one.
--- See: lua/config/autocmds.lua
 ---@param command string Command line passed to `:silent`, such as `grep! -w -- foo`.
 ---@param label string Pattern shown in the no-match notification.
 function M.run(command, label)
