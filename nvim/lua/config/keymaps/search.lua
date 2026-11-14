@@ -1,25 +1,16 @@
 -- lua/config/keymaps/search.lua
 
--- Keymaps for scrolling, search navigation, search highlights and quickfix
--- navigation. Most of them recenter the cursor after moving.
+-- Keymaps for scrolling, search navigation, search highlights, project search
+-- and quickfix navigation. Most of them recenter the cursor after moving.
+-- Project search uses only built-in Neovim features, no plugins.
 --
 -- See: lua/modules/compile.lua
+-- See: lua/lib/search.lua
 
 local km = vim.keymap.set
+local search = require("lib.search")
 
---- Temporarily highlights `positions` as a visual reference, without searching
---- or affecting the search register or `hlsearch`.
----@param positions (integer|integer[])[] Positions in the `matchaddpos()`
----format: a line number, `{ line, col, len }`, etc.
----@param ms? integer Duration in milliseconds
-local function flash(positions, ms)
-	local win = vim.api.nvim_get_current_win()
-	local id = vim.fn.matchaddpos("Visual", positions)
-
-	vim.defer_fn(function()
-		pcall(vim.fn.matchdelete, id, win)
-	end, ms or 400)
-end
+search.setup()
 
 -- Scroll
 km("n", "<C-d>", "<C-d>zz", { desc = "Scroll down and center cursor" })
@@ -49,6 +40,9 @@ km("n", "<leader>sw", function()
 	vim.o.hlsearch = true
 end, { desc = "Search word under cursor" })
 
+-- Search only inside the visual selection
+km("v", "<leader>s/", "<Esc>/\\%V", { desc = "Search inside selection" })
+
 -- Highlights
 km("n", "<leader>hw", function()
 	local lnum, col = vim.fn.line("."), vim.fn.col(".")
@@ -56,11 +50,11 @@ km("n", "<leader>hw", function()
 	if s < 0 then
 		return
 	end
-	flash({ { lnum, s + 1, e - s } })
+	search.flash({ { lnum, s + 1, e - s } })
 end, { desc = "Flash word under cursor" })
 
 km("n", "<leader>hl", function()
-	flash({ vim.fn.line(".") })
+	search.flash({ vim.fn.line(".") })
 end, { desc = "Flash current line" })
 
 km("n", "zh", function()
@@ -72,8 +66,50 @@ end, {
 
 km("n", "<Esc>", "<cmd>nohlsearch<cr>", { desc = "Clear search highlights" })
 
+-- Grep in the project (quickfix)
+km("n", "<leader>sg", function()
+	search.grep(vim.fn.input("Grep> "))
+end, { desc = "Grep in project (regex)" })
+
+km("n", "<leader>sG", function()
+	search.grep(vim.fn.expand("<cword>"), "-F -w")
+end, { desc = "Grep word under cursor in project" })
+
+km("v", "<leader>sg", function()
+	local text = search.get_selection()
+	vim.cmd("normal! \27") -- leave visual mode
+	search.grep(text, "-F")
+end, { desc = "Grep selection in project" })
+
+-- Grep in the current buffer (location list)
+km("n", "<leader>sl", function()
+	search.buffer_grep(vim.fn.input("Buffer grep> "))
+end, { desc = "Grep in current buffer (loclist)" })
+
+-- Lines matching the last search, in the current buffer
+km("n", "<leader>s/", "<cmd>g//#<cr>", { desc = "List lines matching last search" })
+
+-- Lines containing the word under the cursor (also in included files)
+km("n", "<leader>si", "[I", { desc = "List lines with word under cursor" })
+
+-- Files, buffers and history
+km("n", "<leader>sf", ":find *", { desc = "Find file (supports wildcards)" })
+km("n", "<leader>su", ":ls<cr>:b<space>", { desc = "Pick buffer" })
+km("n", "<leader>sp", "<cmd>oldfiles<cr>:edit #<", { desc = "Pick recent file" })
+km("n", "<leader>sa", "<cmd>marks<cr>:normal! `", { desc = "Pick mark" })
+km("n", "<leader>sh", ":help ", { desc = "Search help" })
+km("n", "<leader>sH", ":helpgrep ", { desc = "Grep in all help files" })
+
 -- Quickfix
 km("n", "]q", "<cmd>cnext<cr>zz", { desc = "Next quickfix item" })
 km("n", "[q", "<cmd>cprev<cr>zz", { desc = "Previous quickfix item" })
 km("n", "]Q", "<cmd>clast<cr>", { desc = "Last quickfix item" })
 km("n", "[Q", "<cmd>cfirst<cr>", { desc = "First quickfix item" })
+km("n", "<leader>qq", "<cmd>copen<cr>", { desc = "Open quickfix list" })
+km("n", "<leader>qc", "<cmd>cclose<cr>", { desc = "Close quickfix list" })
+km("n", "<leader>s[", "<cmd>colder<cr>", { desc = "Older quickfix list" })
+km("n", "<leader>s]", "<cmd>cnewer<cr>", { desc = "Newer quickfix list" })
+
+-- Location list
+km("n", "]l", "<cmd>lnext<cr>zz", { desc = "Next location item" })
+km("n", "[l", "<cmd>lprev<cr>zz", { desc = "Previous location item" })

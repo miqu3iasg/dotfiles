@@ -20,7 +20,7 @@ vim.opt.showcmd = false
 vim.opt.mouse = ""
 vim.opt.wrap = false
 vim.opt.startofline = false -- Keeps the cursor column on `gg` and `G`.
-vim.opt.list = true
+vim.opt.list = false
 vim.opt.listchars = { tab = "¬·", trail = "•", nbsp = "·", space = "·" }
 vim.opt.diffopt:append({ "algorithm:histogram", "indent-heuristic", "linematch:60" })
 
