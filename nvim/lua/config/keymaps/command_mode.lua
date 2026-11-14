@@ -30,3 +30,9 @@ km("c", "<C-l>", "<S-Right>", { desc = "Move word forward" })
 km("c", "<C-o>", function()
 	vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<C-f>", true, false, true), "n", true)
 end, { desc = "Open command-line window" })
+
+-- With the completion menu open, `/` accepts the selected entry and lets you
+-- keep going down the path, level by level.
+km("c", "/", function()
+	return vim.fn.wildmenumode() == 1 and "<C-y>" or "/"
+end, { expr = true, desc = "Accept completion and keep going down the path" })

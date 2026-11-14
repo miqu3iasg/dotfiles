@@ -13,4 +13,4 @@ require("config.pack")
 require("plugins")
 require("modules.compile").setup()
 
-vim.cmd.colorscheme("hollow")
+vim.cmd.colorscheme("plain")

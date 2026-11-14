@@ -2,23 +2,23 @@
 
 -- Helpers for searching the project and the current buffer using only built-in
 -- Neovim features: `:grep` (quickfix), `:lvimgrep` (location list) and visual
--- selections. Call `setup()` once to pick the grep program, then use the other
--- functions from keymaps or commands.
+-- selections. Call `setup()` once to set the fallback grep program for when
+-- ripgrep is missing, then use the other functions from keymaps or commands.
 --
 -- See: lua/config/keymaps/search.lua
 
 local M = {}
 
----Configure `grepprg` and `grepformat`. Uses ripgrep when it is installed,
----otherwise falls back to the system `grep`.
+---Configure the fallback `grepprg` and `grepformat` for when ripgrep is not
+---installed. With ripgrep, `grepprg` is left to `config/options.lua`, and the
+---default `grepformat` already understands `--vimgrep` output.
 function M.setup()
 	if vim.fn.executable("rg") == 1 then
-		vim.o.grepprg = "rg --vimgrep --smart-case"
-		vim.o.grepformat = "%f:%l:%c:%m"
-	else
-		vim.o.grepprg = "grep -rIn --exclude-dir=.git $* ."
-		vim.o.grepformat = "%f:%l:%m"
+		return
 	end
+
+	vim.o.grepprg = "grep -rIn --exclude-dir=.git $* ."
+	vim.o.grepformat = "%f:%l:%m"
 end
 
 ---Get the text of the current visual selection. Must be called while still in

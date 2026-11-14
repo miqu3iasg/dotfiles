@@ -4,8 +4,9 @@
 -- and quickfix navigation. Most of them recenter the cursor after moving.
 -- Project search uses only built-in Neovim features, no plugins.
 --
--- See: lua/modules/compile.lua
+-- See: lua/config/options.lua
 -- See: lua/lib/search.lua
+-- See: lua/modules/compile.lua
 
 local km = vim.keymap.set
 local search = require("lib.search")
@@ -40,9 +41,6 @@ km("n", "<leader>sw", function()
 	vim.o.hlsearch = true
 end, { desc = "Search word under cursor" })
 
--- Search only inside the visual selection
-km("v", "<leader>s/", "<Esc>/\\%V", { desc = "Search inside selection" })
-
 -- Highlights
 km("n", "<leader>hw", function()
 	local lnum, col = vim.fn.line("."), vim.fn.col(".")
@@ -71,7 +69,7 @@ km("n", "<leader>sg", function()
 	search.grep(vim.fn.input("Grep> "))
 end, { desc = "Grep in project (regex)" })
 
-km("n", "<leader>sG", function()
+km("n", "<leader>sr", function()
 	search.grep(vim.fn.expand("<cword>"), "-F -w")
 end, { desc = "Grep word under cursor in project" })
 
@@ -93,12 +91,11 @@ km("n", "<leader>s/", "<cmd>g//#<cr>", { desc = "List lines matching last search
 km("n", "<leader>si", "[I", { desc = "List lines with word under cursor" })
 
 -- Files, buffers and history
-km("n", "<leader>sf", ":find *", { desc = "Find file (supports wildcards)" })
+km("n", "<leader>sf", ":find *", { desc = "Find file by name" })
 km("n", "<leader>su", ":ls<cr>:b<space>", { desc = "Pick buffer" })
 km("n", "<leader>sp", "<cmd>oldfiles<cr>:edit #<", { desc = "Pick recent file" })
 km("n", "<leader>sa", "<cmd>marks<cr>:normal! `", { desc = "Pick mark" })
 km("n", "<leader>sh", ":help ", { desc = "Search help" })
-km("n", "<leader>sH", ":helpgrep ", { desc = "Grep in all help files" })
 
 -- Quickfix
 km("n", "]q", "<cmd>cnext<cr>zz", { desc = "Next quickfix item" })

@@ -55,6 +55,7 @@ return {
 		t({ "", "", "Returns:", "    " }),
 		i(6, "Description."),
 		t({ "", '"""' }),
+		-- TODO: add a "Raises" param here as a snippet field
 	}),
 
 	-- Google-style docstring for functions and methods that return nothing.
