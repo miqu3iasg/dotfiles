@@ -1,11 +1,21 @@
 -- lua/snippets/java.lua
 
 -- Java snippets for program scaffolding, types, members, output, comments, and
--- Javadoc. Dynamic helpers derive class names and dates from the current buffer,
--- while mirrored insert nodes keep related declarations synchronized. Indentation
--- uses four spaces and modifiers can be removed by clearing their insert nodes.
+-- Javadoc. Dynamic helpers derive class names and package names from the current
+-- buffer, while mirrored insert nodes keep related declarations synchronized.
+-- Indentation uses four spaces and modifiers can be removed by clearing their
+-- insert nodes.
+--
+-- Javadoc snippets follow the Oracle and Google Java Style conventions: the
+-- first sentence is a summary fragment ending with a period, extra paragraphs
+-- start with <p> glued to the first word, and tags appear in the order
+-- @param, @return, @throws, @author, @see, @since. Every Javadoc block ends with
+-- a line break so the declaration it documents goes right below it. Delete the
+-- tag lines that do not apply.
 --
 -- See: https://docs.oracle.com/javase/8/docs/technotes/tools/windows/javadoc.html
+-- See: https://www.oracle.com/technical-resources/articles/java/javadoc-tool.html
+-- See: https://google.github.io/styleguide/javaguide.html#s7-javadoc
 -- See: https://www.baeldung.com/javadoc
 
 local ls = require("luasnip")
@@ -22,9 +32,16 @@ local function get_classname()
 	return name ~= "" and name or "Untitled"
 end
 
--- Current date in ISO format, used in @since tags.
-local function today()
-	return os.date("%Y-%m-%d")
+-- Package name inferred from the directory of the current buffer, for example
+-- `src/main/java/com/example/app/Main.java` gives `com.example.app`. Falls back
+-- to `com.example` when the path does not follow the Maven/Gradle layout.
+local function get_package()
+	local dir = vim.fn.expand("%:p:h"):gsub("\\", "/")
+	local rel = dir:match("/src/[^/]+/java/(.+)$") or dir:match("/src/(.+)$")
+	if not rel then
+		return "com.example"
+	end
+	return (rel:gsub("/", "."))
 end
 
 -- Capitalizes the first letter of an insert node for getter and setter names.
@@ -154,6 +171,14 @@ return {
 		t({ "public static void main(String[] args) {", "    " }),
 		i(1),
 		t({ "", "}" }),
+		i(0),
+	}),
+
+	-- Package declaration inferred from the directory layout.
+	s("pkg", {
+		t("package "),
+		dynamic_default(1, get_package),
+		t(";"),
 		i(0),
 	}),
 
@@ -376,70 +401,145 @@ return {
 		i(0),
 	}),
 
+	-- Javadoc: blocks.
+
+	-- Class, interface, or enum documentation. Goes after the imports and
+	-- before the declaration (and before annotations such as @Entity).
+	-- Delete @author if your team relies on version control for authorship.
+	s("docc", {
+		t({ "/**", " * " }),
+		i(1, "Summary fragment ending with a period."),
+		t({ "", " *", " * <p>" }),
+		i(2, "Longer description: responsibilities, invariants, thread-safety, usage notes."),
+		t({ "", " *", " * @author " }),
+		i(3, "Miquéias Alves Medeiros"),
+		t({ "", " * @see " }),
+		i(4, "RelatedClass"),
+		t({ "", " * @since " }),
+		i(5, "1.0"),
+		t({ "", " */", "" }),
+		i(0),
+	}),
+
+	-- Documentation for a generic class or interface, with the @param <T> tag.
+	s("docg", {
+		t({ "/**", " * " }),
+		i(1, "Summary fragment ending with a period."),
+		t({ "", " *", " * <p>" }),
+		i(2, "Longer description: responsibilities, invariants, thread-safety, usage notes."),
+		t({ "", " *", " * @param <" }),
+		i(3, "T"),
+		t("> "),
+		i(4, "the type of ..."),
+		t({ "", " * @author " }),
+		i(5, "Miquéias Alves Medeiros"),
+		t({ "", " * @see " }),
+		i(6, "RelatedClass"),
+		t({ "", " * @since " }),
+		i(7, "1.0"),
+		t({ "", " */", "" }),
+		i(0),
+	}),
+
+	-- Record documentation. Records document their components with @param.
+	s("docr", {
+		t({ "/**", " * " }),
+		i(1, "Summary fragment ending with a period."),
+		t({ "", " *", " * @param " }),
+		i(2, "component"),
+		t(" "),
+		i(3, "description of the component"),
+		t({ "", " * @since " }),
+		i(4, "1.0"),
+		t({ "", " */", "" }),
+		i(0),
+	}),
+
 	-- Method documentation with parameter, return, and exception tags.
+	-- The summary is a fragment such as "Returns the customer ID.".
 	-- Remove the tags that do not apply.
 	s("doc", {
 		t({ "/**", " * " }),
-		i(1, "Description."),
+		i(1, "Summary fragment ending with a period."),
 		t({ "", " *", " * @param " }),
 		i(2, "paramName"),
 		t(" "),
-		i(3, "Description."),
+		i(3, "description"),
 		t({ "", " * @param " }),
 		i(4, "paramName"),
 		t(" "),
-		i(5, "Description."),
+		i(5, "description"),
 		t({ "", " * @return " }),
-		i(6, "Description."),
+		i(6, "description"),
 		t({ "", " * @throws " }),
-		i(7, "Exception"),
+		i(7, "IllegalArgumentException"),
 		t(" "),
-		i(8, "When it is thrown."),
-		t({ "", " */" }),
+		i(8, "if ..."),
+		t({ "", " */", "" }),
 		i(0),
 	}),
 
-	-- Method documentation without an @return tag, intended for void methods.
+	-- Documentation for void methods and constructors (no @return tag).
 	s("docv", {
 		t({ "/**", " * " }),
-		i(1, "Description."),
+		i(1, "Summary fragment ending with a period."),
 		t({ "", " *", " * @param " }),
 		i(2, "paramName"),
 		t(" "),
-		i(3, "Description."),
-		t({ "", " */" }),
-		i(0),
-	}),
-
-	-- Class documentation with author, version, and expansion-time @since date.
-	s("docc", {
-		t({ "/**", " * " }),
-		i(1, "Description."),
-		t({ "", " *", " * @author " }),
-		i(2, "Miquéias Alves Medeiros"),
-		t({ "", " * @version " }),
-		i(3, "1.0"),
-		t({ "", " * @since " }),
-		dynamic_default(4, today),
-		t({ "", " */" }),
+		i(3, "description"),
+		t({ "", " * @throws " }),
+		i(4, "IllegalArgumentException"),
+		t(" "),
+		i(5, "if ..."),
+		t({ "", " */", "" }),
 		i(0),
 	}),
 
 	-- One-line documentation comment for fields and constants.
-	s("docf", { t("/** "), i(1, "Description."), t(" */"), i(0) }),
+	s("docf", { t("/** "), i(1, "Summary fragment."), t({ " */", "" }), i(0) }),
 
-	-- Inline and standalone Javadoc tags.
-	s("link", { t("{@link "), i(1, "Class#method"), t("}"), i(0) }),
-	s("code", { t("{@code "), i(1), t("}"), i(0) }),
-	s("seeref", { t("@see "), i(1, "Reference"), i(0) }),
+	-- Package documentation, for package-info.java. The package name is
+	-- inferred from the directory layout.
+	s("docpkg", {
+		t({ "/**", " * " }),
+		i(1, "Summary fragment ending with a period."),
+		t({ "", " *", " * <p>" }),
+		i(2, "Overview of the package: what it contains and how the pieces fit together."),
+		t({ "", " *", " * @since " }),
+		i(3, "1.0"),
+		t({ "", " */", "package " }),
+		dynamic_default(4, get_package),
+		t(";"),
+		i(0),
+	}),
 
 	-- Deprecated documentation followed by the @Deprecated annotation.
+	-- The text says why the element is deprecated and what replaces it.
 	s("dep", {
 		t({ "/**", " * " }),
-		i(1, "Description."),
+		i(1, "Summary fragment ending with a period."),
 		t({ "", " *", " * @deprecated " }),
 		i(2, "Use {@link Other} instead."),
-		t({ "", " */", "@Deprecated", "" }),
+		t({ "", " */", '@Deprecated(since = "' }),
+		i(3, "1.0"),
+		t({ '")', "" }),
+		i(0),
+	}),
+
+	-- Javadoc: inline and standalone tags.
+	s("link", { t("{@link "), i(1, "Class#method"), t("}"), i(0) }),
+	s("linkp", { t("{@linkplain "), i(1, "Class#method"), t(" "), i(2, "label"), t("}"), i(0) }),
+	s("code", { t("{@code "), i(1), t("}"), i(0) }),
+	s("lit", { t("{@literal "), i(1), t("}"), i(0) }),
+	s("val", { t("{@value "), i(1, "Class#CONSTANT"), t("}"), i(0) }),
+	s("inh", { t("{@inheritDoc}"), i(0) }),
+	s("seeref", { t("@see "), i(1, "Reference"), i(0) }),
+
+	-- Code example inside a Javadoc block. Keep the leading asterisks.
+	s("pre", {
+		t({ "<pre>{@code", " * " }),
+		i(1, "example code"),
+		t({ "", " * }</pre>" }),
 		i(0),
 	}),
 }
