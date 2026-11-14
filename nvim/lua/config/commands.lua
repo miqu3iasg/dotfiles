@@ -14,10 +14,16 @@ end, { desc = "Change the working directory to the current file's directory" })
 
 -- Runs the grep program directly with the given arguments, so flags such as
 -- `-w` or `-i` can be typed on the command line, where history and `q:`
--- editing are available. The quickfix window opens through the autocmd.
+-- editing are available. The result handling is shared with the search
+-- keymaps: the quickfix window opens through the autocmd, and a no-match
+-- closes it again and warns.
+-- See: lua/lib/search.lua
 -- See: lua/config/autocmds.lua
 vim.api.nvim_create_user_command("Grep", function(opts)
-	vim.cmd(("silent grep! %s"):format(opts.args))
+	if not opts.args:match("%S") then
+		return
+	end
+	require("lib.search").run(("grep! %s"):format(opts.args), opts.args)
 end, {
 	nargs = "+",
 	desc = "Grep the project for the arguments and open the quickfix (:Grep -w word)",

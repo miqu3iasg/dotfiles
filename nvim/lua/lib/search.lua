@@ -13,8 +13,9 @@
 local M = {}
 
 ---Configure the fallback `grepprg` and `grepformat` for when ripgrep is not
----installed. With ripgrep, `grepprg` is left to `config/options.lua`, and the
----default `grepformat` already understands `--vimgrep` output.
+---installed. Neovim itself sets `rg --vimgrep -uu` as the default when ripgrep
+---is found, and `config/options.lua` narrows that to respect `.gitignore` and
+---follow the smartcase rule; this only covers the missing-ripgrep case.
 function M.setup()
 	if vim.fn.executable("rg") == 1 then
 		return
@@ -32,9 +33,28 @@ function M.get_selection()
 	return table.concat(region, "\n")
 end
 
----Run `:grep` in the project. The quickfix window opens by itself through the
----`QuickFixCmdPost` autocmd; this only warns when nothing matched. The pattern
----is shell-escaped, so it is safe to pass raw user input.
+---Run a full `:grep`-style command line and report the result: the quickfix
+---window opens through the `QuickFixCmdPost` autocmd, and an empty list
+---closes the window again and warns. The list is emptied first, because a
+---failed command would keep the previous one.
+-- See: lua/config/autocmds.lua
+---@param command string Command line passed to `:silent`, such as `grep! -w -- foo`.
+---@param label string Pattern shown in the no-match notification.
+function M.run(command, label)
+	vim.fn.setqflist({}, " ")
+	vim.cmd(("silent %s"):format(command))
+	vim.cmd("redraw!")
+
+	if #vim.fn.getqflist() == 0 then
+		-- An empty list does not close the window by itself, so a no-match
+		-- leaves behind a useless empty window otherwise.
+		vim.cmd("cclose")
+		vim.notify("No matches for: " .. label, vim.log.levels.WARN)
+	end
+end
+
+---Run `:grep` in the project for `pattern`, which is shell-escaped, so it is
+---safe to pass raw user input.
 ---@param pattern string
 ---@param flags? string Extra flags for the grep program, such as `-F -w`.
 function M.grep(pattern, flags)
@@ -42,12 +62,7 @@ function M.grep(pattern, flags)
 		return
 	end
 
-	vim.cmd(("silent grep! %s -- %s"):format(flags or "", vim.fn.shellescape(pattern, true)))
-	vim.cmd("redraw!")
-
-	if #vim.fn.getqflist() == 0 then
-		vim.notify("No matches for: " .. pattern, vim.log.levels.WARN)
-	end
+	M.run(("grep! %s -- %s"):format(flags or "", vim.fn.shellescape(pattern, true)), pattern)
 end
 
 ---Run `:lvimgrep` on the current buffer and open the location list when there
@@ -58,10 +73,13 @@ function M.buffer_grep(pattern)
 		return
 	end
 
+	-- A failed command keeps the previous list, so it is emptied first.
+	vim.fn.setloclist(0, {}, " ")
 	local ok = pcall(vim.cmd, ("lvimgrep /%s/j %%"):format(vim.fn.escape(pattern, "/")))
 	if ok and #vim.fn.getloclist(0) > 0 then
 		vim.cmd("lopen")
 	else
+		vim.cmd("lclose")
 		vim.notify("No matches for: " .. pattern, vim.log.levels.WARN)
 	end
 end
@@ -75,8 +93,11 @@ function M.vimgrep(pattern)
 		return
 	end
 
+	-- A failed command keeps the previous list, so it is emptied first.
+	vim.fn.setqflist({}, " ")
 	local ok = pcall(vim.cmd, ("silent vimgrep! /%s/j **/*"):format(vim.fn.escape(pattern, "/")))
 	if not ok or #vim.fn.getqflist() == 0 then
+		vim.cmd("cclose")
 		vim.notify("No matches for: " .. pattern, vim.log.levels.WARN)
 	end
 end

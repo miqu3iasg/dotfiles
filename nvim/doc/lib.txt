@@ -49,6 +49,14 @@ THE LIBRARIES
         with either a buffer substitution or a project-wide one (the latter needs ripgrep as 'grepprg'). The editing
         keymaps call this from config/keymaps/. API: M.escape_pattern, M.prompt, M.project, M.selection, M.get_visual.
 
+    search
+        Runs the built-in project searches: `:grep` into the quickfix (M.grep takes a shell-escaped pattern, M.run a
+        full command line shared with :Grep), `:vimgrep` with the Vim regex engine (M.vimgrep) and `:lvimgrep` on the
+        current buffer (M.buffer_grep). The quickfix window is opened by the QuickFixCmdPost autocmd in
+        config/autocmds.lua, never from here. M.setup only sets the GNU grep fallback for when ripgrep is missing, and
+        M.flash temporarily highlights positions without touching the search register. The keymaps call this from
+        config/keymaps/search.lua. API: M.setup, M.run, M.grep, M.vimgrep, M.buffer_grep, M.get_selection, M.flash.
+
     exports
         Single source of truth for where exported documents go, shared by the pandoc, vimtex and tinymist setups, so
         three features write to the same layout. Documents go to <root>/exports/<reldir>/<name>.<ext> and latexmk

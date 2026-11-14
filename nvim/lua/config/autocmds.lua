@@ -60,8 +60,11 @@ vim.api.nvim_create_autocmd("CmdlineEnter", {
 })
 
 -- The quickfix window opens itself after any command filled the list, so
--- callers only run the command and report an empty list to the user.
+-- callers only run the command and report an empty list to the user. A
+-- command that may fail while the list still holds entries, such as a manual
+-- `:grep`, should empty the list first; `lib/search.lua` and `:Grep` do.
 -- See: lua/lib/search.lua
+-- See: lua/config/commands.lua
 vim.api.nvim_create_autocmd("QuickFixCmdPost", {
 	group = vim.api.nvim_create_augroup("cg/quickfix_open", { clear = true }),
 	desc = "Open the quickfix window when the list has entries",
