@@ -59,7 +59,6 @@ return {
 		t(": "),
 		i(8, "When it is raised."),
 		t({ "", '"""' }),
-		-- TODO: add a "Raises" param here as a snippet field
 	}),
 
 	-- Google-style docstring for functions and methods that return nothing.
