@@ -26,6 +26,9 @@ vim.opt.diffopt:append({ "algorithm:histogram", "indent-heuristic", "linematch:6
 
 vim.opt.ignorecase = true
 vim.opt.smartcase = true -- Case-sensitive only when the pattern has uppercase.
+-- Substitutions, `:g` and `:vimgrep` preview their matches as typed, without
+-- opening a split.
+vim.opt.inccommand = "nosplit"
 vim.opt.wildignorecase = true
 vim.opt.wildignore:append({ "*/.git/*", "*/node_modules/*", "*/target/*", "*/dist/*" })
 vim.opt.completeopt = "menuone,noselect"
