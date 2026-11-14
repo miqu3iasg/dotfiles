@@ -79,12 +79,6 @@ km("n", "<leader>sl", function()
 	search.buffer_grep(vim.fn.input("Buffer grep> "))
 end, { desc = "Grep in current buffer (loclist)" })
 
--- Grep in the project with the Vim regex engine, no ripgrep needed.
--- <leader>sv belongs to the window keymaps, hence the capital.
-km("n", "<leader>sV", function()
-	search.vimgrep(vim.fn.input("Vimgrep> "))
-end, { desc = "Vimgrep in project (Vim regex)" })
-
 -- Lines matching the last search, in the current buffer
 km("n", "<leader>s/", "<cmd>g//#<cr>", { desc = "List lines matching last search" })
 
