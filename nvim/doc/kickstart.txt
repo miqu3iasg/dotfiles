@@ -71,8 +71,9 @@ OPTIONS
 
     Search
 
-        'ignorecase'/'smartcase' case-insensitive unless the pattern has uppercase; ripgrep is used as 'grepprg' when
-        installed, which the project-wide features rely on.
+        'ignorecase'/'smartcase' case-insensitive unless the pattern has uppercase; 'inccommand' nosplit, so
+        :substitute, :global and :vimgrep preview their matches as typed; ripgrep is used as 'grepprg' when installed
+        (with --smart-case, so project grep follows the same case rule), which the project-wide features rely on.
 
     Display
 
