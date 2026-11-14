@@ -14,6 +14,7 @@ vim.g.maplocalleader = ","
 require("config.keymaps.windows")
 require("config.keymaps.command_mode")
 require("config.keymaps.search")
+require("config.keymaps.quickfix")
 require("config.keymaps.editing")
 require("config.keymaps.buffers")
 require("config.keymaps.terminal")

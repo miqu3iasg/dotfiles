@@ -1,11 +1,12 @@
 -- lua/config/keymaps/search.lua
 
--- Keymaps for scrolling, search navigation, search highlights, project search
--- and quickfix navigation. Most of them recenter the cursor after moving.
+-- Keymaps for scrolling, search navigation, search highlights and project
+-- search. Most of them recenter the cursor after moving.
 -- Project search uses only built-in Neovim features, no plugins.
 --
 -- See: lua/config/options.lua
 -- See: lua/lib/search.lua
+-- See: lua/config/keymaps/quickfix.lua
 -- See: lua/modules/compile.lua
 
 local km = vim.keymap.set
@@ -96,17 +97,3 @@ km("n", "<leader>su", ":ls<cr>:b<space>", { desc = "Pick buffer" })
 km("n", "<leader>sp", "<cmd>oldfiles<cr>:edit #<", { desc = "Pick recent file" })
 km("n", "<leader>sa", "<cmd>marks<cr>:normal! `", { desc = "Pick mark" })
 km("n", "<leader>sh", ":help ", { desc = "Search help" })
-
--- Quickfix
-km("n", "]q", "<cmd>cnext<cr>zz", { desc = "Next quickfix item" })
-km("n", "[q", "<cmd>cprev<cr>zz", { desc = "Previous quickfix item" })
-km("n", "]Q", "<cmd>clast<cr>", { desc = "Last quickfix item" })
-km("n", "[Q", "<cmd>cfirst<cr>", { desc = "First quickfix item" })
-km("n", "<leader>qq", "<cmd>copen<cr>", { desc = "Open quickfix list" })
-km("n", "<leader>qc", "<cmd>cclose<cr>", { desc = "Close quickfix list" })
-km("n", "<leader>s[", "<cmd>colder<cr>", { desc = "Older quickfix list" })
-km("n", "<leader>s]", "<cmd>cnewer<cr>", { desc = "Newer quickfix list" })
-
--- Location list
-km("n", "]l", "<cmd>lnext<cr>zz", { desc = "Next location item" })
-km("n", "[l", "<cmd>lprev<cr>zz", { desc = "Previous location item" })
