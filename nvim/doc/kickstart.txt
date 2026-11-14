@@ -94,6 +94,9 @@ AUTOCMDS
         VimResized      keep splits evenly sized after a terminal resize
         TextYankPost    highlight yanked text
         FileType        do not continue comments on new lines
+        CmdlineEnter    while a `:` command is typed, smartcase is off so completions
+        such as `:find *Foo` stay case-insensitive
+        CmdlineEnter    starting a `/` or `?` search always turns hlsearch on
         QuickFixCmdPost    open the quickfix window when a command filled the list with
         entries; an empty list keeps the window closed
         FileType        disable heavy features on big files (see lua/lib/bigfile.lua): Treesitter, completion,

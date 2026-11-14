@@ -48,6 +48,17 @@ do
 	})
 end
 
+-- A search always highlights its matches, whatever the previous state was, so
+-- mappings that jump without searching do not have to turn it on themselves.
+vim.api.nvim_create_autocmd("CmdlineEnter", {
+	group = vim.api.nvim_create_augroup("cg/search_highlight", { clear = true }),
+	desc = "Highlight matches when starting a search",
+	pattern = { "/", "?" },
+	callback = function()
+		vim.o.hlsearch = true
+	end,
+})
+
 -- The quickfix window opens itself after any command filled the list, so
 -- callers only run the command and report an empty list to the user.
 -- See: lua/lib/search.lua
