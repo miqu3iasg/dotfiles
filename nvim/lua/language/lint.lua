@@ -30,6 +30,8 @@
 
 local lint = require("lint")
 
+local M = {}
+
 lint.linters_by_ft = {
 	python = { "ruff" },
 }
@@ -71,11 +73,22 @@ local function toggle_lint(enable)
 	return lint_enabled
 end
 
+---Reapply the lint state after the global diagnostics display is toggled on,
+---so a disabled lint does not come back with it.
+---See: lua/config/keymaps/misc.lua
+function M.resync()
+	if not lint_enabled then
+		vim.diagnostic.enable(false, { ns_id = ruff_namespace })
+	end
+end
+
 vim.api.nvim_create_autocmd({ "BufWritePost", "FileType" }, {
 	group = vim.api.nvim_create_augroup("Linting", { clear = true }),
 	callback = try_lint,
 })
 
-vim.keymap.set("n", "<leader>uli", function()
+vim.keymap.set("n", "<leader>ui", function()
 	toggle_lint()
 end, { desc = "Toggle linting" })
+
+return M

@@ -77,15 +77,8 @@ end
 ---Reads the system clipboard (falls back to the unnamed register) and
 ---returns its first line, trimmed. Multi-line clipboards are cut at the
 ---first line so the comment stays on a single line.
----@return string
-local function get_clipboard()
-	local text = vim.fn.getreg("+")
-	if text == "" then
-		text = vim.fn.getreg('"')
-	end
-	text = text:match("^%s*([^\r\n]*)") or ""
-	return (text:gsub("%s+$", ""))
-end
+---See: lua/lib/headers.lua
+local get_clipboard = h.get_clipboard
 
 -- `seec`: like `see`, but pastes the clipboard (usually a link or a path)
 -- right after "See: ".

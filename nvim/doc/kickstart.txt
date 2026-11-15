@@ -321,7 +321,9 @@ NOTES
 
     File names follow TYPE-YYYYMMDD-HHmmss[-SLUG].md, defined by the vault's own README. Placeholders available to
     templates: {{title}}, {{date}}, {{date:FMT}} (a moment-like pattern, e.g. {{date:DD/MM/YYYY}}), {{id}},
-    {{adr_number}}. Creation is bound to the vault, but template insertion works on any Markdown file on disk.
+    {{adr_number}}. The next ADR number is the highest ADR-NNN found in the bodies of the vault's ADRs plus one, so
+    deleting the newest ADR does not make the next one reuse its number. Creation is bound to the vault, but template
+    insertion works on any Markdown file on disk.
 
     The daily note of a day is daily-YYYYMMDD.md, one per day: <leader>oa (or :NotesDaily) opens today's note and
     creates it from _templates/daily.md when missing, open-or-create - an existing day is never overwritten. The CLI
@@ -343,7 +345,8 @@ MISC MODULES
     markdown_lists   native list editing for Markdown buffers: cycling, promoting and demoting list items on the current
     line or selection, with formatter helpers that keep markers and indentation as written. The bullet of new items is
     set with vim.g.markdown_list_bullet and the delimiter with vim.g.markdown_list_delimiter (buffer-local versions
-    take precedence).
+    take precedence). The marker cycle and the type cycle order are set with vim.g.markdown_list_bullets and
+    vim.g.markdown_list_cycle.
 
 LIB
     lua/lib/ holds everything that exists to be required by other modules:

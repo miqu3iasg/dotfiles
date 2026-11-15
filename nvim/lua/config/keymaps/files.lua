@@ -7,8 +7,6 @@
 
 local km = vim.keymap.set
 
--- TODO: add more colors to the prompt
-
 -- Prompt text, colored by the active colorscheme. Because of `default`, a
 -- colorscheme or user config can still override this group.
 vim.api.nvim_set_hl(0, "FilesPrompt", { link = "Question", default = true })
@@ -157,6 +155,16 @@ map("<leader>nr", function()
 	local new = read_path("Rename file " .. vim.fn.fnamemodify(old, ":t") .. " to", old)
 	if not new or new == "" or new == old then
 		return
+	end
+
+	-- `:saveas` cannot create the target directory, so it is offered here,
+	-- like the new file flow does.
+	local dir = vim.fn.fnamemodify(new, ":h")
+	if vim.fn.isdirectory(dir) == 0 then
+		if not confirm_action("Directory " .. vim.fn.fnamemodify(dir, ":~") .. " does not exist; create?") then
+			return
+		end
+		vim.fn.mkdir(dir, "p")
 	end
 
 	vim.cmd("saveas " .. vim.fn.fnameescape(new))

@@ -11,6 +11,7 @@
 
 local km = vim.keymap.set
 local search = require("lib.search")
+local substitute = require("lib.substitute")
 
 search.setup()
 
@@ -35,10 +36,9 @@ km("v", "*", [[y/\V<C-r>=escape(@", '/\')<CR><CR>]], { desc = "Search selection 
 km("v", "#", [[y?\V<C-r>=escape(@", '/\')<CR><CR>]], { desc = "Search selection backward" })
 
 -- Search word
+-- See: lua/lib/substitute.lua (pattern escaping)
 km("n", "<leader>sw", function()
-	local word = vim.fn.escape(vim.fn.expand("<cword>"), "\\/.*$^~[]")
-
-	vim.fn.setreg("/", [[\<]] .. word .. [[\>]])
+	vim.fn.setreg("/", substitute.escape_pattern(vim.fn.expand("<cword>"), true))
 	vim.o.hlsearch = true
 end, { desc = "Search word under cursor" })
 

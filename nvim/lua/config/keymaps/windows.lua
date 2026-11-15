@@ -21,11 +21,11 @@ km("n", "<leader>mx", "<C-w>x", { desc = "Swap window with next" })
 km("n", "<leader>mr", "<C-w>r", { desc = "Rotate windows" })
 
 -- Split and close
-km("n", "<leader>sv", "<cmd>vsplit<CR>", { desc = "Split window vertically" })
-km("n", "<leader>sh", "<cmd>split<CR>", { desc = "Split window horizontally" })
-km("n", "<leader>se", "<C-w>=", { desc = "Equalize window sizes" })
-km("n", "<leader>sc", "<cmd>close<CR>", { desc = "Close current window" })
-km("n", "<leader>so", "<cmd>only<CR>", { desc = "Close other windows" })
+km("n", "<leader>wv", "<cmd>vsplit<CR>", { desc = "Split window vertically" })
+km("n", "<leader>wh", "<cmd>split<CR>", { desc = "Split window horizontally" })
+km("n", "<leader>we", "<C-w>=", { desc = "Equalize window sizes" })
+km("n", "<leader>wc", "<cmd>close<CR>", { desc = "Close current window" })
+km("n", "<leader>wo", "<cmd>only<CR>", { desc = "Close other windows" })
 
 -- Resize
 km("n", "+", "<cmd>resize +5<cr>", { desc = "Increase window height" })
@@ -35,6 +35,6 @@ km("n", "-", "<cmd>vertical resize -5<cr>", { desc = "Decrease window width" })
 
 -- Zoom
 -- See: lua/modules/window_zoom.lua
-km("n", "<leader>sm", function()
+km("n", "<leader>wm", function()
 	require("modules.window_zoom").toggle()
 end, { desc = "Toggle window zoom" })

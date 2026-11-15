@@ -10,7 +10,9 @@
 -- The marker of new bullets can be set with `vim.g.markdown_list_bullet` to
 -- `-`, `*` or `+`, and the delimiter of new numbered items with
 -- `vim.g.markdown_list_delimiter` to `.` or `)`. Both have a buffer-local
--- version in `vim.b` that takes precedence.
+-- version in `vim.b` that takes precedence. The bullet cycle and the type
+-- cycle order can be changed with `vim.g.markdown_list_bullets` and
+-- `vim.g.markdown_list_cycle`.
 --
 -- The helpers `bullet_markers`, `restore_bullets` and `tabify` are meant to be
 -- called from formatters, which is why the parsing code relies only on string
@@ -45,18 +47,22 @@ local M = {}
 
 ---@alias MarkdownLists.Operation fun(l1: integer, l2: integer, mode: "n"|"x", arg?: any)
 
----@class MarkdownLists.Config
----@field bullets string[] Bullet markers, in the order of the marker cycle.
----@field cycle MarkdownLists.Type[] Order of the type cycle.
+---Bullet markers, in the order of the marker cycle.
+---See: vim.g.markdown_list_bullets
+---@return string[]
+local function bullets()
+	return vim.g.markdown_list_bullets or { "-", "*", "+" }
+end
 
----@type MarkdownLists.Config
-M.config = {
-	bullets = { "-", "*", "+" },
-	cycle = { "bullet", "check", "number", "none" },
-}
+---Order of the type cycle.
+---See: vim.g.markdown_list_cycle
+---@return MarkdownLists.Type[]
+local function cycle_order()
+	return vim.g.markdown_list_cycle or { "bullet", "check", "number", "none" }
+end
 
 local function default_bullet()
-	return vim.b.markdown_list_bullet or vim.g.markdown_list_bullet or M.config.bullets[1]
+	return vim.b.markdown_list_bullet or vim.g.markdown_list_bullet or bullets()[1]
 end
 
 local function default_delimiter()
@@ -355,7 +361,7 @@ function M.toggle_checklist(l1, l2)
 	end)
 end
 
----Cycle the list type following `M.config.cycle`. The current type is the one
+---Cycle the list type following `cycle_order()`. The current type is the one
 ---of the first line, and every line is converted to the next type.
 ---@type MarkdownLists.Operation
 ---@param dir 1|-1 Passed as `arg`, the direction of the cycle.
@@ -365,7 +371,7 @@ function M.cycle(l1, l2, _, dir)
 		return
 	end
 
-	local order = M.config.cycle
+	local order = cycle_order()
 	local current, idx = type_of(entries[1].p), nil
 	for i, t in ipairs(order) do
 		if t == current then
@@ -389,7 +395,7 @@ function M.clear(l1, l2)
 	end)
 end
 
----Cycle the marker. Bullets go through `M.config.bullets` and numbered items
+---Cycle the marker. Bullets go through `bullets()` and numbered items
 ---swap `.` and `)`.
 ---
 ---In normal mode without a count the whole list changes, because changing the
@@ -423,13 +429,14 @@ function M.cycle_marker(l1, l2, mode)
 	if first.ordered then
 		new = first.marker == "." and ")" or "."
 	else
+		local all = bullets()
 		local idx = 0
-		for i, b in ipairs(M.config.bullets) do
+		for i, b in ipairs(all) do
 			if b == first.marker then
 				idx = i
 			end
 		end
-		new = M.config.bullets[idx % #M.config.bullets + 1]
+		new = all[idx % #all + 1]
 	end
 
 	for _, n in ipairs(targets) do
@@ -505,12 +512,20 @@ local function fence_open(line)
 end
 
 ---Whether `line` closes the code block opened by `fence`.
+---
+---A closing fence with trailing text (` ``` foo `) also closes the block.
+---CommonMark would treat such a line as content and keep the block open to
+---the end of the buffer, which silently disables the list operations below
+---it, so this deliberately deviates and closes it early.
+---
+---The other CommonMark rules hold: same character, at least the same length,
+---so a four-backtick block is not closed by a three-backtick line.
 ---@param line string
 ---@param fence string
 ---@return boolean
 local function fence_closes(line, fence)
 	local f = fence_open(line)
-	return f ~= nil and f:sub(1, 1) == fence:sub(1, 1) and #f >= #fence and line:match("^%s*[`~]+%s*$") ~= nil
+	return f ~= nil and f:sub(1, 1) == fence:sub(1, 1) and #f >= #fence
 end
 
 ---Call `fn` for every real bullet item, skipping the YAML front matter and

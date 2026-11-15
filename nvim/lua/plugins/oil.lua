@@ -137,6 +137,17 @@ oil.setup({
 	},
 })
 
+-- Marks every explorer buffer, so consumers do not have to depend on the
+-- `oil` filetype staying the same (canola is an oil fork).
+-- See: lua/modules/sessions.lua
+vim.api.nvim_create_autocmd("FileType", {
+	group = vim.api.nvim_create_augroup("oil_explorer_flag", { clear = true }),
+	pattern = "oil",
+	callback = function(args)
+		vim.b[args.buf].explorer = true
+	end,
+})
+
 vim.keymap.set("n", "<leader>e", "<CMD>Oil<CR>", {
 	desc = "Open parent directory",
 })
