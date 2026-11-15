@@ -99,7 +99,10 @@ function M.load(name, buf)
 	end
 
 	if spec.after then
-		pcall(spec.after)
+		local ok, err = pcall(spec.after)
+		if not ok then
+			vim.notify(("LazyPack: after %s failed: %s"):format(name, err), vim.log.levels.ERROR)
+		end
 	end
 
 	-- With the plugin on the runtimepath, its ftplugin runs first in the

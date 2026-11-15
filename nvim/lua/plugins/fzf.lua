@@ -3,17 +3,21 @@
 -- Fuzzy finder for files, buffers, text, diagnostics and help, built on
 -- fzf-lua. It gives a single interface for navigating a project.
 --
--- fzf-lua must be installed through the plugin manager. The external tools must
--- be installed on the system, since fzf-lua only wraps them. On Arch Linux:
+-- The plugin loads on demand: `lib.lazy` installs it without sourcing it, and
+-- the first `<leader>f` keymap loads it, runs the setup and opens the picker.
+-- The keymaps below are stubs, so every picker is reachable before the plugin
+-- is loaded.
+--
+-- The external tools must be installed on the system, since fzf-lua only wraps
+-- them. On Arch Linux:
 --
 -- $ sudo pacman -S fzf grep ripgrep fd
 --
+-- See: lua/lib/lazy.lua
 -- See: https://github.com/ibhagwan/fzf-lua
 -- See: https://github.com/bruhtus/dotfiles/blob/master/.vim/after/autoload/enable/fzf.vim
 -- See: https://github.com/bruhtus/dotfiles/blob/master/.vim/plugin/fzf.vim
 -- See: https://github.com/james-orcales/james-orcales/blob/main/home/.config/nvim/init.lua
-
-local fzf = require("fzf-lua")
 
 -- Skipped by the file and grep pickers to keep them fast.
 ---@type string[]
@@ -49,7 +53,7 @@ fd_excludes = table.concat(fd_excludes, " ")
 ---Build the options table passed to `fzf.setup()`.
 ---@return table<string, any>
 local function make_opts()
-	local actions = fzf.actions
+	local actions = require("fzf-lua").actions
 
 	return {
 		winopts = {
@@ -155,8 +159,6 @@ local function make_opts()
 	}
 end
 
-fzf.setup(make_opts())
-
 ---Set the border highlights of the fzf-lua window and its preview. It also runs
 ---on every colorscheme change, because a colorscheme resets the highlight
 ---groups.
@@ -171,36 +173,88 @@ vim.api.nvim_create_autocmd("ColorScheme", {
 	callback = set_fzf_hl,
 })
 
+---Install fzf-lua without loading it; the setup runs on the first load.
+require("lib.lazy").setup({
+	src = "https://github.com/ibhagwan/fzf-lua",
+	after = function()
+		require("fzf-lua").setup(make_opts())
+	end,
+})
+
+---Load fzf-lua on first use and return it. The loader is guarded, so after the
+---first keypress this is a cached require.
+---@return table
+local function fzf()
+	require("lib.lazy").load("fzf-lua")
+	return require("fzf-lua")
+end
+
 local km = vim.keymap.set
 
-km("n", "<leader>ff", "<cmd>FzfLua files<cr>", { desc = "Fzf: find files in cwd (respects .gitignore)" })
-km("n", "<leader>fd", "<cmd>FzfLua files cwd=%:p:h<cr>", { desc = "Fzf: find files in the current buffer's directory" })
-km("n", "<leader>fz", "<cmd>FzfLua zoxide<cr>", { desc = "Fzf: jump to a frequent directory (zoxide)" })
+km("n", "<leader>ff", function()
+	fzf().files()
+end, { desc = "Fzf: find files in cwd (respects .gitignore)" })
+
+km("n", "<leader>fd", function()
+	fzf().files({ cwd = vim.fn.expand("%:p:h") })
+end, { desc = "Fzf: find files in the current buffer's directory" })
+
+km("n", "<leader>fz", function()
+	fzf().zoxide()
+end, { desc = "Fzf: jump to a frequent directory (zoxide)" })
 
 km("n", "<leader>fr", function()
-	fzf.files({ cwd = vim.fn.expand("~/dev/repos") })
+	fzf().files({ cwd = vim.fn.expand("~/dev/repos") })
 end, { desc = "Fzf: find files in ~/dev/repos" })
 
 km("n", "<leader>fn", function()
-	fzf.files({ cwd = vim.fn.expand("~/dotfiles/nvim") })
+	fzf().files({ cwd = vim.fn.expand("~/dotfiles/nvim") })
 end, { desc = "Fzf: find files in ~/dotfiles/nvim" })
 
-km("n", "<leader>fb", "<cmd>FzfLua buffers<cr>", { desc = "Fzf: switch between open buffers" })
-km("n", "<leader>fo", "<cmd>FzfLua oldfiles<cr>", { desc = "Fzf: reopen recently edited files" })
+km("n", "<leader>fb", function()
+	fzf().buffers()
+end, { desc = "Fzf: switch between open buffers" })
+
+km("n", "<leader>fo", function()
+	fzf().oldfiles()
+end, { desc = "Fzf: reopen recently edited files" })
 
 km("n", "<leader>fg", function()
-	fzf.live_grep({ rg_glob = true })
+	fzf().live_grep({ rg_glob = true })
 end, { desc = "Fzf: live grep in cwd" })
 
-km("n", "<leader>fw", "<cmd>FzfLua grep_cword<cr>", { desc = "Fzf: grep the word under the cursor in cwd" })
-km("v", "<leader>fw", fzf.grep_visual, { desc = "Fzf: grep the visual selection" })
-km("n", "<leader>fl", "<cmd>FzfLua blines<cr>", { desc = "Fzf: search lines in the current buffer" })
+km("n", "<leader>fw", function()
+	fzf().grep_cword()
+end, { desc = "Fzf: grep the word under the cursor in cwd" })
 
-km("n", "<leader>fh", "<cmd>FzfLua help_tags<cr>", { desc = "Fzf: search Neovim help tags" })
-km("n", "<leader>fm", "<cmd>FzfLua man_pages<cr>", { desc = "Fzf: search man pages" })
+km("v", "<leader>fw", function()
+	fzf().grep_visual()
+end, { desc = "Fzf: grep the visual selection" })
 
-km("n", "<leader>fx", "<cmd>FzfLua diagnostics_document<cr>", { desc = "Fzf: list LSP diagnostics in current buffer" })
-km("n", "<leader>fX", "<cmd>FzfLua diagnostics_workspace<cr>", { desc = "Fzf: list LSP diagnostics in workspace" })
+km("n", "<leader>fl", function()
+	fzf().blines()
+end, { desc = "Fzf: search lines in the current buffer" })
 
-km("n", "<leader>fk", "<cmd>FzfLua keymaps<cr>", { desc = "Fzf: search all keymaps" })
-km("n", "<leader>fc", "<cmd>FzfLua resume<cr>", { desc = "Fzf: resume the last picker with its previous query" })
+km("n", "<leader>fh", function()
+	fzf().help_tags()
+end, { desc = "Fzf: search Neovim help tags" })
+
+km("n", "<leader>fm", function()
+	fzf().man_pages()
+end, { desc = "Fzf: search man pages" })
+
+km("n", "<leader>fx", function()
+	fzf().diagnostics_document()
+end, { desc = "Fzf: list LSP diagnostics in current buffer" })
+
+km("n", "<leader>fX", function()
+	fzf().diagnostics_workspace()
+end, { desc = "Fzf: list LSP diagnostics in workspace" })
+
+km("n", "<leader>fk", function()
+	fzf().keymaps()
+end, { desc = "Fzf: search all keymaps" })
+
+km("n", "<leader>fc", function()
+	fzf().resume()
+end, { desc = "Fzf: resume the last picker with its previous query" })

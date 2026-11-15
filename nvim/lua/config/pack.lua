@@ -84,9 +84,7 @@ vim.pack.add({
 	-- Asynchronous linter runner for external linters such as ruff.
 	{ src = "https://github.com/mfussenegger/nvim-lint" },
 
-	-- fzf-lua
-	-- Fuzzy finder for files, grep, buffers and LSP results, powered by fzf.
-	{ src = "https://github.com/ibhagwan/fzf-lua" },
+	-- fzf-lua is installed through lib.lazy, see lua/plugins/fzf.lua.
 
 	-- vim-fugitive
 	-- Git wrapper for staging, committing, diffing and blaming.
