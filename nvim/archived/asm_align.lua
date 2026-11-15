@@ -1,4 +1,4 @@
--- lua/modules/asm_align.lua
+-- archived/asm_align.lua
 
 -- Column alignment for assembly buffers, following the layout that `asmfmt`
 -- produces: tabs for indentation and spaces for alignment, instructions and
@@ -23,6 +23,7 @@
 -- See: lua/plugins/formatting.lua (asmfmt)
 -- See: https://github.com/klauspost/asmfmt/blob/master/asmfmt.go
 
+---@deprecated This module has been discontinued and is no longer used.
 local M = {}
 
 ---Go assembly directives that asmfmt keeps at indentation level 0.

@@ -83,12 +83,6 @@ THE MODULES
         indentation as written. API: M.toggle, M.toggle_checklist, M.cycle, M.clear, M.cycle_marker, M.renumber and the
         formatting helpers.
 
-    asm_align
-        Column alignment for assembly buffers, a direct port of the layout asmfmt produces: tabs for indentation, spaces
-        for alignment, per-block operand columns, end-of-line comments aligned to one column. Lines are never added,
-        removed or reordered; structural changes are left to asmfmt, which conform runs on format. API: M.align,
-        M.block, M.range, M.action.
-
 WHO CALLS MODULES
     Feature-level modules (statusline, scratch, compile) are set up directly by init.lua, in the startup
     order. Modules

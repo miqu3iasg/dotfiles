@@ -344,10 +344,6 @@ MISC MODULES
     set with vim.g.markdown_list_bullet and the delimiter with vim.g.markdown_list_delimiter (buffer-local versions
     take precedence).
 
-    asm_align        column alignment for assembly buffers, a direct port of the layout asmfmt produces: tabs for
-    indentation, spaces for alignment, per-block operand columns and end-of-line comments aligned to one column. Lines
-    are never added, removed or reordered; structural changes are left to asmfmt, which conform runs on format.
-
 LIB
     lua/lib/ holds everything that exists to be required by other modules:
 
