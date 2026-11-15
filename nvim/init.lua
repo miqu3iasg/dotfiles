@@ -12,5 +12,6 @@ require("modules.scratch").setup()
 require("config.pack")
 require("plugins")
 require("modules.compile").setup()
+require("modules.templates").setup()
 
 vim.cmd.colorscheme("plain")
