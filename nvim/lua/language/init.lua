@@ -207,6 +207,11 @@ local function toggle_lsp(enable)
 	return lsp_enabled
 end
 
-vim.keymap.set("n", "<leader>uls", function()
+vim.keymap.set("n", "<leader>ul", function()
 	toggle_lsp()
 end, { desc = "Toggle LSP" })
+
+-- The external linters load with the rest of the stack, so their toggle and
+-- their autocmds exist from the start.
+-- See: lua/language/lint.lua
+require("language.lint")
