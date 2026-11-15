@@ -107,14 +107,13 @@ for _, name in ipairs(modules) do
 end
 
 -- Buffer-local mappings set once a server attaches. The native LSP and
--- diagnostic mappings, such as hover, rename and diagnostic navigation, are
--- intentionally not redefined, except where fzf-lua replaces them.
+-- diagnostic mappings, such as hover, rename, `gd`, `grr`, `gri`, `grt`, `gO`
+-- and `gra`, are intentionally not redefined; the mappings below are the
+-- ones without a native default or with custom behavior.
 -- See: :help lsp-defaults
 vim.api.nvim_create_autocmd("LspAttach", {
 	group = vim.api.nvim_create_augroup("UserLspConfig", { clear = true }),
 	callback = function(ev)
-		local fzf = require("fzf-lua")
-
 		---Set a buffer-local mapping on the attached buffer.
 		---@param mode string|string[]
 		---@param lhs string
@@ -124,20 +123,11 @@ vim.api.nvim_create_autocmd("LspAttach", {
 			vim.keymap.set(mode, lhs, rhs, { buffer = ev.buf, desc = desc })
 		end
 
-		km("n", "gd", fzf.lsp_definitions, "Go to definition")
 		km("i", "<C-j>", vim.lsp.buf.signature_help, "Signature help")
 
 		km("n", "grp", vim.lsp.buf.signature_help, "Show signature help")
-		km("n", "grc", fzf.lsp_declarations, "Go to declaration")
-		km("n", "gri", fzf.lsp_implementations, "Go to implementation")
-		km("n", "grt", fzf.lsp_typedefs, "Go to type definition")
-		km("n", "grr", fzf.lsp_references, "Go to references")
-		km("n", "grm", fzf.lsp_document_symbols, "Document symbols")
-		km("n", "grw", fzf.lsp_live_workspace_symbols, "Workspace symbols")
-		km("n", "grf", fzf.lsp_finder, "LSP finder")
-		km("n", "grd", fzf.diagnostics_document, "Document diagnostics")
-		km("n", "grD", fzf.diagnostics_workspace, "Workspace diagnostics")
-		km({ "n", "v" }, "gra", fzf.lsp_code_actions, "Code action")
+		km("n", "grc", vim.lsp.buf.declaration, "Go to declaration")
+		km("n", "grw", vim.lsp.buf.workspace_symbol, "Workspace symbols")
 
 		km("n", "grs", function()
 			vim.cmd("vsplit")
