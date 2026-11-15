@@ -233,6 +233,12 @@ function M.build(opts, on_done)
 		end
 	end
 
+	-- HTML embeds local images in the file itself, so the export can be shared
+	-- as a single document; other formats already bundle their resources.
+	if fmt == "html" then
+		cmd[#cmd + 1] = "--embed-resources"
+	end
+
 	local ok, err = pcall(
 		vim.system,
 		cmd,
