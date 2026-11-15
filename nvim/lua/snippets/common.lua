@@ -231,32 +231,41 @@ local function line_prefix(style)
 	end
 end
 
+-- Pads a usage label so the commands line up under "Compile:" and "Run:":
+-- the label sits two steps deeper than the usage title and the `$` starts
+-- ten columns after the label indent.
+---@param text string
+---@return string
+local function usage_label(text)
+	return "      " .. text .. string.rep(" ", 10 - #text)
+end
+
 -- Compile/run instructions for the `ehead` and `shead` headers. Each entry
 -- takes a comment style and returns the nodes for the lines that follow the
--- usage title.
+-- usage title: one line per label, commands prefixed by `$ ` and carrying
+-- the filename nodes of the buffer.
+--
+-- Usage labels pad to ten columns, so the commands line up under
+-- "Compile:" and "Run:"; the lines sit two steps deeper than the title.
 ---@type table<string, fun(style: CommentStyle): table>
 local usage_by_ft = {
 	c = function(style)
 		return {
-			t({ "", wrap(style, "    Compile:") }),
-			t({ "", wrap(style, "    $ gcc -Wall -Wextra -Wpedantic -std=c23 ") }),
+			t({ "", wrap(style, usage_label("Compile:") .. "$ gcc -Wall -Wextra -Wpedantic -std=c23 ") }),
 			f(get_filename, {}),
 			t(" -o "),
 			f(get_basename, {}),
-			t({ "", wrap(style, ""), wrap(style, "    Run:") }),
-			t({ "", wrap(style, "    $ ./") }),
+			t({ "", wrap(style, usage_label("Run:") .. "$ ./") }),
 			f(get_basename, {}),
 		}
 	end,
 	cpp = function(style)
 		return {
-			t({ "", wrap(style, "    Compile:") }),
-			t({ "", wrap(style, "    $ g++ -Wall -Wextra -Wpedantic -std=c++23 ") }),
+			t({ "", wrap(style, usage_label("Compile:") .. "$ g++ -Wall -Wextra -Wpedantic -std=c++23 ") }),
 			f(get_filename, {}),
 			t(" -o "),
 			f(get_basename, {}),
-			t({ "", wrap(style, ""), wrap(style, "    Run:") }),
-			t({ "", wrap(style, "    $ ./") }),
+			t({ "", wrap(style, usage_label("Run:") .. "$ ./") }),
 			f(get_basename, {}),
 		}
 	end,
@@ -270,134 +279,118 @@ local usage_by_ft = {
 	end,
 	python = function(style)
 		return {
-			t({ "", wrap(style, "    Run from the directory containing this file.") }),
-			t({ "", wrap(style, ""), wrap(style, "    $ python ") }),
+			t({ "", wrap(style, usage_label("Run:") .. "$ python3 ") }),
 			f(get_filename, {}),
 		}
 	end,
 	zig = function(style)
 		return {
-			t({ "", wrap(style, "    Run:") }),
-			t({ "", wrap(style, "    $ zig run ") }),
+			t({ "", wrap(style, usage_label("Run:") .. "$ zig run ") }),
 			f(get_filename, {}),
 		}
 	end,
 	scheme = function(style)
 		return {
-			t({ "", wrap(style, "    Run:") }),
-			t({ "", wrap(style, "    $ mit-scheme --quiet --load ") }),
+			t({ "", wrap(style, usage_label("Run:") .. "$ mit-scheme --quiet --load ") }),
 			f(get_filename, {}),
-			t({ "", wrap(style, ""), wrap(style, "    To evaluate line by line, use ,ee and ,er in the REPL.") }),
+			t({ "", wrap(style, "      To evaluate line by line, use ,ee and ,er in the REPL.") }),
 		}
 	end,
 	javascript = function(style)
 		return {
-			t({ "", wrap(style, "    Run:") }),
-			t({ "", wrap(style, "    $ node ") }),
+			t({ "", wrap(style, usage_label("Run:") .. "$ node ") }),
 			f(get_filename, {}),
 		}
 	end,
 	typescript = function(style)
 		return {
-			t({ "", wrap(style, "    Run:") }),
-			t({ "", wrap(style, "    $ npx ts-node ") }),
+			t({ "", wrap(style, usage_label("Run:") .. "$ npx ts-node ") }),
 			f(get_filename, {}),
-			t({ "", wrap(style, ""), wrap(style, "    Or compile then run:") }),
-			t({ "", wrap(style, "    $ tsc ") }),
+			t({ "", wrap(style, "      Or compile then run:") }),
+			t({ "", wrap(style, "      $ tsc ") }),
 			f(get_filename, {}),
-			t({ "", wrap(style, "    $ node ") }),
+			t({ "", wrap(style, "      $ node ") }),
 			f(get_basename, {}),
 			t(".js"),
 		}
 	end,
 	rust = function(style)
 		return {
-			t({ "", wrap(style, "    Compile:") }),
-			t({ "", wrap(style, "    $ rustc ") }),
+			t({ "", wrap(style, usage_label("Compile:") .. "$ rustc ") }),
 			f(get_filename, {}),
 			t(" -o "),
 			f(get_basename, {}),
-			t({ "", wrap(style, ""), wrap(style, "    Run:") }),
-			t({ "", wrap(style, "    $ ./") }),
+			t({ "", wrap(style, usage_label("Run:") .. "$ ./") }),
 			f(get_basename, {}),
 		}
 	end,
 	go = function(style)
 		return {
-			t({ "", wrap(style, "    Run:") }),
-			t({ "", wrap(style, "    $ go run ") }),
+			t({ "", wrap(style, usage_label("Run:") .. "$ go run ") }),
 			f(get_filename, {}),
 		}
 	end,
 	php = function(style)
 		return {
-			t({ "", wrap(style, "    Run:") }),
-			t({ "", wrap(style, "    $ php ") }),
+			t({ "", wrap(style, usage_label("Run:") .. "$ php ") }),
 			f(get_filename, {}),
 		}
 	end,
 	cs = function(style)
 		return {
-			t({ "", wrap(style, "    Run (single file, .NET 10+):") }),
-			t({ "", wrap(style, "    $ dotnet run ") }),
+			t({ "", wrap(style, usage_label("Run:") .. "$ dotnet run ") }),
 			f(get_filename, {}),
+			t({ "", wrap(style, "      Single-file runs need .NET 10 or newer.") }),
 		}
 	end,
 	haskell = function(style)
 		return {
-			t({ "", wrap(style, "    Run:") }),
-			t({ "", wrap(style, "    $ runghc ") }),
+			t({ "", wrap(style, usage_label("Run:") .. "$ runghc ") }),
 			f(get_filename, {}),
-			t({ "", wrap(style, ""), wrap(style, "    Or compile then run:") }),
-			t({ "", wrap(style, "    $ ghc -o ") }),
+			t({ "", wrap(style, "      Or compile then run:") }),
+			t({ "", wrap(style, "      $ ghc -o ") }),
 			f(get_basename, {}),
 			t(" "),
 			f(get_filename, {}),
-			t({ "", wrap(style, "    $ ./") }),
+			t({ "", wrap(style, "      $ ./") }),
 			f(get_basename, {}),
 		}
 	end,
 	sh = function(style)
 		return {
-			t({ "", wrap(style, "    Run:") }),
-			t({ "", wrap(style, "    $ chmod +x ") }),
+			t({ "", wrap(style, usage_label("Run:") .. "$ chmod +x ") }),
 			f(get_filename, {}),
-			t({ "", wrap(style, "    $ ./") }),
+			t(" && ./"),
 			f(get_filename, {}),
 		}
 	end,
 	ruby = function(style)
 		return {
-			t({ "", wrap(style, "    Run:") }),
-			t({ "", wrap(style, "    $ ruby ") }),
+			t({ "", wrap(style, usage_label("Run:") .. "$ ruby ") }),
 			f(get_filename, {}),
 		}
 	end,
 	kotlin = function(style)
 		return {
-			t({ "", wrap(style, "    Compile:") }),
-			t({ "", wrap(style, "    $ kotlinc ") }),
+			t({ "", wrap(style, usage_label("Compile:") .. "$ kotlinc ") }),
 			f(get_filename, {}),
 			t(" -include-runtime -d "),
 			f(get_basename, {}),
 			t(".jar"),
-			t({ "", wrap(style, ""), wrap(style, "    Run:") }),
-			t({ "", wrap(style, "    $ java -jar ") }),
+			t({ "", wrap(style, usage_label("Run:") .. "$ java -jar ") }),
 			f(get_basename, {}),
 			t(".jar"),
 		}
 	end,
 	perl = function(style)
 		return {
-			t({ "", wrap(style, "    Run:") }),
-			t({ "", wrap(style, "    $ perl ") }),
+			t({ "", wrap(style, usage_label("Run:") .. "$ perl ") }),
 			f(get_filename, {}),
 		}
 	end,
 	ps1 = function(style)
 		return {
-			t({ "", wrap(style, "    Run:") }),
-			t({ "", wrap(style, "    $ pwsh -File ") }),
+			t({ "", wrap(style, usage_label("Run:") .. "$ pwsh -File ") }),
 			f(get_filename, {}),
 		}
 	end,
@@ -410,8 +403,10 @@ usage_by_ft.zsh = usage_by_ft.sh
 ---@type table<string, boolean>
 local inline_usage_fts = { java = true }
 
----Adds a blank line and the usage block to a header. Falls back to a
----placeholder when the filetype has no entry in `usage_by_ft`.
+---Adds a blank line and the usage block to a header: a `Usage:` title and,
+---below it, the filetype instructions. Java keeps its own labels and gets
+---no title. Falls back to a title plus an editable placeholder when the
+---filetype has no entry in `usage_by_ft`.
 ---
 ---LuaSnip needs contiguous insert indices, so the caller passes the next
 ---free index and gets back the next one still free. An index is only
@@ -424,17 +419,16 @@ local inline_usage_fts = { java = true }
 local function add_usage(add, style, ft, idx)
 	local usage_fn = usage_by_ft[ft]
 	add(t({ "", wrap(style, "") }))
+	if not inline_usage_fts[ft] then
+		add(t({ "", wrap(style, "    Usage:") }))
+	end
 	if usage_fn then
-		if not inline_usage_fts[ft] then
-			add(t({ "", wrap(style, label("Usage:")) }))
-		end
 		for _, n in ipairs(usage_fn(style)) do
 			add(n)
 		end
 		return idx
 	end
-	add(t({ "", wrap(style, label("Usage:")) }))
-	add(t({ "", wrap(style, "    ") }))
+	add(t({ "", wrap(style, "      ") }))
 	add(i(idx, "how to compile/run this file"))
 	return idx + 1
 end

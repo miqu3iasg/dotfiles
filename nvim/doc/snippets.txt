@@ -72,9 +72,9 @@ FILE HEADERS
         - There is no Modified field: modification dates are the version control system's job.
         - The SPDX line is the last field, editable on the first jump. Study and personal headers default to
         AGPL-3.0-only; the proprietary header defaults to LicenseRef-Proprietary.
-        - The usage block is a `Usage:` title with `Compile:` and `Run:` labels aligned by the header column, each
-        command prefixed by `$ `. Java keeps its own aligned labels, `Compilation:` and `Execution:`, without the
-        title. A filetype without a usage entry gets the title plus an editable placeholder.
+        - The usage block is a `Usage:` title with `Compile:` and `Run:` labels aligned with each other, each command
+        prefixed by `$ `. Java keeps its own aligned labels, `Compilation:` and `Execution:`, without the title. A
+        filetype without a usage entry gets the title plus an editable placeholder.
         - In `ahead` the copyright line opens the header, Google proprietary style: `Copyright (c) YEAR HOLDER. All
         rights reserved.`
 
