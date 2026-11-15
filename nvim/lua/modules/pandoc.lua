@@ -334,6 +334,15 @@ function M.setup()
 		M.preview(parse(a))
 	end, { nargs = "*", complete = complete })
 
+	-- `M.last` is keyed by buffer id, and ids are recycled after a wipe, so a
+	-- stale entry could point "open last build" at the wrong file.
+	vim.api.nvim_create_autocmd("BufWipeout", {
+		group = vim.api.nvim_create_augroup("PandocLastCache", { clear = true }),
+		callback = function(args)
+			M.last[args.buf] = nil
+		end,
+	})
+
 	local map = function(lhs, rhs, desc)
 		vim.keymap.set("n", "<localleader>" .. lhs, rhs, { buffer = true, desc = "Pandoc: " .. desc })
 	end
