@@ -83,7 +83,8 @@ ADDING A FORMATTER OR LINTER
 ADDING SNIPPETS
     One file per filetype in lua/snippets/<ft>.lua, returning the snippets. Shared helpers and filetype-adaptive
     snippets live in lua/snippets/common.lua. Register the new filetype (and its inheritances) in
-    lua/plugins/completions.lua, which loads snippet modules lazily by filetype.
+    lua/plugins/completions.lua, which loads snippet modules lazily by filetype. Documentation snippets and file
+    headers follow the standard in doc/snippets.txt; read it before adding a doc trigger to a new language.
 
 ADDING FILETYPE OPTIONS
     Buffer-local options for one filetype go in after/ftplugin/<ft>.lua, applied after the runtime ftplugins, so
@@ -128,7 +129,8 @@ FILES
     doc/lib.txt                  the lib layer
     doc/philosophy.txt           why the config builds from scratch
     doc/documentation.txt        the documentation standard
+    doc/snippets.txt             the documentation snippet standard
     doc/development.txt          this page
 
 SEE ALSO
-    kickstart(7), documentation(7), structure(7).
+    kickstart(7), documentation(7), snippets(7), structure(7).

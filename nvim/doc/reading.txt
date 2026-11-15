@@ -15,6 +15,7 @@ DESCRIPTION
         philosophy.txt      why the config builds features from scratch
         documentation.txt   the documentation standard of the config
         development.txt     how to extend the config
+        snippets.txt        the documentation snippet standard
         reading.txt         this note
 
 READING BY OPENING THE FILE
