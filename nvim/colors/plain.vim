@@ -12,8 +12,8 @@ hi IncSearch term=bold,underline,reverse cterm=reverse gui=reverse
 hi Search term=reverse ctermbg=11 guibg=Yellow
 hi MoreMsg term=bold ctermfg=2 gui=bold guifg=SeaGreen
 hi ModeMsg term=bold cterm=bold gui=bold
-hi LineNr ctermfg=130 guifg=Brown
-hi CursorLineNr term=bold cterm=underline ctermfg=130 gui=bold guifg=Brown
+hi LineNr ctermfg=0 guifg=bg
+hi CursorLineNr term=bold cterm=bold ctermfg=0 gui=bold guifg=bg
 hi Question term=standout ctermfg=2 gui=bold guifg=SeaGreen
 hi StatusLine term=bold,reverse cterm=bold,reverse gui=bold,reverse
 hi StatusLineNC term=reverse cterm=reverse gui=reverse
@@ -23,12 +23,12 @@ hi Visual ctermfg=0 ctermbg=248 guifg=Black guibg=LightGrey
 hi WarningMsg term=standout ctermfg=1 guifg=Red
 hi WildMenu term=underline ctermfg=0 ctermbg=11 guifg=Black guibg=Yellow
 hi Folded term=standout ctermfg=4 ctermbg=248 guifg=DarkBlue guibg=LightGrey
-hi FoldColumn term=standout ctermfg=4 ctermbg=248 guifg=DarkBlue guibg=Grey
+hi FoldColumn ctermfg=0 ctermbg=NONE guifg=bg
 hi DiffAdd term=bold ctermfg=0 ctermbg=81 guibg=LightBlue
 hi DiffChange term=bold ctermfg=0 ctermbg=225 guibg=LightMagenta
 hi DiffDelete term=bold ctermfg=12 ctermbg=159 gui=bold guifg=Blue guibg=LightCyan
 hi DiffText term=reverse cterm=bold ctermfg=0 ctermbg=9 gui=bold guibg=Red
-hi SignColumn term=standout ctermfg=4 ctermbg=248 guifg=DarkBlue guibg=Grey
+hi SignColumn ctermfg=0 ctermbg=NONE guifg=bg
 hi Conceal ctermfg=7 ctermbg=242 guifg=LightGrey guibg=DarkGrey
 hi SpellBad term=reverse ctermbg=224 gui=undercurl guisp=Red
 hi SpellCap term=reverse ctermbg=81 gui=undercurl guisp=Blue
