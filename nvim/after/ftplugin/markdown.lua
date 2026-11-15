@@ -8,8 +8,9 @@
 -- the plugin manager and relies on a clipboard utility such as wl-clipboard or
 -- xclip.
 --
--- See: ~/.config/nvim/pandoc
+-- See: pandoc/                        the export pipeline data
 -- See: lua/modules/pandoc.lua
+-- See: doc/pandoc.txt                  the Pandoc export feature page
 -- See: lua/modules/markdown_lists.lua
 -- See: https://github.com/HakonHarnes/img-clip.nvim
 
