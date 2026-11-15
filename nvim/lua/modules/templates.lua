@@ -145,6 +145,10 @@ local function parse(path, lines, ft)
 		end
 		text = text .. line:sub(pos) .. "\n"
 	end
+	-- The file's last line carries no terminator, so the `\n` appended
+	-- above it is dropped: without this, the final flush would emit a
+	-- blank line after the template's last line.
+	text = text:sub(1, -2)
 	flush()
 	-- The exit cursor sits right after the last line of the template.
 	table.insert(nodes, i(0))
