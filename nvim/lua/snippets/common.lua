@@ -21,7 +21,7 @@ local d = ls.dynamic_node
 local sn = ls.snippet_node
 local rep = require("luasnip.extras").rep
 
----Today's date in ISO format, used in Created/Modified header fields.
+---Today's date in ISO format, used in the Created header field.
 ---@return string
 local function get_date()
 	return os.date("%Y-%m-%d")
@@ -525,14 +525,6 @@ function H.created()
 end
 
 ---@return HeaderField
-function H.modified()
-	return function(ctx)
-		ctx.add(t({ "", wrap(ctx.style, label("Modified:")) }))
-		ctx.add(f(get_date, {}))
-	end
-end
-
----@return HeaderField
 function H.source()
 	return function(ctx)
 		ctx.add(t({ "", wrap(ctx.style, label("Source:")) }))
@@ -633,12 +625,11 @@ end
 -- Header specs. The fields appear in the order the rendered header does:
 -- identification, context, usage, description, license.
 local headers = {
-	-- `head`: File, Author, Created, Modified, Description. No license.
+	-- `head`: File, Author, Created, Description. No license.
 	head = {
 		H.file(),
 		H.author(),
 		H.created(),
-		H.modified(),
 		H.description("add description here"),
 	},
 	-- `shead`: for code written while studying a book or article. The
@@ -647,7 +638,6 @@ local headers = {
 		H.file(),
 		H.author(),
 		H.created(),
-		H.modified(),
 		H.source(),
 		H.by(),
 		H.location(),
@@ -660,7 +650,6 @@ local headers = {
 		H.file(),
 		H.author(),
 		H.created(),
-		H.modified(),
 		H.description("add description here"),
 		H.copyright(". All rights reserved."),
 	},
@@ -670,7 +659,6 @@ local headers = {
 		H.file(),
 		H.author("Miquéias Medeiros <https://github.com/miqu3iasg>"),
 		H.created(),
-		H.modified(),
 		H.source(),
 		H.by(),
 		H.location(),
