@@ -92,7 +92,8 @@ THE LUA LAYERS
         list as a full module, because it must load between completions and fzf.
 
     snippets/ - LuaSnip snippets
-        One file per filetype, loaded lazily; shared and filetype-adaptive helpers in common.lua.
+        One file per filetype, loaded lazily; filetype-adaptive snippets in common.lua, and the comment and header
+        machinery they share with lua/modules/templates.lua in lib/headers.lua.
 
     archived/ - deprecated, not deleted
         Modules kept around for possible future use. They sit outside lua/ and off the runtimepath on purpose: Neovim

@@ -81,8 +81,9 @@ ADDING A FORMATTER OR LINTER
     Python/ruff is the current example and the template: a lint table entry, an autocmd, and its own toggle.
 
 ADDING SNIPPETS
-    One file per filetype in lua/snippets/<ft>.lua, returning the snippets. Shared helpers and filetype-adaptive
-    snippets live in lua/snippets/common.lua. Register the new filetype (and its inheritances) in
+    One file per filetype in lua/snippets/<ft>.lua, returning the snippets. Filetype-adaptive snippets live in
+    lua/snippets/common.lua, and the comment and header machinery they build on in lua/lib/headers.lua (also consumed
+    by the templates module). Register the new filetype (and its inheritances) in
     lua/plugins/completions.lua, which loads snippet modules lazily by filetype. Documentation snippets and file
     headers follow the standard in doc/snippets.txt; read it before adding a doc trigger to a new language.
 

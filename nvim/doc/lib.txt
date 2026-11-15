@@ -31,6 +31,13 @@ THE LIBRARIES
         the verdict in vim.b.bigfile. Every feature that needs to switch off on big buffers asks this module, so the
         thresholds are defined once. API: M.is_big.
 
+    headers
+        Comment and file-header machinery shared by the snippets and the templates module: per-filetype comment styles
+        (line, block and docstring), shebangs, filename and date helpers, the declarative header field constructors
+        (`H.*`) and the four header specs. A header is a list of field constructors applied in order, so every header
+        keeps the same field order and usage format; the standard the specs implement is doc/snippets.txt. The file
+        registers nothing global. API: M.render, M.build_header, M.H, M.headers and the style and filename helpers.
+
     lazy
         The filetype-based lazy loader for vim.pack plugins, the only indirection in the config. Plugins declare
         themselves through M.setup{ src, filetypes, version, configure, after }; the plugin is installed at startup, but

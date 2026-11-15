@@ -67,6 +67,14 @@ THE MODULES
         M.open_vault, M.setup. Commands: :NotesDraft, :NotesNew, :NotesDaily, :NotesTemplate, :NotesFiles, :NotesGrep,
         :NotesLast, :NotesOpen.
 
+    templates
+        Whole-file templates filled on demand: `:Template <name>` inserts a ready structure - the standard file header,
+        a shebang, a package line or a class and main skeleton - into the current buffer, with the placeholders opening
+        as LuaSnip jumps. Templates are never applied automatically: the command refuses non-empty buffers and files
+        that already exist on disk, so a template can never overwrite anything. The builders compose the header
+        machinery of lib/headers.lua with language-specific bodies, and the registry, keyed by filetype and name, is
+        also what completion reads. API: M.expand, M.complete, M.setup. Commands: :Template.
+
     window_zoom
         Zooms the focused window by showing it as the only window of a new tab, the original layout staying intact in
         its own tab. Toggling again closes the zoom tab. The state is the tabpage-local t:zoomed, read by the
@@ -90,7 +98,8 @@ THE MODULES
         M.block, M.range, M.action.
 
 WHO CALLS MODULES
-    Feature-level modules (statusline, scratch, compile) are set up directly by init.lua, in the startup order. Modules
+    Feature-level modules (statusline, scratch, compile, templates) are set up directly by init.lua, in the startup
+    order. Modules
     scoped to a context are set up by the code that owns the context: pandoc and notes register buffer-local commands
     and autocmds from their setup(), called by init.lua; close_view and markdown_lists are wired by the filetypes and
     keymap files that use them. A module that needs shared logic requires it from lib/, never the other way around.
