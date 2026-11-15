@@ -7,18 +7,30 @@
 -- an empty buffer whose file does not exist yet, so a template can never
 -- overwrite anything.
 --
--- A template is a builder function returning a snippet node, composed from
--- the same header machinery the file-header snippets use: the header renders
--- in the filetype's comment style and the body is language-specific. The
--- registry is a table keyed by filetype and name, so completion lists
--- exactly what the current filetype offers.
+-- A template is a data file under templates/<filetype>/<name>, not code: the
+-- body is the file itself, and the placeholders inside it open as jumps. The
+-- grammar is single-line:
+--
+--     {{+default+}}   editable placeholder; `default` is its initial text
+--     {{++}}          editable placeholder without a default
+--     {{+~expr+}}     evaluated at expansion time (see `exprs` below)
+--     {{+@head+}}     the standard file header of lib/headers.lua; any spec
+--                     name works, e.g. `{{+@shead+}}`
+--
+-- shortcut: placeholders are single-line; a placeholder cannot span lines,
+-- so a multi-line default is impossible - upgrade the parser when a
+-- template needs one.
+--
+-- Files are found through the runtimepath, so another rtp entry can add or
+-- override templates without touching this config. `bash` and `zsh` have no
+-- folder yet; `sh` is the fallback when one is added.
 --
 -- The LuaSnip dependency is the plugin's public API only: node construction
--- and `snip_expand` for the programmatic expansion. `bash` and `zsh` buffers
--- have no registry entry yet; `sh` is the fallback when one is added.
+-- and `snip_expand` for the programmatic expansion.
 --
 -- `setup()` must be called once to register the :Template command.
 --
+-- See: templates/                  the template files
 -- See: lua/lib/headers.lua
 -- See: lua/snippets/common.lua
 -- See: doc/modules.txt
@@ -30,134 +42,150 @@ local s = ls.snippet
 local t = ls.text_node
 local i = ls.insert_node
 local f = ls.function_node
-local d = ls.dynamic_node
-local sn = ls.snippet_node
 
 local h = require("lib.headers")
 
----Java package of the buffer: the path relative to the working directory,
----segments joined with dots. Everything up to a `java` path segment (the
----Maven and Gradle source root) is dropped, so a file under
----`src/main/java/com/foo/` gets `com.foo`; a file with no `java` segment
----uses its whole relative directory.
+---Java package statement of the buffer: the path relative to the working
+---directory, segments joined with dots. Everything up to a `java` path
+---segment (the Maven and Gradle source root) is dropped, so a file under
+---`src/main/java/com/foo/` gets `package com.foo;`; a file with no `java`
+---segment uses its whole relative directory, and a file at the working
+---directory gets an empty statement, leaving the line blank.
 ---@return string
 local function java_package()
 	local dir = vim.fn.expand("%:.:h")
 	if dir == "." then
 		return ""
 	end
-	return (dir:match(".-/java/(.+)$") or dir):gsub("/", ".")
+	local pkg = (dir:match(".-/java/(.+)$") or dir):gsub("/", ".")
+	return "package " .. pkg .. ";"
 end
 
----Renders the standard `head` header into `nodes` and returns the context
----the body continues from.
----@param nodes table
----@return HeaderContext ctx
-local function head_into(nodes)
-	return h.render(h.headers.head, vim.bo.filetype, nodes)
-end
-
--- `java/class`: the standard header, the package derived from the buffer
--- path, and the class declaration named after the file, with a mirrored
--- constructor (Allman braces, as the reference skeletons use).
-local function build_java_class(_, _)
-	local nodes = {}
-	local ctx = head_into(nodes)
-
-	ctx.add(f(function()
-		local pkg = java_package()
-		if pkg == "" then
-			return ""
-		end
-		return "package " .. pkg .. ";"
-	end, {}))
-	ctx.add(t({ "", "", "public class " }))
-	ctx.add(f(h.get_basename, {}))
-	ctx.add(t({ "", "{", "\tpublic " }))
-	ctx.add(f(h.get_basename, {}))
-	ctx.add(t({ "()", "", "\t{", "\t\t" }))
-	ctx.add(i(ctx.idx, "constructor body"))
-	ctx.idx = ctx.idx + 1
-	ctx.add(t({ "", "\t}", "", "}" }))
-	table.insert(nodes, i(0))
-	return sn(nil, nodes)
-end
-
--- `python/script`: the interpreter line, the standard header as a docstring
--- (Python headers carry no shebang, so the template adds the interpreter
--- line itself), and the main-function skeleton.
-local function build_python_script(_, _)
-	local nodes = { t({ h.shebang_by_ft[vim.bo.filetype] or "#!/usr/bin/env python3", "" }) }
-	local ctx = head_into(nodes)
-
-	ctx.add(t({ "def main():", "\t" }))
-	ctx.add(i(ctx.idx, "main body"))
-	ctx.idx = ctx.idx + 1
-	ctx.add(t({ "", "", 'if __name__ == "__main__":', "\tmain()", "" }))
-	table.insert(nodes, i(0))
-	return sn(nil, nodes)
-end
-
--- `sh/script`: the interpreter line, the standard header, and a POSIX main
--- function invoked once, so `set -e` applies everywhere it runs.
-local function build_sh_script(_, _)
-	local nodes = { t({ h.shebang_by_ft[vim.bo.filetype] or "#!/usr/bin/env sh", "" }) }
-	local ctx = head_into(nodes)
-
-	ctx.add(t({ "main() {", "\t" }))
-	ctx.add(i(ctx.idx, "main body"))
-	ctx.idx = ctx.idx + 1
-	ctx.add(t({ "", "}", "", "", 'main "$@"', "" }))
-	table.insert(nodes, i(0))
-	return sn(nil, nodes)
-end
-
--- `c/main`: the standard header and the `stdio.h` program skeleton.
-local function build_c_main(_, _)
-	local nodes = {}
-	local ctx = head_into(nodes)
-
-	ctx.add(t({ "#include <stdio.h>", "", "", "int main(int argc, char *argv[])", "{", "\t" }))
-	ctx.add(i(ctx.idx, "main body"))
-	ctx.idx = ctx.idx + 1
-	ctx.add(t({ "", "\treturn 0;", "}" }))
-	table.insert(nodes, i(0))
-	return sn(nil, nodes)
-end
-
--- `markdown/readme`: the standard header and the title named after the file.
-local function build_readme(_, _)
-	local nodes = {}
-	local ctx = head_into(nodes)
-
-	ctx.add(t("# "))
-	ctx.add(f(h.get_basename, {}))
-	ctx.add(t({ "", "" }))
-	ctx.add(i(ctx.idx, "what this document covers"))
-	ctx.idx = ctx.idx + 1
-	ctx.add(t({ "", "" }))
-	table.insert(nodes, i(0))
-	return sn(nil, nodes)
-end
-
--- The registry: builder functions by filetype and name. Completion reads
--- this table, so a new template is one entry here.
----@type table<string, table<string, fun(): table>>
-local templates = {
-	c = { main = build_c_main },
-	java = { class = build_java_class },
-	markdown = { readme = build_readme },
-	python = { script = build_python_script },
-	sh = { script = build_sh_script },
+---Expressions available to `{{+~expr+}}` placeholders, evaluated at
+---expansion time in the buffer's context.
+---@type table<string, fun(): string>
+local exprs = {
+	shebang = function()
+		return h.shebang_by_ft[vim.bo.filetype] or "#!/usr/bin/env sh"
+	end,
+	filename = h.get_filename,
+	basename = h.get_basename,
+	relpath = h.get_relpath,
+	date = h.get_date,
+	year = h.get_year,
+	package = java_package,
 }
+
+---Parses the placeholder grammar of one template file into LuaSnip nodes.
+---Text between placeholders accumulates with one `\n` per file line and is
+---flushed as a single text node at the next placeholder. When the previous
+---emission already ended its line, a leading `\n` would draw a blank line
+---the file does not have, so it is dropped.
+---@param path string Template file path, for parse error messages.
+---@param lines string[] File lines, without their terminators.
+---@param ft string Filetype the template expands into.
+---@return table? nodes
+---@return string? err
+local function parse(path, lines, ft)
+	local nodes = {}
+	local idx = 1
+	local text = ""
+	local at_line_start = true
+
+	local function flush()
+		if at_line_start and text:sub(1, 1) == "\n" then
+			text = text:sub(2)
+		end
+		if text ~= "" then
+			-- LuaSnip text nodes take lines, not strings with newlines.
+			table.insert(nodes, t(vim.split(text, "\n")))
+			at_line_start = text:sub(-1) == "\n"
+			text = ""
+		end
+	end
+
+	for n, line in ipairs(lines) do
+		local pos = 1
+		while true do
+			local open = line:find("{{+", pos, true)
+			if not open then
+				break
+			end
+			local close = line:find("+}}", open + 3, true)
+			if not close then
+				return nil, ("%s:%d: placeholder without `+}}`"):format(path, n)
+			end
+			local inner = line:sub(open + 3, close - 1)
+			text = text .. line:sub(pos, open - 1)
+			flush()
+			pos = close + 3
+
+			if inner:sub(1, 1) == "~" then
+				local expr = exprs[inner:sub(2)]
+				if not expr then
+					return nil, ("%s:%d: unknown expression `%s`"):format(path, n, inner:sub(2))
+				end
+				table.insert(nodes, f(expr, {}))
+				at_line_start = false
+			elseif inner:sub(1, 1) == "@" then
+				local spec = h.headers[inner:sub(2)]
+				if not spec then
+					return nil, ("%s:%d: unknown header spec `%s`"):format(path, n, inner:sub(2))
+				end
+				h.render(spec, ft, nodes)
+				at_line_start = true
+			else
+				table.insert(nodes, i(idx, inner))
+				idx = idx + 1
+				at_line_start = false
+			end
+		end
+		text = text .. line:sub(pos) .. "\n"
+	end
+	flush()
+	-- The exit cursor sits right after the last line of the template.
+	table.insert(nodes, i(0))
+	return nodes
+end
+
+---Paths of the template files of a filetype, searched on the runtimepath.
+---The config directory often sits on the runtimepath twice (its real path
+---and its symlink under .config), so entries are deduplicated by real path.
+---@param ft string
+---@return string[]
+local function files_for(ft)
+	local seen = {}
+	local files = {}
+	for _, path in ipairs(vim.fn.globpath(vim.o.runtimepath, "templates/" .. ft .. "/*", 0, 1)) do
+		local real = vim.uv.fs_realpath(path)
+		if real and not seen[real] then
+			seen[real] = true
+			table.insert(files, path)
+		end
+	end
+	return files
+end
+
+---Name of a template file: its basename without the extension.
+---@param path string
+---@return string
+local function name_of(path)
+	return vim.fn.fnamemodify(path, ":t:r")
+end
 
 ---Expands one template into the current buffer. A template exists only for
 ---the buffer's filetype; anything else notifies instead of expanding.
----@param name string Template name, as registered for the filetype.
+---@param name string Template name, the file's basename.
 function M.expand(name)
 	local ft = vim.bo.filetype
-	local builder = (templates[ft] or {})[name]
-	if not builder then
+	local path
+	for _, file in ipairs(files_for(ft)) do
+		if name_of(file) == name then
+			path = file
+			break
+		end
+	end
+	if not path then
 		local where = ft ~= "" and ft or "this filetype"
 		return vim.notify(("Template '%s' is not registered for %s."):format(name, where), vim.log.levels.WARN)
 	end
@@ -167,20 +195,27 @@ function M.expand(name)
 	if vim.api.nvim_buf_line_count(0) > 1 or vim.fn.getline(1) ~= "" then
 		return vim.notify("Template: the buffer is not empty.", vim.log.levels.WARN)
 	end
-	-- The expansion runs inside pcall, so a LuaSnip failure notifies instead
-	-- of raising out of a user command.
-	local ok, err = pcall(ls.snip_expand, s("", { d(1, builder, {}) }))
+	-- Parsing and expansion run inside pcall, so a broken template file
+	-- notifies instead of raising out of a user command.
+	local ok, err = pcall(function()
+		local nodes, perr = parse(path, vim.fn.readfile(path), ft)
+		if not nodes then
+			error(perr, 0)
+		end
+		ls.snip_expand(s("", nodes))
+	end)
 	if not ok then
 		vim.notify(("Template '%s' failed to expand: %s"):format(name, err), vim.log.levels.ERROR)
 	end
 end
 
----Completes :Template with the names registered for the current filetype.
+---Completes :Template with the names of the template files of the current
+---filetype.
 ---@return string[]
 function M.complete()
 	local names = {}
-	for name in pairs(templates[vim.bo.filetype] or {}) do
-		table.insert(names, name)
+	for _, file in ipairs(files_for(vim.bo.filetype)) do
+		table.insert(names, name_of(file))
 	end
 	table.sort(names)
 	return names

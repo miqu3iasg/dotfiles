@@ -87,6 +87,13 @@ ADDING SNIPPETS
     lua/plugins/completions.lua, which loads snippet modules lazily by filetype. Documentation snippets and file
     headers follow the standard in doc/snippets.txt; read it before adding a doc trigger to a new language.
 
+ADDING A TEMPLATE
+    A template is a file under templates/<filetype>/<name>, filled by :Template into an empty buffer whose file does
+    not exist yet. The body is the file itself; the placeholders follow the grammar documented in the header of
+    lua/modules/templates.lua: `{{+default+}}` is an editable placeholder, `{{+~expr+}}` an expression evaluated at
+    expansion (shebang, filename, basename, relpath, date, year, package) and `{{+@head+}}` the standard file header
+    of lib/headers.lua. The name is the file's basename, and completion lists the names of the current filetype.
+
 ADDING FILETYPE OPTIONS
     Buffer-local options for one filetype go in after/ftplugin/<ft>.lua, applied after the runtime ftplugins, so
     overrides stick. Rules:
