@@ -173,9 +173,12 @@ vim.api.nvim_create_autocmd("ColorScheme", {
 	callback = set_fzf_hl,
 })
 
----Install fzf-lua without loading it; the setup runs on the first load.
+---Install fzf-lua without loading it; the setup runs on the first load. Notes
+---buffers also trigger the load, so the obsidian picker works without a
+---`<leader>f` keymap having been pressed first.
 require("lib.lazy").setup({
 	src = "https://github.com/ibhagwan/fzf-lua",
+	filetypes = { "markdown" },
 	after = function()
 		require("fzf-lua").setup(make_opts())
 	end,
