@@ -48,10 +48,13 @@ local function count_file_buffers()
 	return count
 end
 
--- Delete Oil ((canola)) buffers so they are not written into the session file.
+-- Delete explorer buffers, which are virtual `oil://` buffers, so they are not
+-- written into the session file. The flag is set by the explorer plugin and the
+-- filetype is kept as a fallback.
+-- See: lua/plugins/oil.lua
 local function remove_oil_buffers()
 	for _, buf in ipairs(vim.api.nvim_list_bufs()) do
-		if vim.bo[buf].filetype == "oil" then
+		if vim.bo[buf].filetype == "oil" or vim.b[buf].explorer then
 			pcall(vim.api.nvim_buf_delete, buf, { force = true })
 		end
 	end
