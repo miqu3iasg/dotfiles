@@ -128,6 +128,14 @@ km("n", "<leader>ol", notes.last, { desc = "Reopen the last note" })
 km("n", "<leader>ov", notes.open_vault, { desc = "Open the vault folder" })
 km("n", "<leader>ow", "<cmd>e ~/TODO.md<cr>", { desc = "Open TODO file" })
 
+km("n", "<leader>ok", function()
+	notes.daily(1)
+end, { desc = "Open tomorrow's daily note" })
+
+km("n", "<leader>oj", function()
+	notes.daily(-1)
+end, { desc = "Open yesterday's daily note" })
+
 local opts = {
 	legacy_commands = false,
 
