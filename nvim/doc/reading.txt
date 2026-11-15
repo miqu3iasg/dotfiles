@@ -9,6 +9,7 @@ DESCRIPTION
     The pages, all ending in .txt:
 
         kickstart.txt       full guide to the config
+        pandoc.txt          the Pandoc export feature
         structure.txt       the folder structure in depth
         modules.txt         the lua/modules/ layer
         lib.txt             the lua/lib/ layer

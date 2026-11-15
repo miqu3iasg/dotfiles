@@ -309,8 +309,9 @@ PANDOC
     Preview mode builds and opens the document once, then rebuilds it on every save; zathura reloads by itself. Each
     export loads, in order: the pipeline in pandoc/defaults.yaml, an optional defaults.yaml in the note's folder or a
     parent, pandoc/metadata.yaml (default layout and language), and a profile from pandoc/profiles/ when one is named.
-    Filters in pandoc/filters/ handle wikilinks, metadata blocks and citations rendered as plain text;
-    profiles/abnt.yaml covers ABNT-styled documents. Needs pandoc-cli and zathura.
+    Filters in pandoc/filters/ handle wikilinks and the metadata block under the title; profiles/abnt.yaml covers
+    ABNT-styled documents. Needs pandoc-cli and zathura. The feature page, with the whole load order and the filter
+    behavior, is doc/pandoc.txt.
 
 NOTES
     modules/notes.lua is a flat vault of Markdown notes managed from Neovim: quick drafts and typed notes from
@@ -388,10 +389,11 @@ FILES
     doc/philosophy.txt       why the config builds from scratch
     doc/documentation.txt    the documentation standard of this config
     doc/development.txt      how to extend the config
+    doc/pandoc.txt           the Pandoc export feature
 
 SEE ALSO
-    structure(7), modules(7), lib(7), philosophy(7), documentation(7), development(7). Also :help vim.pack, :help lsp,
-    :help ftplugin.
+    structure(7), modules(7), lib(7), philosophy(7), documentation(7), development(7), pandoc(7). Also :help vim.pack,
+    :help lsp, :help ftplugin.
 
 AUTHORS
     miqu3iasg and contributors. License: see LICENSE.

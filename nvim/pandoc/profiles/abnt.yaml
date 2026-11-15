@@ -6,8 +6,11 @@
 #
 # The profile is loaded after metadata.yaml, so its values override the
 # general metadata defaults. The note's own YAML front matter is applied
-# later and can still override this profile.
-pdf-engine: xelatex
+# later and can still override this profile. Values here are metadata, not
+# Pandoc options: engine options such as pdf-engine belong in defaults files.
+#
+# See: pandoc/metadata.yaml          the defaults this profile overrides
+# See: doc/pandoc.txt                the export feature page
 mainfont: Times New Roman # Requires this font to be installed on the system.
 fontsize: 12pt
 linestretch: 1.5

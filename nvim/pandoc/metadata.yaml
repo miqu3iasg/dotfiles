@@ -13,7 +13,11 @@
 #
 # Language controls hyphenation, quotation marks and translated labels such
 # as "Contents" and "Sumário". On Arch Linux, pt-BR hyphenation requires
-# texlive-langportuguese.
+# texlive-langportuguese. Values are metadata, not Pandoc options: engine
+# keys such as pdf-engine belong in defaults files.
+#
+# See: lua/modules/pandoc.lua        the module that loads this file
+# See: doc/pandoc.txt                the export feature page
 lang: en-US
 # Page layout
 documentclass: article

@@ -9,17 +9,18 @@
 -- Preview mode builds and opens the document once, then rebuilds it on every
 -- save. Zathura reloads the file by itself.
 --
--- Each export loads the pipeline in `~/.config/nvim/pandoc/defaults.yaml`, an
--- optional `defaults.yaml` in the note's folder or a parent folder, the default
--- layout and language in `metadata.yaml`, and a profile from `profiles/` when
--- one is requested. Later files win, and the YAML header of the note overrides
--- all of them.
+-- Each export loads the pipeline in `pandoc/defaults.yaml`, an optional
+-- `defaults.yaml` in the note's folder or a parent folder, the default
+-- layout and language in `metadata.yaml`, and a profile from `profiles/`
+-- when one is requested. Later files win, and the YAML header of the note
+-- overrides all of them.
 --
 -- Wikilinks become plain text, and Obsidian image embeds become real images,
 -- looked up in any `attachments/` folder above the note. Citations are
 -- disabled, so `@john` is always plain text. A second filter adds a block with
--- the reference fields of the note below the title, with labels that follow the
--- `lang` of the document.
+-- the reference fields of the note below the title, with labels that follow
+-- the `lang` of the document. HTML exports embed local images in the file
+-- itself, so the document can be shared on its own.
 --
 -- Nothing is notified on success. Errors and pandoc warnings are shown with
 -- pandoc's own message.
@@ -30,9 +31,12 @@
 --
 -- PDF export through XeTeX needs these TeX Live packages:
 --
--- $ sudo pacman -S texlive-xetex texlive-latex texlive-latexextra texlive-latexrecommended texlive-fontsrecommended texlive-langportuguese
+-- $ sudo pacman -S texlive-xetex texlive-latex texlive-latexextra \
+--   texlive-latexrecommended texlive-fontsrecommended texlive-langportuguese
 --
 -- See: lua/lib/exports.lua
+-- See: pandoc/                        the pipeline data loaded by this module
+-- See: doc/pandoc.txt                 the feature page
 -- See: https://pandoc.org/MANUAL.html
 -- See: :help vim.system()
 
@@ -231,6 +235,12 @@ function M.build(opts, on_done)
 		elseif fmt == "html" then
 			cmd[#cmd + 1] = "--metadata=pagetitle:" .. base
 		end
+	end
+
+	-- HTML embeds local images in the file itself, so the export can be shared
+	-- as a single document; other formats already bundle their resources.
+	if fmt == "html" then
+		cmd[#cmd + 1] = "--embed-resources"
 	end
 
 	local ok, err = pcall(
