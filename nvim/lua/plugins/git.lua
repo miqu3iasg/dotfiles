@@ -27,17 +27,10 @@
 -- See: https://github.com/lewis6991/gitsigns.nvim
 -- See: https://github.com/ibhagwan/fzf-lua
 
-local map = vim.keymap.set
+local keys = require("lib.keys")
+local map = keys.map
 
 local log_format = "--color=never --date=short --pretty=format:'%h %cd  %s (%an)%d'"
-
----@param mode string|string[]
----@param lhs string
----@param rhs string|function
----@param desc string
-local function gmap(mode, lhs, rhs, desc)
-	map(mode, lhs, rhs, { desc = desc })
-end
 
 ---Open the history of the current file, the repository or the function under
 ---the cursor. Ported from bruhtus <https://github.com/bruhtus>' `enable#fugitive_log`.
@@ -91,32 +84,32 @@ vim.api.nvim_create_autocmd("FileType", {
 
 require("modules.close_view").setup()
 
-gmap("n", "<leader>gg", "<cmd>silent tab Git<cr>", "Git status")
-gmap("n", "<leader>ga", "<cmd>silent Gwrite<cr>", "Stage current file")
-gmap("n", "<leader>gu", "<cmd>Gread<cr>", "Restore file from index (undoable)")
+map("n", "<leader>gg", "<cmd>silent tab Git<cr>", "Git status")
+map("n", "<leader>ga", "<cmd>silent Gwrite<cr>", "Stage current file")
+map("n", "<leader>gu", "<cmd>Gread<cr>", "Restore file from index (undoable)")
 
-gmap("n", "<leader>gc", "<cmd>Git commit<cr>", "Commit")
+map("n", "<leader>gc", "<cmd>Git commit<cr>", "Commit")
 
-gmap("n", "<leader>gp", "<cmd>Git push<cr>", "Push")
+map("n", "<leader>gp", "<cmd>Git push<cr>", "Push")
 
-gmap("n", "<leader>gl", "<cmd>-tab Git log --color=never --oneline --graph --decorate<cr>", "Git log (oneline)")
-gmap("n", "<leader>gL", "<cmd>-tab Git log --color=never --stat -p --decorate --date=short<cr>", "Git log (expanded)")
-gmap("n", "<leader>go", git_log_normal, "Git log (file/all/function)")
-gmap("x", "<leader>go", git_log_visual, "Git log (selection)")
+map("n", "<leader>gl", "<cmd>-tab Git log --color=never --oneline --graph --decorate<cr>", "Git log (oneline)")
+map("n", "<leader>gL", "<cmd>-tab Git log --color=never --stat -p --decorate --date=short<cr>", "Git log (expanded)")
+map("n", "<leader>go", git_log_normal, "Git log (file/all/function)")
+map("x", "<leader>go", git_log_visual, "Git log (selection)")
 
-gmap("n", "<leader>gd", "<cmd>silent Gvdiffsplit<cr>", "Diff against index")
-gmap("n", "<leader>gh", "<cmd>silent Gvdiffsplit HEAD<cr>", "Diff against HEAD")
-gmap("n", "<leader>gb", "<cmd>silent Git blame<cr>", "Git blame")
-gmap("n", "<leader>ge", "<cmd>.Git blame<cr>", "Git blame (line)")
+map("n", "<leader>gd", "<cmd>silent Gvdiffsplit<cr>", "Diff against index")
+map("n", "<leader>gh", "<cmd>silent Gvdiffsplit HEAD<cr>", "Diff against HEAD")
+map("n", "<leader>gb", "<cmd>silent Git blame<cr>", "Git blame")
+map("n", "<leader>ge", "<cmd>.Git blame<cr>", "Git blame (line)")
 
-gmap("n", "<leader>gw", "<cmd>GBrowse<cr>", "Open file in browser")
-gmap("x", "<leader>gw", ":GBrowse<cr>", "Open selection in browser")
+map("n", "<leader>gw", "<cmd>GBrowse<cr>", "Open file in browser")
+map("x", "<leader>gw", ":GBrowse<cr>", "Open selection in browser")
 
 -- In the 3-way diff, `//2` is the target (ours) and `//3` is the merge
 -- (theirs). Only the entry point uses the leader, so picking a side stays quick.
-gmap("n", "<leader>gx", "<cmd>Gvdiffsplit!<cr>", "Resolve conflicts (3-way diff)")
-gmap({ "n", "x" }, "gt", "<cmd>diffget //2<cr>", "Conflict: take ours (target)")
-gmap({ "n", "x" }, "gh", "<cmd>diffget //3<cr>", "Conflict: take theirs (merge)")
+map("n", "<leader>gx", "<cmd>Gvdiffsplit!<cr>", "Resolve conflicts (3-way diff)")
+map({ "n", "x" }, "gt", "<cmd>diffget //2<cr>", "Conflict: take ours (target)")
+map({ "n", "x" }, "gh", "<cmd>diffget //3<cr>", "Conflict: take theirs (merge)")
 
 local diff_overlay = false
 
@@ -132,7 +125,7 @@ require("gitsigns").setup({
 		local gs = require("gitsigns")
 
 		local function bmap(mode, lhs, rhs, desc)
-			map(mode, lhs, rhs, { buffer = bufnr, desc = desc })
+			keys.map(mode, lhs, rhs, desc, { buffer = bufnr })
 		end
 
 		---Navigate hunks, falling back to the native diff motions in diff mode.
@@ -181,7 +174,7 @@ local function fzf()
 	return require("fzf-lua")
 end
 
-gmap("n", "<leader>gfb", function()
+map("n", "<leader>gfb", function()
 	fzf().git_branches({
 		header = "<enter> checkout | <C-a> new branch from query | <C-x> delete | <C-d> force delete",
 		actions = {
@@ -200,24 +193,24 @@ gmap("n", "<leader>gfb", function()
 	})
 end, "Git branches (checkout / <C-a> new)")
 
-gmap("n", "<leader>gfc", function()
+map("n", "<leader>gfc", function()
 	fzf().git_commits()
 end, "Git commits (project)")
-gmap("n", "<leader>gfu", function()
+map("n", "<leader>gfu", function()
 	fzf().git_bcommits()
 end, "Git commits (current file)")
-gmap("n", "<leader>gfs", function()
+map("n", "<leader>gfs", function()
 	fzf().git_status()
 end, "Git status (modified files)")
-gmap("n", "<leader>gfh", function()
+map("n", "<leader>gfh", function()
 	fzf().git_hunks()
 end, "Git hunks")
-gmap("n", "<leader>gfd", function()
+map("n", "<leader>gfd", function()
 	fzf().git_diff()
 end, "Git diff")
-gmap("n", "<leader>gfa", function()
+map("n", "<leader>gfa", function()
 	fzf().git_stash()
 end, "Git stash (apply/pop/drop)")
-gmap("n", "<leader>gff", function()
+map("n", "<leader>gff", function()
 	fzf().git_files({ cmd = "git ls-files --cached --others --exclude-standard" })
 end, "Git files")

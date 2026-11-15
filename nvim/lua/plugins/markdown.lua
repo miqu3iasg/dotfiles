@@ -191,23 +191,13 @@ vim.api.nvim_create_autocmd("CmdlineChanged", {
 vim.api.nvim_create_autocmd("User", {
 	pattern = "ObsidianNoteEnter",
 	callback = function()
-		local function map(lhs, rhs, desc)
-			km("n", lhs, rhs, {
-				buffer = true,
-				silent = true,
-				desc = desc,
-			})
-		end
+		local bmap = require("lib.keys").bmap
 
-		map("<leader>oo", "<cmd>Obsidian open<cr>", "Open this note in the Obsidian app")
-		map("<leader>or", "<cmd>Obsidian rename<cr>", "Rename note by title")
-		map("<leader>ob", "<cmd>Obsidian backlinks<cr>", "Backlinks of this note")
-		map("<leader>oi", "<cmd>Obsidian links<cr>", "Links in this note")
+		bmap("n", "<leader>oo", "<cmd>Obsidian open<cr>", "Open this note in the Obsidian app")
+		bmap("n", "<leader>or", "<cmd>Obsidian rename<cr>", "Rename note by title")
+		bmap("n", "<leader>ob", "<cmd>Obsidian backlinks<cr>", "Backlinks of this note")
+		bmap("n", "<leader>oi", "<cmd>Obsidian links<cr>", "Links in this note")
 
-		km("v", "<leader>ok", "<cmd>Obsidian link<cr>", {
-			buffer = true,
-			silent = true,
-			desc = "Link selection to existing note",
-		})
+		bmap("v", "<leader>ok", "<cmd>Obsidian link<cr>", "Link selection to existing note")
 	end,
 })

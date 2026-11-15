@@ -6,23 +6,16 @@
 
 local buffers = require("lib.buffers")
 
----Set a keymap, silent by default.
----@param mode string|string[]
----@param lhs string
----@param rhs string|fun()
----@param opts? table<string, any> Extra mapping options.
-local function km(mode, lhs, rhs, opts)
-	opts = vim.tbl_extend("keep", opts or {}, { silent = true })
-	vim.keymap.set(mode, lhs, rhs, opts)
-end
+local keys = require("lib.keys")
+local map = keys.map
 
 -- Create and save
-km("n", "<leader>bn", "<cmd>enew<CR>", { desc = "New buffer" })
-km("n", "<leader>bw", "<cmd>write ++p<CR>", { desc = "Save buffer" })
-km("n", "<leader>bs", "<cmd>noautocmd write<CR>", { desc = "Save buffer without auto-formatting" })
+map("n", "<leader>bn", "<cmd>enew<CR>", "New buffer")
+map("n", "<leader>bw", "<cmd>write ++p<CR>", "Save buffer")
+map("n", "<leader>bs", "<cmd>noautocmd write<CR>", "Save buffer without auto-formatting")
 
 -- Close
-km("n", "<leader>bd", function()
+map("n", "<leader>bd", function()
 	local buf = vim.api.nvim_get_current_buf()
 
 	if buffers.save_if_modified(buf) then
@@ -30,9 +23,9 @@ km("n", "<leader>bd", function()
 	else
 		vim.notify("Could not save buffer, not deleted", vim.log.levels.WARN)
 	end
-end, { desc = "Save and delete buffer" })
+end, "Save and delete buffer")
 
-km("n", "<leader>bo", function()
+map("n", "<leader>bo", function()
 	local current_win = vim.api.nvim_get_current_win()
 	local current_buf = vim.api.nvim_get_current_buf()
 
@@ -45,9 +38,9 @@ km("n", "<leader>bo", function()
 	buffers.delete_where(function(info)
 		return info.bufnr ~= current_buf
 	end)
-end, { desc = "Close other windows and buffers" })
+end, "Close other windows and buffers")
 
 -- Navigate
-km("n", "]b", "<cmd>bnext<CR>", { desc = "Next buffer" })
-km("n", "[b", "<cmd>bprevious<CR>", { desc = "Previous buffer" })
-km("n", "<leader><Space>", "<C-^>", { desc = "Toggle between last two buffers" })
+map("n", "]b", "<cmd>bnext<CR>", "Next buffer")
+map("n", "[b", "<cmd>bprevious<CR>", "Previous buffer")
+map("n", "<leader><Space>", "<C-^>", "Toggle between last two buffers")

@@ -606,8 +606,7 @@ local function render(content, ctx)
 	---The `date` of the context as a date table, for `{{date:FMT}}`.
 	---@return { year: integer, month: integer, day: integer, hour: integer, min: integer, sec: integer }?
 	local function date_parts()
-		local y, mo, d, h, mi, s =
-			ctx.date:match("^(%d%d%d%d)%-(%d%d)%-(%d%d)T(%d%d):(%d%d):(%d%d)$")
+		local y, mo, d, h, mi, s = ctx.date:match("^(%d%d%d%d)%-(%d%d)%-(%d%d)T(%d%d):(%d%d):(%d%d)$")
 		if not y then
 			return nil
 		end
@@ -639,43 +638,47 @@ local function render(content, ctx)
 	local fm = fm_split(content)
 	if fm then
 		local cut = 4 + #fm
-		local head = content:sub(1, cut):gsub("(\n[%w_%-]+:)[ \t]*([\"'])%{%{([%w_]+)([^}]*)%}%}%2", function(key, _, name, fmt)
-			local v
+		local head = content
+			:sub(1, cut)
+			:gsub("(\n[%w_%-]+:)[ \t]*([\"'])%{%{([%w_]+)([^}]*)%}%}%2", function(key, _, name, fmt)
+				local v
+				if fmt ~= "" then
+					-- A format only makes sense on `{{date:FMT}}`.
+					if name ~= "date" or fmt:sub(1, 1) ~= ":" then
+						return nil
+					end
+					local parts = date_parts()
+					v = parts and format_date(fmt:sub(2), parts)
+				else
+					v = value(name)
+				end
+				if v == nil then
+					return nil
+				end
+				local text = RAW_VARS[name] and v or yaml_scalar(v)
+				return key .. (text ~= "" and (" " .. text) or "")
+			end)
+		content = head .. content:sub(cut + 1)
+	end
+
+	-- Everything else, in a single pass. Unknown names are kept as they are.
+	return (
+		content:gsub("%{%{([%w_]+)([^}]*)%}%}", function(name, fmt)
+			local v = value(name)
+			if v == nil then
+				return nil
+			end
 			if fmt ~= "" then
 				-- A format only makes sense on `{{date:FMT}}`.
 				if name ~= "date" or fmt:sub(1, 1) ~= ":" then
 					return nil
 				end
 				local parts = date_parts()
-				v = parts and format_date(fmt:sub(2), parts)
-			else
-				v = value(name)
+				return parts and format_date(fmt:sub(2), parts)
 			end
-			if v == nil then
-				return nil
-			end
-			local text = RAW_VARS[name] and v or yaml_scalar(v)
-			return key .. (text ~= "" and (" " .. text) or "")
+			return v
 		end)
-		content = head .. content:sub(cut + 1)
-	end
-
-	-- Everything else, in a single pass. Unknown names are kept as they are.
-	return (content:gsub("%{%{([%w_]+)([^}]*)%}%}", function(name, fmt)
-		local v = value(name)
-		if v == nil then
-			return nil
-		end
-		if fmt ~= "" then
-			-- A format only makes sense on `{{date:FMT}}`.
-			if name ~= "date" or fmt:sub(1, 1) ~= ":" then
-				return nil
-			end
-			local parts = date_parts()
-			return parts and format_date(fmt:sub(2), parts)
-		end
-		return v
-	end))
+	)
 end
 
 ---Guarantee that the frontmatter of `content` has a `date` field. An existing
@@ -967,10 +970,7 @@ local function insert_template(buf, name)
 	if not title or title == "" then
 		title = vim.fs.basename(vim.api.nvim_buf_get_name(buf)):gsub("%.md$", "")
 	end
-	local rendered = ensure_date(
-		render(template, { title = title, date = date, id = id ~= "" and id or nil }),
-		date
-	)
+	local rendered = ensure_date(render(template, { title = title, date = date, id = id ~= "" and id or nil }), date)
 	local new_fm, tbody = fm_split(rendered)
 
 	-- Frontmatter lines to write, with a blank line after it when the note had none.

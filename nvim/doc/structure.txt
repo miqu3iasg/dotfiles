@@ -27,7 +27,7 @@ THE TREE
     |  |- language/           the language server stack
     |  |- snippets/           LuaSnip snippets, one file per filetype
     |  |- archived/           deprecated modules, off the runtimepath
-    |- pandoc/                Pandoc pipeline: defaults, metadata, profiles
+    |- lua/pandoc/                Pandoc pipeline: defaults, metadata, profiles
     |                         and Lua filters
     |- resources/             example configuration for external tools
     |- spell/                 custom spell files
@@ -46,7 +46,7 @@ TOP-LEVEL FOLDERS
         That is why every filetype option lives here and not in a custom layer. after/queries/ overrides Tree-sitter
         queries the same way (Markdown textobjects).
 
-    pandoc/
+    lua/pandoc/
         The export pipeline is data, not code: defaults.yaml (the writer pipeline), metadata.yaml (default layout and
         language), profiles/ (per-document styles, such as abnt.yaml) and filters/ (wikilinks, metadata blocks). The
         Lua module lua/modules/pandoc.lua orchestrates these files; it holds no document logic itself. The feature

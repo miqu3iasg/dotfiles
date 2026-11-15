@@ -1,0 +1,5 @@
+# StyLua formatting for this configuration. The defaults already match the
+# code style, so this file only pins them.
+indent_type = "Tabs"
+indent_width = 4
+column_width = 120

@@ -3,10 +3,10 @@ NAME
 
 SYNOPSIS
     lua/modules/pandoc.lua             the export module
-    pandoc/defaults.yaml               the conversion pipeline
-    pandoc/metadata.yaml               default look and language
-    pandoc/profiles/<name>.yaml        per-document styles
-    pandoc/filters/*.lua               conversion filters
+    lua/pandoc/defaults.yaml               the conversion pipeline
+    lua/pandoc/metadata.yaml               default look and language
+    lua/pandoc/profiles/<name>.yaml        per-document styles
+    lua/pandoc/filters/*.lua               conversion filters
     doc/pandoc.txt                     this page
 
 DESCRIPTION
@@ -23,10 +23,10 @@ DESCRIPTION
 THE EXPORT PIPELINE
     Every export loads its configuration in a fixed order, where later files win:
 
-        1.  pandoc/defaults.yaml         always loaded; defines the pipeline itself.
+        1.  lua/pandoc/defaults.yaml         always loaded; defines the pipeline itself.
         2.  a project defaults.yaml      an optional defaults.yaml in the note's folder or a parent, up to $HOME.
-        3.  pandoc/metadata.yaml         default look and language.
-        4.  a profile                    requested by name, from pandoc/profiles/.
+        3.  lua/pandoc/metadata.yaml         default look and language.
+        4.  a profile                    requested by name, from lua/pandoc/profiles/.
         5.  the note's YAML front matter  the last word on metadata.
 
     The project-level file can override the pipeline for a whole folder tree; relative paths inside it resolve from the
@@ -71,17 +71,17 @@ THE FILTERS
 
 COMMANDS
     :Pandoc [fmt] [profile]      export the current buffer and open the result. fmt is pdf (default), epub, docx
-                                 or html; profile is a name from pandoc/profiles/.
+                                 or html; profile is a name from lua/pandoc/profiles/.
     :PandocPreview [fmt] [profile]  like :Pandoc, then rebuild on every save until toggled off.
 
 FILES
     lua/modules/pandoc.lua          the export module; requirements in its header
     lua/lib/exports.lua             where exports go, shared with VimTeX
     after/ftplugin/markdown.lua     the Markdown buffers that load the module
-    pandoc/defaults.yaml            the pipeline
-    pandoc/metadata.yaml            the default appearance
-    pandoc/profiles/                the profiles
-    pandoc/filters/                 the Lua filters
+    lua/pandoc/defaults.yaml            the pipeline
+    lua/pandoc/metadata.yaml            the default appearance
+    lua/pandoc/profiles/                the profiles
+    lua/pandoc/filters/                 the Lua filters
 
 SEE ALSO
     kickstart(7), structure(7), modules(7), lib(7), documentation(7).

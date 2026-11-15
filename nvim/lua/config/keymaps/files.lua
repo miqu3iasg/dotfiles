@@ -5,7 +5,8 @@
 -- See: lua/lib/system.lua
 -- See: lua/config/commands.lua
 
-local km = vim.keymap.set
+local keys = require("lib.keys")
+local map = keys.map
 
 -- Prompt text, colored by the active colorscheme. Because of `default`, a
 -- colorscheme or user config can still override this group.
@@ -13,15 +14,6 @@ vim.api.nvim_set_hl(0, "FilesPrompt", { link = "Question", default = true })
 
 ---Sentinel returned by `input()` when the prompt is cancelled.
 local CANCEL = "\1<cancel>"
-
----Set a normal-mode keymap, always with a description.
----@param lhs string
----@param rhs string|fun()
----@param desc string
----@param opts? table<string, any> Extra mapping options.
-local function map(lhs, rhs, desc, opts)
-	km("n", lhs, rhs, vim.tbl_extend("force", { desc = desc }, opts or {}))
-end
 
 ---Absolute path of the current file, or `nil` with a message when there is none.
 ---@return string?
@@ -49,7 +41,7 @@ end
 ---@param desc string
 ---@see :help filename-modifiers
 local function yank_map(lhs, modifier, desc)
-	map(lhs, function()
+	map("n", lhs, function()
 		yank(vim.fn.expand(modifier))
 	end, desc)
 end
@@ -109,14 +101,14 @@ local function confirm_action(prompt)
 end
 
 -- Working directory
-map("<leader>nw", "<cmd>Setwd<CR>", "Set working directory to current file")
+map("n", "<leader>nw", "<cmd>Setwd<CR>", "Set working directory to current file")
 
-map("<leader>.", function()
+map("n", "<leader>.", function()
 	vim.notify("Current directory: " .. vim.fn.getcwd(), vim.log.levels.INFO)
 end, "Show current working directory", { silent = true })
 
 -- File operations
-map("<leader>nf", function()
+map("n", "<leader>nf", function()
 	local current_dir = vim.fn.expand("%:p:h")
 	if current_dir == "" or current_dir == "." then
 		current_dir = vim.fn.getcwd()
@@ -146,7 +138,7 @@ map("<leader>nf", function()
 	vim.cmd("edit " .. vim.fn.fnameescape(file))
 end, "Find or create new file")
 
-map("<leader>nr", function()
+map("n", "<leader>nr", function()
 	local old = current_file()
 	if not old then
 		return
@@ -174,7 +166,7 @@ map("<leader>nr", function()
 end, "Rename current file")
 
 -- Deletes the file permanently, after confirmation.
-map("<leader>nk", function()
+map("n", "<leader>nk", function()
 	local file = current_file()
 	if not file then
 		return
@@ -192,7 +184,7 @@ map("<leader>nk", function()
 	print("Deleted " .. vim.fn.fnamemodify(file, ":~"))
 end, "Delete current file")
 
-map("<leader>nx", function()
+map("n", "<leader>nx", function()
 	local file = current_file()
 	if not file then
 		return
@@ -203,7 +195,7 @@ map("<leader>nx", function()
 	print((is_exec and "Removed" or "Added") .. " executable permission: " .. file)
 end, "Toggle executable permission on current file")
 
-map("<leader>ne", function()
+map("n", "<leader>ne", function()
 	local file = current_file()
 	if not file then
 		return
@@ -229,7 +221,7 @@ yank_map("<leader>yr", "%:.", "Yank relative file path")
 yank_map("<leader>yn", "%:t", "Yank file name")
 yank_map("<leader>yd", "%:p:h", "Yank containing directory path")
 
-map("<leader>yl", function()
+map("n", "<leader>yl", function()
 	local path = vim.fn.expand("%:.")
 	if path == "" then
 		return

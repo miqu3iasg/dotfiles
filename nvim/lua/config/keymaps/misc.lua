@@ -10,32 +10,16 @@
 -- See: lua/plugins/oil.lua
 -- See: :help :restart
 
-local km = vim.keymap.set
-
----Set a normal-mode keymap.
----@param lhs string
----@param rhs string|fun()
----@param desc string
-local function map(lhs, rhs, desc)
-	km("n", lhs, rhs, { desc = desc })
-end
-
----Map a key that toggles a boolean window option.
----@param lhs string
----@param opt string Name of the window option.
----@param desc string
-local function toggle_wo(lhs, opt, desc)
-	map(lhs, function()
-		vim.wo[opt] = not vim.wo[opt]
-	end, desc)
-end
+local keys = require("lib.keys")
+local map = keys.map
+local toggle_wo = keys.toggle_wo
 
 ---Map a key that opens a file for editing.
 ---@param lhs string
 ---@param path string
 ---@param desc string
 local function edit_file(lhs, path, desc)
-	map(lhs, "<cmd>e " .. path .. "<cr>", desc)
+	map("n", lhs, "<cmd>e " .. path .. "<cr>", desc)
 end
 
 ---Map a key that opens a directory in the file explorer.
@@ -43,7 +27,7 @@ end
 ---@param path string
 ---@param desc string
 local function open_dir(lhs, path, desc)
-	map(lhs, function()
+	map("n", lhs, function()
 		require("oil").open(vim.fn.expand(path))
 	end, desc)
 end
@@ -71,11 +55,11 @@ toggle_wo("<leader>vl", "list", "Toggle whitespace characters")
 toggle_wo("<leader>vs", "spell", "Toggle spell check")
 toggle_wo("<leader>vc", "cursorline", "Toggle cursorline")
 
-map("<leader>vg", function()
+map("n", "<leader>vg", function()
 	vim.wo.signcolumn = vim.wo.signcolumn == "no" and "yes" or "no"
 end, "Toggle sign column")
 
-map("<leader>ud", function()
+map("n", "<leader>ud", function()
 	local enabled = not vim.diagnostic.is_enabled()
 	vim.diagnostic.enable(enabled)
 	-- Re-enabling every namespace would bring back a lint that the lint toggle
@@ -89,11 +73,11 @@ map("<leader>ud", function()
 	vim.notify("Diagnostics " .. (enabled and "enabled" or "disabled"))
 end, "Toggle diagnostics")
 
-map("<leader>vh", function()
+map("n", "<leader>vh", function()
 	vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled({ bufnr = 0 }), { bufnr = 0 })
 end, "Toggle inlay hints (buffer)")
 
-map("<leader>vm", function()
+map("n", "<leader>vm", function()
 	if vim.wo.colorcolumn ~= "" then
 		vim.wo.colorcolumn = ""
 		return
@@ -102,12 +86,12 @@ map("<leader>vm", function()
 end, "Toggle color column")
 
 -- Line numbers
-map("<leader>vn", function()
+map("n", "<leader>vn", function()
 	vim.wo.number = not vim.wo.number
 	vim.wo.relativenumber = vim.wo.number
 end, "Toggle line numbers")
 
-map("<leader>vr", function()
+map("n", "<leader>vr", function()
 	vim.wo.number = true
 	vim.wo.relativenumber = not vim.wo.relativenumber
 end, "Toggle relative numbers")
@@ -126,12 +110,12 @@ open_dir("<leader>zd", "~/dotfiles", "Open dotfiles directory")
 open_dir("<leader>zb", "~/.local/bin", "Open ~/.local/bin directory (scripts)")
 
 -- Explicit mappings of the native commands, so they show up with a description.
-map("ZZ", "<cmd>x<cr>", "Save and quit")
-map("ZQ", "<cmd>q!<cr>", "Quit without saving")
-map("ZX", "<cmd>w<cr>", "Save file")
+map("n", "ZZ", "<cmd>x<cr>", "Save and quit")
+map("n", "ZQ", "<cmd>q!<cr>", "Quit without saving")
+map("n", "ZX", "<cmd>w<cr>", "Save file")
 
 -- Reload, restart and run
-map("<leader>re", "<cmd>wa | restart<cr>", "Save all changes and restart Neovim")
-map("<leader>rs", "<cmd>luafile %<cr>", "Source lua files")
-map("<leader>ru", "<cmd>update<bar>source %<cr>", "Save and source current file")
-map("<leader>rc", run_command_in_file_dir, "Run command in file's directory")
+map("n", "<leader>re", "<cmd>wa | restart<cr>", "Save all changes and restart Neovim")
+map("n", "<leader>rs", "<cmd>luafile %<cr>", "Source lua files")
+map("n", "<leader>ru", "<cmd>update<bar>source %<cr>", "Save and source current file")
+map("n", "<leader>rc", run_command_in_file_dir, "Run command in file's directory")

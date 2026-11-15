@@ -46,7 +46,7 @@ DIRECTORY LAYOUT
     lua/language/          language server stack; one module per server under servers/
     lua/snippets/          LuaSnip snippets, one file per filetype
     lua/archived/          deprecated modules kept off the runtimepath
-    pandoc/                Pandoc defaults, metadata, profiles and Lua filters
+    lua/pandoc/                Pandoc defaults, metadata, profiles and Lua filters
     resources/             example external-tool configuration files
     spell/                 custom spell files
     nvim-pack-lock.json    revision lock file written by vim.pack
@@ -307,9 +307,9 @@ PANDOC
     the exports folder (see lib/exports.lua) and open in zathura (PDF/EPUB) or xdg-open (DOCX/HTML).
 
     Preview mode builds and opens the document once, then rebuilds it on every save; zathura reloads by itself. Each
-    export loads, in order: the pipeline in pandoc/defaults.yaml, an optional defaults.yaml in the note's folder or a
-    parent, pandoc/metadata.yaml (default layout and language), and a profile from pandoc/profiles/ when one is named.
-    Filters in pandoc/filters/ handle wikilinks and the metadata block under the title; profiles/abnt.yaml covers
+    export loads, in order: the pipeline in lua/pandoc/defaults.yaml, an optional defaults.yaml in the note's folder or a
+    parent, lua/pandoc/metadata.yaml (default layout and language), and a profile from lua/pandoc/profiles/ when one is named.
+    Filters in lua/pandoc/filters/ handle wikilinks and the metadata block under the title; profiles/abnt.yaml covers
     ABNT-styled documents. Needs pandoc-cli and zathura. The feature page, with the whole load order and the filter
     behavior, is doc/pandoc.txt.
 

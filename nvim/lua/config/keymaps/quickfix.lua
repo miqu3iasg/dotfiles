@@ -18,8 +18,7 @@ local function delete_entry()
 	local is_loclist = vim.fn.getwininfo(win)[1].loclist == 1
 
 	local items = is_loclist and vim.fn.getloclist(win) or vim.fn.getqflist()
-	local title = is_loclist and vim.fn.getloclist(win, { title = 0 }).title
-		or vim.fn.getqflist({ title = 0 }).title
+	local title = is_loclist and vim.fn.getloclist(win, { title = 0 }).title or vim.fn.getqflist({ title = 0 }).title
 	table.remove(items, vim.fn.line("."))
 
 	if is_loclist then

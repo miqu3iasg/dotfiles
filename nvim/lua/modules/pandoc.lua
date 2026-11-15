@@ -9,7 +9,7 @@
 -- Preview mode builds and opens the document once, then rebuilds it on every
 -- save. Zathura reloads the file by itself.
 --
--- Each export loads the pipeline in `pandoc/defaults.yaml`, an optional
+-- Each export loads the pipeline in `lua/pandoc/defaults.yaml`, an optional
 -- `defaults.yaml` in the note's folder or a parent folder, the default
 -- layout and language in `metadata.yaml`, and a profile from `profiles/`
 -- when one is requested. Later files win, and the YAML header of the note
@@ -35,7 +35,7 @@
 --   texlive-latexrecommended texlive-fontsrecommended texlive-langportuguese
 --
 -- See: lua/lib/exports.lua
--- See: pandoc/                        the pipeline data loaded by this module
+-- See: lua/pandoc/                        the pipeline data loaded by this module
 -- See: doc/pandoc.txt                 the feature page
 -- See: https://pandoc.org/MANUAL.html
 -- See: :help vim.system()
@@ -50,7 +50,7 @@ local exports = require("lib.exports")
 
 ---@class PandocBuildOptions
 ---@field fmt? string Export format. Defaults to `"pdf"`.
----@field profile? string Name of a profile in `pandoc/profiles/`.
+---@field profile? string Name of a profile in `lua/pandoc/profiles/`.
 ---@field buf? integer Buffer number to export. Defaults to the current buffer.
 
 ---@type SharedPandoc
@@ -58,7 +58,7 @@ local M = {}
 
 M.formats = { "pdf", "epub", "docx", "html" }
 M.viewers = { pdf = "zathura", epub = "zathura", docx = "xdg-open", html = "xdg-open" }
-M.config_dir = vim.fn.stdpath("config") .. "/pandoc"
+M.config_dir = vim.fn.stdpath("config") .. "/lua/pandoc"
 M.last = {}
 
 local home = vim.uv.os_homedir()

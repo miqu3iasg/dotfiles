@@ -53,7 +53,7 @@ THE MODULES
     pandoc
         Exports the current Markdown buffer to PDF, EPUB, DOCX or HTML by running pandoc asynchronously, through stdin,
         so unsaved changes are exported too. Preview mode rebuilds on every save. The pipeline itself is data:
-        pandoc/defaults.yaml, pandoc/metadata.yaml, per-folder defaults, profiles/ and filters/. Results go where
+        lua/pandoc/defaults.yaml, lua/pandoc/metadata.yaml, per-folder defaults, profiles/ and filters/. Results go where
         lib/exports.lua points and open in zathura or xdg-open. API: M.build, M.open, M.preview, M.setup. Buffer-local
         commands: :Pandoc, :PandocPreview. The feature page is doc/pandoc.txt.
 

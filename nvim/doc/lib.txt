@@ -38,6 +38,11 @@ THE LIBRARIES
         keeps the same field order and usage format; the standard the specs implement is doc/snippets.txt. The file
         registers nothing global. API: M.render, M.build_header, M.H, M.headers and the style and filename helpers.
 
+    keys
+        Shared keymap setters: M.map, M.bmap and M.toggle_wo. Every mapping gets a `desc` and is silent by default;
+        extra options merge over these defaults, so a caller can turn `silent` off explicitly. The keymap files and
+        the plugin adapters build on them instead of rolling their own wrappers.
+
     lazy
         The filetype-based lazy loader for vim.pack plugins, the only indirection in the config. Plugins declare
         themselves through M.setup{ src, filetypes, version, configure, after }; the plugin is installed at startup, but
