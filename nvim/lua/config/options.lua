@@ -15,6 +15,9 @@ if vim.fn.executable("rg") == 1 then
 	vim.opt.grepprg = "rg --vimgrep --smart-case"
 end
 
+-- The file explorer is canola.nvim, so netrw never loads.
+vim.g.loaded_netrw = 1
+
 vim.opt.hidden = true
 vim.opt.history = 10000
 vim.opt.showtabline = 0
