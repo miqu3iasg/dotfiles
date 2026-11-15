@@ -159,6 +159,16 @@ map("<leader>nr", function()
 		return
 	end
 
+	-- `:saveas` cannot create the target directory, so it is offered here,
+	-- like the new file flow does.
+	local dir = vim.fn.fnamemodify(new, ":h")
+	if vim.fn.isdirectory(dir) == 0 then
+		if not confirm_action("Directory " .. vim.fn.fnamemodify(dir, ":~") .. " does not exist; create?") then
+			return
+		end
+		vim.fn.mkdir(dir, "p")
+	end
+
 	vim.cmd("saveas " .. vim.fn.fnameescape(new))
 	vim.fn.delete(old)
 	vim.cmd("bd " .. vim.fn.bufnr(old))
