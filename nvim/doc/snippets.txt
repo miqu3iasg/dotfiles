@@ -26,8 +26,9 @@ THE TRIGGERS
         doce    example block, testable where the language supports it
 
     Language files add triggers for constructs only they have: Java has docg for generic classes, docr for records and
-    docpkg for package-info.java, plus snippets for the standalone Javadoc tags. Go keeps docp for the package comment
-    above the `package` clause, the one doc comment per package that GoDoc renders as the package summary.
+    docpkg for package-info.java, plus snippets for the standalone Javadoc tags; Go renders the package comment through
+    docm, the module-overview form, and adds snippets for the Go 1.19 doc comment syntax (headings and symbol links)
+    and for testable examples.
 
 THE SHAPE OF A BLOCK
     Rules every doc block follows, in any language:
