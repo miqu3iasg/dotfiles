@@ -7,8 +7,6 @@
 
 local km = vim.keymap.set
 
--- TODO: add more colors to the prompt
-
 -- Prompt text, colored by the active colorscheme. Because of `default`, a
 -- colorscheme or user config can still override this group.
 vim.api.nvim_set_hl(0, "FilesPrompt", { link = "Question", default = true })
