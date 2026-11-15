@@ -2,7 +2,9 @@
 
 -- Filetype-based lazy loading for vim.pack plugins. Each plugin's own file in
 -- `lua/plugins/` declares itself with `setup(spec)`, so `lua/config/pack.lua`
--- stays limited to declarations of eager plugins.
+-- stays limited to declarations of eager plugins. A plugin without a natural
+-- filetype trigger, such as fzf-lua, registers with no filetypes and loads
+-- through an explicit `load(name)` call; see `lua/plugins/fzf.lua`.
 --
 -- The plugin is registered at startup, but its `plugin/` scripts only run when
 -- the first buffer of one of the listed filetypes appears, or when `load(name)`
