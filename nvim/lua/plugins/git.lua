@@ -1,9 +1,10 @@
 -- lua/plugins/git.lua
 
 -- Git workflow inside Neovim, built on vim-fugitive for repository operations,
--- gitsigns.nvim for hunk-level changes and, optionally, fzf-lua for browsing
--- branches, commits and diffs. The fzf-lua keymaps are only registered when it
--- is available.
+-- gitsigns.nvim for hunk-level changes and fzf-lua for browsing branches,
+-- commits and diffs. The fzf-lua keymaps are stubs: the plugin loads on demand
+-- through `lib.lazy`, like in its own adapter, so the first press pays the
+-- load.
 --
 -- Git must be installed and the current directory must belong to a repository.
 -- vim-rhubarb is required for `:GBrowse` to build GitHub URLs. Destructive
@@ -171,33 +172,52 @@ require("gitsigns").setup({
 	end,
 })
 
-if pcall(require, "fzf-lua") then
-	gmap("n", "<leader>gfb", function()
-		require("fzf-lua").git_branches({
-			header = "<enter> checkout | <C-a> new branch from query | <C-x> delete | <C-d> force delete",
-			actions = {
-				["ctrl-a"] = {
-					fn = function(selected)
-						local name = vim.trim(selected[1] or "")
-						if name ~= "" then
-							vim.schedule(function()
-								vim.cmd("Git switch -c " .. name)
-							end)
-						end
-					end,
-					field_index = "{q}",
-				},
-			},
-		})
-	end, "Git branches (checkout / <C-a> new)")
-
-	gmap("n", "<leader>gfc", "<cmd>FzfLua git_commits<cr>", "Git commits (project)")
-	gmap("n", "<leader>gfu", "<cmd>FzfLua git_bcommits<cr>", "Git commits (current file)")
-	gmap("n", "<leader>gfs", "<cmd>FzfLua git_status<cr>", "Git status (modified files)")
-	gmap("n", "<leader>gfh", "<cmd>FzfLua git_hunks<cr>", "Git hunks")
-	gmap("n", "<leader>gfd", "<cmd>FzfLua git_diff<cr>", "Git diff")
-	gmap("n", "<leader>gfa", "<cmd>FzfLua git_stash<cr>", "Git stash (apply/pop/drop)")
-	gmap("n", "<leader>gff", function()
-		require("fzf-lua").git_files({ cmd = "git ls-files --cached --others --exclude-standard" })
-	end, "Git files")
+---Load fzf-lua on first use and return it. The loader is guarded, so after the
+---first keypress this is a cached require.
+---See: lua/plugins/fzf.lua
+---@return table
+local function fzf()
+	require("lib.lazy").load("fzf-lua")
+	return require("fzf-lua")
 end
+
+gmap("n", "<leader>gfb", function()
+	fzf().git_branches({
+		header = "<enter> checkout | <C-a> new branch from query | <C-x> delete | <C-d> force delete",
+		actions = {
+			["ctrl-a"] = {
+				fn = function(selected)
+					local name = vim.trim(selected[1] or "")
+					if name ~= "" then
+						vim.schedule(function()
+							vim.cmd("Git switch -c " .. name)
+						end)
+					end
+				end,
+				field_index = "{q}",
+			},
+		},
+	})
+end, "Git branches (checkout / <C-a> new)")
+
+gmap("n", "<leader>gfc", function()
+	fzf().git_commits()
+end, "Git commits (project)")
+gmap("n", "<leader>gfu", function()
+	fzf().git_bcommits()
+end, "Git commits (current file)")
+gmap("n", "<leader>gfs", function()
+	fzf().git_status()
+end, "Git status (modified files)")
+gmap("n", "<leader>gfh", function()
+	fzf().git_hunks()
+end, "Git hunks")
+gmap("n", "<leader>gfd", function()
+	fzf().git_diff()
+end, "Git diff")
+gmap("n", "<leader>gfa", function()
+	fzf().git_stash()
+end, "Git stash (apply/pop/drop)")
+gmap("n", "<leader>gff", function()
+	fzf().git_files({ cmd = "git ls-files --cached --others --exclude-standard" })
+end, "Git files")
