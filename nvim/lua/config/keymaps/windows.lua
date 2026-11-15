@@ -21,8 +21,6 @@ km("n", "<leader>mx", "<C-w>x", { desc = "Swap window with next" })
 km("n", "<leader>mr", "<C-w>r", { desc = "Rotate windows" })
 
 -- Split and close
--- The splits live under `<leader>w` so the `s` prefix stays with the search
--- keymaps, which use `<leader>sh` for help.
 km("n", "<leader>wv", "<cmd>vsplit<CR>", { desc = "Split window vertically" })
 km("n", "<leader>wh", "<cmd>split<CR>", { desc = "Split window horizontally" })
 km("n", "<leader>we", "<C-w>=", { desc = "Equalize window sizes" })
