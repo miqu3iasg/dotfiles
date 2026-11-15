@@ -103,9 +103,9 @@ for _, name in ipairs(modules) do
 end
 
 -- Buffer-local mappings set once a server attaches. The native LSP and
--- diagnostic mappings, such as hover, rename, `gd`, `grr`, `gri`, `grt`, `gO`
--- and `gra`, are intentionally not redefined; the mappings below are the
--- ones without a native default or with custom behavior.
+-- diagnostic mappings, such as hover, rename and the navigation motions, are
+-- intentionally not redefined; the mappings below are the ones without a
+-- native default or with custom behavior.
 -- See: :help lsp-defaults
 vim.api.nvim_create_autocmd("LspAttach", {
 	group = vim.api.nvim_create_augroup("UserLspConfig", { clear = true }),

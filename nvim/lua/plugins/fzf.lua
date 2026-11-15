@@ -3,10 +3,10 @@
 -- Fuzzy finder for files, buffers, text, diagnostics and help, built on
 -- fzf-lua. It gives a single interface for navigating a project.
 --
--- The plugin loads on demand: `lib.lazy` installs it without sourcing it, and
--- the first `<leader>f` keymap loads it, runs the setup and opens the picker.
--- The keymaps below are stubs, so every picker is reachable before the plugin
--- is loaded.
+-- The plugin loads on demand. `lib.lazy` installs it without sourcing it, and
+-- the first picker keymap loads it, runs the setup and opens the picker. The
+-- keymaps below are stubs, so every picker is reachable before the plugin is
+-- loaded.
 --
 -- The external tools must be installed on the system, since fzf-lua only wraps
 -- them. On Arch Linux:
@@ -18,6 +18,8 @@
 -- See: https://github.com/bruhtus/dotfiles/blob/master/.vim/after/autoload/enable/fzf.vim
 -- See: https://github.com/bruhtus/dotfiles/blob/master/.vim/plugin/fzf.vim
 -- See: https://github.com/james-orcales/james-orcales/blob/main/home/.config/nvim/init.lua
+
+local M = {}
 
 -- Skipped by the file and grep pickers to keep them fast.
 ---@type string[]
@@ -173,16 +175,11 @@ vim.api.nvim_create_autocmd("ColorScheme", {
 	callback = set_fzf_hl,
 })
 
----Install fzf-lua without loading it; the setup runs on the first load. Notes
----buffers also trigger the load, so the obsidian picker works without a
----`<leader>f` keymap having been pressed first.
-require("lib.lazy").setup({
-	src = "https://github.com/ibhagwan/fzf-lua",
-	filetypes = { "markdown" },
-	after = function()
-		require("fzf-lua").setup(make_opts())
-	end,
-})
+---Set up fzf-lua. Called once per session by `lib.lazy`, after fzf-lua is
+---loaded; the setup needs the module, so it cannot run as a `configure`.
+function M.after()
+	require("fzf-lua").setup(make_opts())
+end
 
 ---Load fzf-lua on first use and return it. The loader is guarded, so after the
 ---first keypress this is a cached require.
@@ -261,3 +258,13 @@ end, { desc = "Fzf: search all keymaps" })
 km("n", "<leader>fc", function()
 	fzf().resume()
 end, { desc = "Fzf: resume the last picker with its previous query" })
+
+-- Notes buffers also trigger the load, so the obsidian picker resolves before
+-- any picker was opened.
+require("lib.lazy").setup({
+	src = "https://github.com/ibhagwan/fzf-lua",
+	filetypes = { "markdown" },
+	after = M.after,
+})
+
+return M
