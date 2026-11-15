@@ -6,6 +6,7 @@
 -- The documentation comment format uses @field: descriptions and can be adapted
 -- for structs or functions.
 --
+-- See: doc/snippets.txt
 -- See: https://www.kernel.org/doc/html/v4.10/process/coding-style.html
 
 local ls = require("luasnip")

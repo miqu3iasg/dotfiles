@@ -158,6 +158,7 @@ FILES
     doc/philosophy.txt               why the config builds from scratch
     doc/documentation.txt            this page
     doc/development.txt              how to extend the config
+    doc/snippets.txt                 the documentation snippet standard
 
 SEE ALSO
-    kickstart(7), structure(7), modules(7), lib(7), philosophy(7), development(7).
+    kickstart(7), structure(7), modules(7), lib(7), philosophy(7), development(7), snippets(7).

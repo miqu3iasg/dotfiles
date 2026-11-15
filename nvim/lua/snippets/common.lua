@@ -8,6 +8,7 @@
 -- Headers can include source metadata and compile/run instructions, while
 -- inline snippets use the appropriate comment form for the current language.
 --
+-- See: doc/snippets.txt
 -- See: https://spdx.dev/ids/
 
 local ls = require("luasnip")

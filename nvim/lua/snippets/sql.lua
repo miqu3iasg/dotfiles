@@ -7,6 +7,7 @@
 -- are upper-case, matching the sql-formatter configuration; indentation
 -- assumes four spaces.
 --
+-- See: doc/snippets.txt
 -- See: https://github.com/sql-formatter-org/sql-formatter
 
 local ls = require("luasnip")

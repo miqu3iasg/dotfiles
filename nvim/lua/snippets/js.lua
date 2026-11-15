@@ -5,6 +5,7 @@
 -- TypeScript alias and the react filetypes inherit this file through the
 -- completions module. Indentation assumes two spaces.
 --
+-- See: doc/snippets.txt
 -- See: https://jsdoc.app
 -- See: https://www.typescriptlang.org/docs/handbook/jsdoc-supported-types.html
 

@@ -5,6 +5,7 @@
 -- in the format the official tooling renders. Every snippet is written with
 -- the hard tabs that gofmt emits, so they never need reindenting.
 --
+-- See: doc/snippets.txt
 -- See: after/ftplugin/go.lua
 -- See: https://go.dev/doc/effective_go
 

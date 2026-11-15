@@ -5,6 +5,7 @@
 -- parameters and returns, class definitions, and single param and field
 -- lines. Indentation assumes tabs.
 --
+-- See: doc/snippets.txt
 -- See: https://luals.github.io/wiki/annotations/
 -- See: https://github.com/LuaLS/lua-language-server/wiki/Annotations
 

@@ -6,6 +6,7 @@
 -- method call synchronized with its name. Docstrings follow the Google style;
 -- indentation assumes four spaces.
 --
+-- See: doc/snippets.txt
 -- See: https://peps.python.org/pep-0257/
 -- See: https://google.github.io/styleguide/pyguide.html#s38-comments-and-docstrings
 

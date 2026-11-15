@@ -13,6 +13,7 @@
 -- a line break so the declaration it documents goes right below it. Delete the
 -- tag lines that do not apply.
 --
+-- See: doc/snippets.txt
 -- See: https://docs.oracle.com/javase/8/docs/technotes/tools/windows/javadoc.html
 -- See: https://www.oracle.com/technical-resources/articles/java/javadoc-tool.html
 -- See: https://google.github.io/styleguide/javaguide.html#s7-javadoc
