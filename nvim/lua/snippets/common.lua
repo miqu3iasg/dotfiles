@@ -591,16 +591,25 @@ function H.references()
 	end
 end
 
--- The license block closes a header: an SPDX line followed by the
--- copyright notice, whose holder mirrors the Author field via `rep`.
+-- Editable SPDX identifier line, the last field of every header.
 ---@param license string SPDX license identifier.
+---@return HeaderField
+function H.spdx(license)
+	return function(ctx)
+		ctx.add(t({ "", wrap(ctx.style, ""), wrap(ctx.style, "SPDX-License-Identifier: ") }))
+		ctx.add(i(ctx.idx, license))
+		ctx.idx = ctx.idx + 1
+	end
+end
+
+-- Copyright field for the study headers, mirroring the Author line through
+-- `rep` so the holder is typed once.
 ---@param suffix string Text appended after the copyright holder.
 ---@return HeaderField
-function H.license(license, suffix)
+function H.copyright(suffix)
 	return function(ctx)
-		ctx.add(t({ "", wrap(ctx.style, ""), wrap(ctx.style, "SPDX-License-Identifier: " .. license) }))
-		ctx.add(t({ "", wrap(ctx.style, label("Copyright:")) }))
-		ctx.add(t("(c) "))
+		ctx.add(t({ "", wrap(ctx.style, ""), wrap(ctx.style, label("Copyright:")) }))
+		ctx.add(t("Copyright (c) "))
 		ctx.add(f(get_year, {}))
 		ctx.add(t(" "))
 		ctx.add(rep(1))
@@ -608,32 +617,34 @@ function H.license(license, suffix)
 	end
 end
 
--- Copyright notice alone, without the SPDX line.
+-- Bare copyright line for the proprietary header, Google style: the year
+-- comes from the date helper and the holder is editable on the first jump.
 ---@param suffix string Text appended after the copyright holder.
 ---@return HeaderField
-function H.copyright(suffix)
+function H.copyright_line(suffix)
 	return function(ctx)
-		ctx.add(t({ "", wrap(ctx.style, ""), wrap(ctx.style, label("Copyright:")) }))
-		ctx.add(t("(c) "))
+		open_and_first_line(ctx.add, ctx.style, "Copyright (c) ")
 		ctx.add(f(get_year, {}))
 		ctx.add(t(" "))
-		ctx.add(rep(1))
+		ctx.add(i(ctx.idx, "Miquéias Alves Medeiros"))
 		ctx.add(t(suffix))
+		ctx.idx = ctx.idx + 1
 	end
 end
 
 -- Header specs. The fields appear in the order the rendered header does:
 -- identification, context, usage, description, license.
 local headers = {
-	-- `head`: File, Author, Created, Description. No license.
+	-- `head`: File, Author, Created, Description, license line.
 	head = {
 		H.file(),
 		H.author(),
 		H.created(),
 		H.description("add description here"),
+		H.spdx("AGPL-3.0-only"),
 	},
 	-- `shead`: for code written while studying a book or article. The
-	-- license is fixed to AGPL-3.0-only.
+	-- copyright holder mirrors the Author field.
 	shead = {
 		H.file(),
 		H.author(),
@@ -643,15 +654,15 @@ local headers = {
 		H.location(),
 		H.usage(),
 		H.description("what you implemented / learned here"),
-		H.license("AGPL-3.0-only", "."),
+		H.spdx("AGPL-3.0-only"),
+		H.copyright("."),
 	},
-	-- `ahead`: proprietary header with an "All rights reserved." notice.
+	-- `ahead`: proprietary header, Google style: the copyright line opens
+	-- the header because the holder is the identification.
 	ahead = {
-		H.file(),
-		H.author(),
-		H.created(),
+		H.copyright_line(". All rights reserved."),
 		H.description("add description here"),
-		H.copyright(". All rights reserved."),
+		H.spdx("LicenseRef-Proprietary"),
 	},
 	-- `ehead`: exercise header. `shead` fields plus a problem statement and
 	-- a reference list.
@@ -666,7 +677,8 @@ local headers = {
 		H.problem_statement(),
 		H.description("Longer description, if needed."),
 		H.references(),
-		H.license("AGPL-3.0-only", "."),
+		H.spdx("AGPL-3.0-only"),
+		H.copyright("."),
 	},
 }
 
