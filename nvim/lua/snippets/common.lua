@@ -5,8 +5,9 @@
 -- Dynamic snippets adapt their output to the current buffer's filetype and use
 -- language-specific comment styles for line, block, and docstring comments.
 --
--- Headers can include source metadata and compile/run instructions, while
--- inline snippets use the appropriate comment form for the current language.
+-- File headers are assembled declaratively: each header is a list of field
+-- constructors applied in order, so every header keeps the same field order
+-- and usage format (See: doc/snippets.txt).
 --
 -- See: doc/snippets.txt
 -- See: https://spdx.dev/ids/
@@ -465,159 +466,245 @@ local function close_header(add, style)
 	end
 end
 
--- The `build_*` functions below are dynamic node functions: LuaSnip passes
--- two arguments, which they ignore, and each returns a snippet node. Every
--- one defines a local `add` that appends nodes to its own list.
-
--- `head`: File, Author, Created, Modified, Description. No license.
-local function build_head(_, _)
-	local ft = vim.bo.filetype
-	local style = comment_styles[ft] or DEFAULT_STYLE
-	local nodes = {}
-	local function add(...)
+---Returns a function that appends its arguments to `list`, so the snippet
+---builders share one `add` implementation.
+---@param list table
+---@return fun(...: table)
+local function append_to(list)
+	return function(...)
 		for _, n in ipairs({ ... }) do
-			table.insert(nodes, n)
+			table.insert(list, n)
 		end
 	end
-
-	open_and_first_line(add, style, label("File:"))
-	add(f(get_filename, {}))
-	add(t({ "", wrap(style, label("Author:")) }))
-	add(i(1, "Miquéias Alves Medeiros <https://github.com/miqu3iasg>"))
-	add(t({ "", wrap(style, label("Created:")) }))
-	add(f(get_date, {}))
-	add(t({ "", wrap(style, label("Modified:")) }))
-	add(f(get_date, {}))
-	add(t({ "", wrap(style, ""), line_prefix(style) }))
-	add(i(2, "add description here"))
-	close_header(add, style)
-	add(i(0))
-
-	return sn(nil, nodes)
 end
 
--- `shead`: for code written while studying a book or article. Includes the
--- compile/run commands from `usage_by_ft`. The license is fixed to
--- AGPL-3.0-only.
-local function build_study(_, _)
-	local ft = vim.bo.filetype
-	local style = comment_styles[ft] or DEFAULT_STYLE
-	local nodes = {}
-	local function add(...)
-		for _, n in ipairs({ ... }) do
-			table.insert(nodes, n)
-		end
+-- The four file headers are assembled declaratively: each one is a list of
+-- field constructors, and `build_header` applies them in order inside one
+-- dynamic node function. A constructor takes its parameter when the header
+-- list is assembled, so the specs below read like the rendered headers.
+--
+-- Every field receives a header context and appends its nodes to it:
+-- `add` appends nodes, `style` is the comment style of the buffer filetype,
+-- `ft` is the filetype, and `idx` is the next free insert index. Fields
+-- that insert nodes advance `ctx.idx`, so the indices stay contiguous by
+-- construction; index 0 is the exit cursor, added by the builder itself.
+---@class HeaderContext
+---@field add fun(...: table) Appends nodes to the snippet being built.
+---@field style CommentStyle
+---@field ft string
+---@field idx integer Next free insert node index.
+
+---@alias HeaderField fun(ctx: HeaderContext)
+
+local H = {}
+
+---@return HeaderField
+function H.file()
+	return function(ctx)
+		open_and_first_line(ctx.add, ctx.style, label("File:"))
+		ctx.add(f(get_filename, {}))
 	end
-
-	open_and_first_line(add, style, label("File:"))
-	add(f(get_filename, {}))
-	add(t({ "", wrap(style, label("Author:")) }))
-	add(i(1, "Miquéias Alves Medeiros <https://github.com/miqu3iasg>"))
-	add(t({ "", wrap(style, label("Created:")) }))
-	add(f(get_date, {}))
-	add(t({ "", wrap(style, label("Modified:")) }))
-	add(f(get_date, {}))
-	add(t({ "", wrap(style, label("Source:")) }))
-	add(i(2, "title of the book/article"))
-	add(t({ "", wrap(style, label("By:")) }))
-	add(i(3, "actual author(s) of the source material"))
-	add(t({ "", wrap(style, label("Location:")) }))
-	add(i(4, "chapter / pages / section"))
-	local idx = add_usage(add, style, ft, 5)
-	add(t({ "", wrap(style, ""), line_prefix(style) }))
-	add(i(idx, "what you implemented / learned here"))
-	add(t({ "", wrap(style, ""), wrap(style, "SPDX-License-Identifier: AGPL-3.0-only") }))
-	add(t({ "", wrap(style, label("Copyright:")) }))
-	add(t("(c) "))
-	add(f(get_year, {}))
-	add(t(" "))
-	add(rep(1))
-	add(t("."))
-	close_header(add, style)
-	add(i(0))
-
-	return sn(nil, nodes)
 end
 
--- `ahead`: proprietary header with an "All rights reserved." notice.
-local function build_allhead(_, _)
-	local ft = vim.bo.filetype
-	local style = comment_styles[ft] or DEFAULT_STYLE
-	local nodes = {}
-	local function add(...)
-		for _, n in ipairs({ ... }) do
-			table.insert(nodes, n)
-		end
+---@param text? string Default author line.
+---@return HeaderField
+function H.author(text)
+	return function(ctx)
+		ctx.add(t({ "", wrap(ctx.style, label("Author:")) }))
+		ctx.add(i(ctx.idx, text or "Miquéias Alves Medeiros <https://github.com/miqu3iasg>"))
+		ctx.idx = ctx.idx + 1
 	end
-
-	open_and_first_line(add, style, label("File:"))
-	add(f(get_filename, {}))
-	add(t({ "", wrap(style, label("Author:")) }))
-	add(i(1, "Miquéias Alves Medeiros <https://github.com/miqu3iasg>"))
-	add(t({ "", wrap(style, label("Created:")) }))
-	add(f(get_date, {}))
-	add(t({ "", wrap(style, label("Modified:")) }))
-	add(f(get_date, {}))
-	add(t({ "", wrap(style, ""), line_prefix(style) }))
-	add(i(2, "add description here"))
-	add(t({ "", wrap(style, ""), wrap(style, label("Copyright:")) }))
-	add(t("(c) "))
-	add(f(get_year, {}))
-	add(t(" "))
-	add(rep(1))
-	add(t(". All rights reserved."))
-	close_header(add, style)
-	add(i(0))
-
-	return sn(nil, nodes)
 end
 
--- `ehead`: exercise header. `shead` fields plus a problem statement and a
--- reference list, with compile/run commands from `usage_by_ft`.
-local function build_exs(_, _)
-	local ft = vim.bo.filetype
-	local style = comment_styles[ft] or DEFAULT_STYLE
-	local nodes = {}
-	local function add(...)
-		for _, n in ipairs({ ... }) do
-			table.insert(nodes, n)
-		end
+---@return HeaderField
+function H.created()
+	return function(ctx)
+		ctx.add(t({ "", wrap(ctx.style, label("Created:")) }))
+		ctx.add(f(get_date, {}))
 	end
+end
 
-	open_and_first_line(add, style, label("File:"))
-	add(f(get_filename, {}))
-	add(t({ "", wrap(style, label("Author:")) }))
-	add(i(1, "Miquéias Medeiros <https://github.com/miqu3iasg>"))
-	add(t({ "", wrap(style, label("Created:")) }))
-	add(f(get_date, {}))
-	add(t({ "", wrap(style, label("Modified:")) }))
-	add(f(get_date, {}))
-	add(t({ "", wrap(style, label("Source:")) }))
-	add(i(2, "title of the book/article"))
-	add(t({ "", wrap(style, label("By:")) }))
-	add(i(3, "actual author(s) of the source material"))
-	add(t({ "", wrap(style, label("Location:")) }))
-	add(i(4, "chapter / pages / section"))
-	local idx = add_usage(add, style, ft, 5)
-	add(t({ "", wrap(style, ""), wrap(style, "Problem Statement:") }))
-	add(t({ "", wrap(style, "    ") }))
-	add(i(idx, "Paste the exercise/assignment text here."))
-	add(t({ "", wrap(style, ""), line_prefix(style) }))
-	add(i(idx + 1, "Longer description, if needed."))
-	add(t({ "", wrap(style, ""), wrap(style, "References:") }))
-	add(t({ "", wrap(style, "  - ") }))
-	add(i(idx + 2, "https://..."))
-	add(t({ "", wrap(style, ""), wrap(style, "SPDX-License-Identifier: AGPL-3.0-only") }))
-	add(t({ "", wrap(style, label("Copyright:")) }))
-	add(t("(c) "))
-	add(f(get_year, {}))
-	add(t(" "))
-	add(rep(1))
-	add(t("."))
-	close_header(add, style)
-	add(i(0))
+---@return HeaderField
+function H.modified()
+	return function(ctx)
+		ctx.add(t({ "", wrap(ctx.style, label("Modified:")) }))
+		ctx.add(f(get_date, {}))
+	end
+end
 
-	return sn(nil, nodes)
+---@return HeaderField
+function H.source()
+	return function(ctx)
+		ctx.add(t({ "", wrap(ctx.style, label("Source:")) }))
+		ctx.add(i(ctx.idx, "title of the book/article"))
+		ctx.idx = ctx.idx + 1
+	end
+end
+
+---@return HeaderField
+function H.by()
+	return function(ctx)
+		ctx.add(t({ "", wrap(ctx.style, label("By:")) }))
+		ctx.add(i(ctx.idx, "actual author(s) of the source material"))
+		ctx.idx = ctx.idx + 1
+	end
+end
+
+---@return HeaderField
+function H.location()
+	return function(ctx)
+		ctx.add(t({ "", wrap(ctx.style, label("Location:")) }))
+		ctx.add(i(ctx.idx, "chapter / pages / section"))
+		ctx.idx = ctx.idx + 1
+	end
+end
+
+---@return HeaderField
+function H.usage()
+	return function(ctx)
+		ctx.idx = add_usage(ctx.add, ctx.style, ctx.ft, ctx.idx)
+	end
+end
+
+-- Exercise problem statement: a title line and an indented placeholder.
+---@return HeaderField
+function H.problem_statement()
+	return function(ctx)
+		ctx.add(t({ "", wrap(ctx.style, ""), wrap(ctx.style, "Problem Statement:") }))
+		ctx.add(t({ "", wrap(ctx.style, "    ") }))
+		ctx.add(i(ctx.idx, "Paste the exercise/assignment text here."))
+		ctx.idx = ctx.idx + 1
+	end
+end
+
+-- The description starts on its own comment line, so the field uses the
+-- comment prefix instead of a padded label.
+---@param placeholder string
+---@return HeaderField
+function H.description(placeholder)
+	return function(ctx)
+		ctx.add(t({ "", wrap(ctx.style, ""), line_prefix(ctx.style) }))
+		ctx.add(i(ctx.idx, placeholder))
+		ctx.idx = ctx.idx + 1
+	end
+end
+
+---@return HeaderField
+function H.references()
+	return function(ctx)
+		ctx.add(t({ "", wrap(ctx.style, ""), wrap(ctx.style, "References:") }))
+		ctx.add(t({ "", wrap(ctx.style, "  - ") }))
+		ctx.add(i(ctx.idx, "https://..."))
+		ctx.idx = ctx.idx + 1
+	end
+end
+
+-- The license block closes a header: an SPDX line followed by the
+-- copyright notice, whose holder mirrors the Author field via `rep`.
+---@param license string SPDX license identifier.
+---@param suffix string Text appended after the copyright holder.
+---@return HeaderField
+function H.license(license, suffix)
+	return function(ctx)
+		ctx.add(t({ "", wrap(ctx.style, ""), wrap(ctx.style, "SPDX-License-Identifier: " .. license) }))
+		ctx.add(t({ "", wrap(ctx.style, label("Copyright:")) }))
+		ctx.add(t("(c) "))
+		ctx.add(f(get_year, {}))
+		ctx.add(t(" "))
+		ctx.add(rep(1))
+		ctx.add(t(suffix))
+	end
+end
+
+-- Copyright notice alone, without the SPDX line.
+---@param suffix string Text appended after the copyright holder.
+---@return HeaderField
+function H.copyright(suffix)
+	return function(ctx)
+		ctx.add(t({ "", wrap(ctx.style, ""), wrap(ctx.style, label("Copyright:")) }))
+		ctx.add(t("(c) "))
+		ctx.add(f(get_year, {}))
+		ctx.add(t(" "))
+		ctx.add(rep(1))
+		ctx.add(t(suffix))
+	end
+end
+
+-- Header specs. The fields appear in the order the rendered header does:
+-- identification, context, usage, description, license.
+local headers = {
+	-- `head`: File, Author, Created, Modified, Description. No license.
+	head = {
+		H.file(),
+		H.author(),
+		H.created(),
+		H.modified(),
+		H.description("add description here"),
+	},
+	-- `shead`: for code written while studying a book or article. The
+	-- license is fixed to AGPL-3.0-only.
+	shead = {
+		H.file(),
+		H.author(),
+		H.created(),
+		H.modified(),
+		H.source(),
+		H.by(),
+		H.location(),
+		H.usage(),
+		H.description("what you implemented / learned here"),
+		H.license("AGPL-3.0-only", "."),
+	},
+	-- `ahead`: proprietary header with an "All rights reserved." notice.
+	ahead = {
+		H.file(),
+		H.author(),
+		H.created(),
+		H.modified(),
+		H.description("add description here"),
+		H.copyright(". All rights reserved."),
+	},
+	-- `ehead`: exercise header. `shead` fields plus a problem statement and
+	-- a reference list.
+	ehead = {
+		H.file(),
+		H.author("Miquéias Medeiros <https://github.com/miqu3iasg>"),
+		H.created(),
+		H.modified(),
+		H.source(),
+		H.by(),
+		H.location(),
+		H.usage(),
+		H.problem_statement(),
+		H.description("Longer description, if needed."),
+		H.references(),
+		H.license("AGPL-3.0-only", "."),
+	},
+}
+
+---Builds the dynamic node function for one header spec.
+---@param spec HeaderField[]
+---@return fun(): table
+local function build_header(spec)
+	return function(_, _)
+		local ft = vim.bo.filetype
+		local style = comment_styles[ft] or DEFAULT_STYLE
+		local nodes = {}
+		local ctx = {
+			add = append_to(nodes),
+			style = style,
+			ft = ft,
+			idx = 1,
+		}
+
+		for _, field in ipairs(spec) do
+			field(ctx)
+		end
+		close_header(ctx.add, style)
+		ctx.add(i(0))
+
+		return sn(nil, nodes)
+	end
 end
 
 ---Returns the style for multi-line inline snippets: the block style for
@@ -741,11 +828,7 @@ end
 local function build_refs(_, _)
 	local style = inline_style(vim.bo.filetype)
 	local nodes = {}
-	local function add(...)
-		for _, n in ipairs({ ... }) do
-			table.insert(nodes, n)
-		end
-	end
+	local add = append_to(nodes)
 
 	open_inline(add, style)
 	add(t("References:"))
@@ -762,11 +845,7 @@ end
 local function build_snip(_, _)
 	local style = inline_style(vim.bo.filetype)
 	local nodes = {}
-	local function add(...)
-		for _, n in ipairs({ ... }) do
-			table.insert(nodes, n)
-		end
-	end
+	local add = append_to(nodes)
 
 	open_inline(add, style)
 	add(i(1, "what this snippet does / why it was kept"))
@@ -780,10 +859,10 @@ local function build_snip(_, _)
 end
 
 return {
-	s("head", { d(1, build_head, {}) }),
-	s("shead", { d(1, build_study, {}) }),
-	s("ahead", { d(1, build_allhead, {}) }),
-	s("ehead", { d(1, build_exs, {}) }),
+	s("head", { d(1, build_header(headers.head), {}) }),
+	s("shead", { d(1, build_header(headers.shead), {}) }),
+	s("ahead", { d(1, build_header(headers.ahead), {}) }),
+	s("ehead", { d(1, build_header(headers.ehead), {}) }),
 	s("shb", { d(1, build_shebang, {}) }),
 	s("see", { d(1, build_see, {}) }),
 	s("seec", { d(1, build_see_clip, {}) }),
