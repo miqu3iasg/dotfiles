@@ -9,6 +9,8 @@
 -- Image embeds such as ![[image.png]] are handled earlier by
 -- lua/modules/pandoc.lua, which rewrites them as ordinary Markdown images
 -- because Pandoc does not parse Obsidian image embeds reliably.
+--
+-- See: doc/pandoc.txt               the export feature page
 
 ---Determine whether a Pandoc link represents an Obsidian wikilink.
 ---Both the `wikilink` title and class are accepted for compatibility with

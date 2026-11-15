@@ -14,6 +14,7 @@
 -- # show-metadata: false
 --
 -- See: https://pandoc.org/lua-filters.html
+-- See: doc/pandoc.txt                the export feature page
 
 ---@alias MetadataMode "inline"|"list"
 ---@alias MetadataItem pandoc.Inline[]
