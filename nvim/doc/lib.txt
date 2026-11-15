@@ -32,7 +32,7 @@ THE LIBRARIES
         thresholds are defined once. API: M.is_big.
 
     headers
-        Comment and file-header machinery shared by the snippets and the templates module: per-filetype comment styles
+        Comment and file-header machinery owned by the snippets: per-filetype comment styles
         (line, block and docstring), shebangs, filename and date helpers, the declarative header field constructors
         (`H.*`) and the four header specs. A header is a list of field constructors applied in order, so every header
         keeps the same field order and usage format; the standard the specs implement is doc/snippets.txt. The file

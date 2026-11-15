@@ -1,10 +1,10 @@
 -- lua/lib/headers.lua
 
--- Comment and file-header machinery shared by the snippets and the template
--- module: comment styles per filetype, shebangs, filename and date helpers,
--- the declarative header field constructors (`H.*`) and the four header
--- specs. Every piece of this file is domain logic the two consumers build on;
--- the file itself registers nothing global and exposes no commands.
+-- Comment and file-header machinery for the snippets: comment styles per
+-- filetype, shebangs, filename and date helpers, the declarative header field
+-- constructors (`H.*`) and the four header specs. Every piece of this file is
+-- domain logic the consumer builds on; the file itself registers nothing
+-- global and exposes no commands.
 --
 -- File headers are assembled declaratively: each header is a list of field
 -- constructors applied in order, so every header keeps the same field order
@@ -14,7 +14,6 @@
 -- contain a literal long-bracket delimiter.
 --
 -- See: lua/snippets/common.lua
--- See: lua/modules/templates.lua
 -- See: doc/snippets.txt
 -- See: https://spdx.dev/ids/
 

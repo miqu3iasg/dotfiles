@@ -14,8 +14,7 @@ DESCRIPTION
     C, LuaLS annotations in Lua.
 
     The machinery the header snippets build on - comment styles, filename helpers and the header field constructors -
-    lives in lib/headers.lua, where the templates module reaches the same specs for whole-file templates
-    (See: lua/modules/templates.lua).
+    lives in lib/headers.lua.
 
 THE TRIGGERS
     The doc triggers, and what each one expands to in any language:
@@ -106,7 +105,6 @@ FILES
     lua/snippets/common.lua             file headers, SPDX, shebangs, references and helpers
     lua/snippets/<ft>.lua               snippets per filetype, including the doc blocks
     lua/lib/headers.lua                 the header machinery the snippets build on
-    lua/modules/templates.lua           whole-file templates, filled on demand by :Template
     lua/plugins/completions.lua         loads the snippet modules lazily by filetype
 
 SEE ALSO

@@ -83,18 +83,10 @@ ADDING A FORMATTER OR LINTER
 
 ADDING SNIPPETS
     One file per filetype in lua/snippets/<ft>.lua, returning the snippets. Filetype-adaptive snippets live in
-    lua/snippets/common.lua, and the comment and header machinery they build on in lua/lib/headers.lua (also consumed
-    by the templates module). Register the new filetype (and its inheritances) in
+    lua/snippets/common.lua, and the comment and header machinery they build on in lua/lib/headers.lua. Register the
+    new filetype (and its inheritances) in
     lua/plugins/completions.lua, which loads snippet modules lazily by filetype. Documentation snippets and file
     headers follow the standard in doc/snippets.txt; read it before adding a doc trigger to a new language.
-
-ADDING A TEMPLATE
-    A template is a file under templates/<name>, filled by :Template into an empty buffer whose file is empty on disk
-    or does not exist - a file with content is never overwritten. The body is the file itself; the placeholders follow
-    the grammar documented in the header of
-    lua/modules/templates.lua: `{{+default+}}` is an editable placeholder, `{{+~expr+}}` an expression evaluated at
-    expansion (shebang, filename, basename, relpath, date, year, package) and `{{+@head+}}` the standard file header
-    of lib/headers.lua. The name is the file's basename with its extension, and completion lists every template file.
 
 ADDING FILETYPE OPTIONS
     Buffer-local options for one filetype go in after/ftplugin/<ft>.lua, applied after the runtime ftplugins, so

@@ -6,11 +6,10 @@
 -- language-specific comment styles for line, block, and docstring comments.
 --
 -- The comment styles, filename helpers and header field constructors these
--- snippets build on live in lib/headers.lua, where the templates module
--- reaches the same machinery; this file only defines the snippets.
+-- snippets build on live in lib/headers.lua; this file only defines the
+-- snippets.
 --
 -- See: lua/lib/headers.lua
--- See: lua/modules/templates.lua
 -- See: doc/snippets.txt
 -- See: https://spdx.dev/ids/
 

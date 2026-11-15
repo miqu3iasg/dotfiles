@@ -31,7 +31,6 @@ THE TREE
     |                         and Lua filters
     |- resources/             example configuration for external tools
     |- spell/                 custom spell files
-    |- templates/             whole-file templates filled on demand by :Template
     |- doc/                   the doc pages, plain text (this folder)
     |- nvim-pack-lock.json    revision lock file written by vim.pack
     |- LICENSE
@@ -62,13 +61,6 @@ TOP-LEVEL FOLDERS
 
     spell/
         Custom spell dictionaries, loaded by Neovim's spelling machinery directly.
-
-    templates/
-        Whole-file templates for :Template (lua/modules/templates.lua), one file per template, like pandoc/ the
-        bodies are data, not code: a template is the file itself, and the placeholders inside it follow the grammar
-        documented in the module's header. The expressions and the header spec always render in the buffer's own
-        filetype. Files are found through the runtimepath, so another rtp entry can add or override templates without
-        touching this config.
 
 THE LUA LAYERS
     Everything under lua/ is split into layers by what a file is, and the split is the contract:
@@ -101,7 +93,7 @@ THE LUA LAYERS
 
     snippets/ - LuaSnip snippets
         One file per filetype, loaded lazily; filetype-adaptive snippets in common.lua, and the comment and header
-        machinery they share with lua/modules/templates.lua in lib/headers.lua.
+        machinery they build on in lib/headers.lua.
 
     archived/ - deprecated, not deleted
         Modules kept around for possible future use. They sit outside lua/ and off the runtimepath on purpose: Neovim
