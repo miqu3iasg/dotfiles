@@ -452,15 +452,35 @@ local function read_template(name)
 end
 
 ---Zero-padded sequence number for the next note of a type (`007`).
+---
+---The ADR number is written by the template into the body heading
+---(`# ADR-007 ...`), so the next value is the highest `ADR-NNN` found in the
+---bodies plus one: deleting the newest ADR does not make the next one reuse
+---its number, and references in prose are counted too, which keeps the
+---number above any superseded mention. Notes without a number in the body,
+---and the other types, which have no stored number, fall back to the count
+---of their notes.
 ---@param type_ string
 ---@return string
 local function next_number(type_)
 	local count = 0
+	local max
 	for _, name in ipairs(M.notes()) do
 		local info = M.parse_name(name)
 		if info and info.type == type_ then
 			count = count + 1
+			if type_ == "adr" then
+				local content = read_file(vault_dir() .. "/" .. name)
+				local n = content and content:match("ADR%-(%d+)")
+				n = n and tonumber(n)
+				if n and (not max or n > max) then
+					max = n
+				end
+			end
 		end
+	end
+	if max then
+		return ("%03d"):format(max + 1)
 	end
 	return ("%03d"):format(count + 1)
 end
