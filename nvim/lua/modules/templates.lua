@@ -7,8 +7,8 @@
 -- an empty buffer whose file does not exist yet, so a template can never
 -- overwrite anything.
 --
--- A template is a data file under templates/<filetype>/<name>, not code: the
--- body is the file itself, and the placeholders inside it open as jumps. The
+-- A template is a data file under templates/<name>, not code: the body is
+-- the file itself, and the placeholders inside it open as jumps. The
 -- grammar is single-line:
 --
 --     {{+default+}}   editable placeholder; `default` is its initial text
@@ -21,9 +21,12 @@
 -- so a multi-line default is impossible - upgrade the parser when a
 -- template needs one.
 --
--- Files are found through the runtimepath, so another rtp entry can add or
--- override templates without touching this config. `bash` and `zsh` have no
--- folder yet; `sh` is the fallback when one is added.
+-- The name is the file's basename, extension included, and one file is one
+-- template: there is no mapping between the extension and the buffer's
+-- filetype, so the expressions (`{{+~expr+}}`) and the header spec
+-- (`{{+@head+}}`) always render in the buffer's own filetype. Files are
+-- found through the runtimepath, so another rtp entry can add or override
+-- templates without touching this config.
 --
 -- The LuaSnip dependency is the plugin's public API only: node construction
 -- and `snip_expand` for the programmatic expansion.
@@ -148,15 +151,14 @@ local function parse(path, lines, ft)
 	return nodes
 end
 
----Paths of the template files of a filetype, searched on the runtimepath.
----The config directory often sits on the runtimepath twice (its real path
----and its symlink under .config), so entries are deduplicated by real path.
----@param ft string
+---Paths of the template files, searched on the runtimepath. The config
+---directory often sits on the runtimepath twice (its real path and its
+---symlink under .config), so entries are deduplicated by real path.
 ---@return string[]
-local function files_for(ft)
+local function files()
 	local seen = {}
 	local files = {}
-	for _, path in ipairs(vim.fn.globpath(vim.o.runtimepath, "templates/" .. ft .. "/*", 0, 1)) do
+	for _, path in ipairs(vim.fn.globpath(vim.o.runtimepath, "templates/*", 0, 1)) do
 		local real = vim.uv.fs_realpath(path)
 		if real and not seen[real] then
 			seen[real] = true
@@ -166,28 +168,27 @@ local function files_for(ft)
 	return files
 end
 
----Name of a template file: its basename without the extension.
+---Name of a template file: its basename, extension included.
 ---@param path string
 ---@return string
 local function name_of(path)
-	return vim.fn.fnamemodify(path, ":t:r")
+	return vim.fn.fnamemodify(path, ":t")
 end
 
----Expands one template into the current buffer. A template exists only for
----the buffer's filetype; anything else notifies instead of expanding.
+---Expands one template into the current buffer. Anything that fails - an
+---unknown name, a non-empty buffer, an existing file, a broken template -
+---notifies instead of expanding.
 ---@param name string Template name, the file's basename.
 function M.expand(name)
-	local ft = vim.bo.filetype
 	local path
-	for _, file in ipairs(files_for(ft)) do
+	for _, file in ipairs(files()) do
 		if name_of(file) == name then
 			path = file
 			break
 		end
 	end
 	if not path then
-		local where = ft ~= "" and ft or "this filetype"
-		return vim.notify(("Template '%s' is not registered for %s."):format(name, where), vim.log.levels.WARN)
+		return vim.notify(("Template '%s' does not exist."):format(name), vim.log.levels.WARN)
 	end
 	if vim.fn.filereadable(vim.fn.expand("%:p")) == 1 then
 		return vim.notify("Template: the file already exists on disk.", vim.log.levels.WARN)
@@ -197,6 +198,7 @@ function M.expand(name)
 	end
 	-- Parsing and expansion run inside pcall, so a broken template file
 	-- notifies instead of raising out of a user command.
+	local ft = vim.bo.filetype
 	local ok, err = pcall(function()
 		local nodes, perr = parse(path, vim.fn.readfile(path), ft)
 		if not nodes then
@@ -209,12 +211,11 @@ function M.expand(name)
 	end
 end
 
----Completes :Template with the names of the template files of the current
----filetype.
+---Completes :Template with the names of all template files.
 ---@return string[]
 function M.complete()
 	local names = {}
-	for _, file in ipairs(files_for(vim.bo.filetype)) do
+	for _, file in ipairs(files()) do
 		table.insert(names, name_of(file))
 	end
 	table.sort(names)

@@ -64,10 +64,11 @@ TOP-LEVEL FOLDERS
         Custom spell dictionaries, loaded by Neovim's spelling machinery directly.
 
     templates/
-        Whole-file templates for :Template (lua/modules/templates.lua), one folder per filetype, like pandoc/ the
+        Whole-file templates for :Template (lua/modules/templates.lua), one file per template, like pandoc/ the
         bodies are data, not code: a template is the file itself, and the placeholders inside it follow the grammar
-        documented in the module's header. Files are found through the runtimepath, so another rtp entry can add or
-        override templates without touching this config.
+        documented in the module's header. The expressions and the header spec always render in the buffer's own
+        filetype. Files are found through the runtimepath, so another rtp entry can add or override templates without
+        touching this config.
 
 THE LUA LAYERS
     Everything under lua/ is split into layers by what a file is, and the split is the contract:
