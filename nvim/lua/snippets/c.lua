@@ -3,10 +3,13 @@
 -- C snippets for small programs, practice problems, and Linux kernel-style
 -- documentation comments. Indentation follows the conventions of each snippet:
 -- four spaces for the basic program template and tabs for the solution scaffold.
--- The documentation comment format uses @field: descriptions and can be adapted
--- for structs or functions.
+-- Documentation comments follow kernel-doc, whose tooling only extracts
+-- comments opened with /**: structs document their members as @member: lines,
+-- functions carry @arg: lines and close with Context: and Return:, and a DOC:
+-- section holds the file overview. Delete the lines that do not apply.
 --
 -- See: doc/snippets.txt
+-- See: https://docs.kernel.org/doc-guide/kernel-doc.html
 -- See: https://www.kernel.org/doc/html/v4.10/process/coding-style.html
 
 local ls = require("luasnip")
@@ -45,32 +48,72 @@ return {
 		i(0),
 	}),
 
-	-- Linux kernel-style documentation comment.
-	-- Starts with a short description followed by @field: description entries.
-	-- Unused fields can be removed or duplicated for additional entries.
+	-- Struct documentation, above the struct. The kernel-doc struct format
+	-- names the struct, documents each member as an @member: line and ends
+	-- with the longer description. Duplicate the @member lines as needed.
 	s("doc", {
-		t("/* "),
-		i(1, "Short description"),
-		t({ "", " * @" }),
-		i(2, "field"),
+		t({ "/**", " * struct " }),
+		i(1, "name"),
+		t(" - "),
+		i(2, "Short description."),
+		t({ "", " *", " * @" }),
+		i(3, "member"),
 		t(": "),
-		i(3, "Description."),
+		i(4, "Description."),
 		t({ "", " * @" }),
-		i(4, "field"),
+		i(5, "member"),
 		t(": "),
-		i(5, "Description."),
+		i(6, "Description."),
+		t({ "", " *", " * " }),
+		i(7, "Longer description, if needed."),
+		t({ "", " */", "" }),
+		i(0),
+	}),
+
+	-- Function documentation, above the function. The kernel-doc function
+	-- format differs from the struct one: the brief description follows the
+	-- empty signature, parameters are @arg: lines and the block closes with
+	-- the Context and Return sections.
+	s("docfn", {
+		t({ "/**", " * " }),
+		i(1, "name"),
+		t("() - "),
+		i(2, "Brief description."),
+		t({ "", " *", " * @" }),
+		i(3, "arg"),
+		t(": "),
+		i(4, "Description."),
 		t({ "", " * @" }),
-		i(6, "field"),
+		i(5, "arg"),
 		t(": "),
-		i(7, "Description."),
-		t({ "", " */" }),
+		i(6, "Description."),
+		t({ "", " *", " * " }),
+		i(7, "Longer description of the behavior."),
+		t({ "", " *", " * Context: " }),
+		i(8, "Locking or borrowing context."),
+		t({ "", " * Return: " }),
+		i(9, "Description of the return value."),
+		t({ "", " */", "" }),
+		i(0),
+	}),
+
+	-- File overview, at the top of the file. The kernel-doc tool renders the
+	-- DOC: section as the file's theory of operation, free from the syntax
+	-- of the declarations below it.
+	s("docm", {
+		t({ "/**", " * DOC: " }),
+		i(1, "Title"),
+		t({ "", " *", " * " }),
+		i(2, "Theory of operation."),
+		t({ "", " */", "" }),
+		i(0),
 	}),
 
 	-- One-line comment for fields, constants and small declarations.
 	s("docf", {
 		t("/* "),
 		i(1, "Description."),
-		t(" */"),
+		t({ " */", "" }),
 		i(0),
 	}),
 }
