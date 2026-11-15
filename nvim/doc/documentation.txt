@@ -123,6 +123,7 @@ KEYMAPS
     Keymaps are the deliberate exception to "document everything":
 
         - They are never listed in doc/ or in the README.
+        - The same rule holds in code comments: a comment describes behavior, not the keys that trigger it, because keys change too often for comments to carry them. The `desc` field and the keymap files are where the keys live.
         - The keymap files under lua/config/keymaps/ have minimal headers (a sentence about the group's scope) and rely
         on `vim.keymap.set` desc fields, which surface in the shortlist and `:map`, as the documentation.
         - A keymap that only makes sense inside one plugin lives in that plugin's file; all others live in the matching

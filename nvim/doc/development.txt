@@ -31,22 +31,23 @@ ADDING A PLUGIN, EAGER
     entry, and its keymaps if they live in the adapter.
 
 ADDING A PLUGIN, LAZY
-    Use lazy loading when the plugin is only useful for specific filetypes and its plugin/ scripts are heavy on startup:
+    Use lazy loading when the plugin is only useful for specific filetypes and its plugin/ scripts are heavy on startup, or when it has no natural filetype trigger and should load on first use. The adapter file follows the module shape of lua/plugins/lisp.lua (filetype trigger) and lua/plugins/fzf.lua (on-demand trigger):
 
-        1.  Create lua/plugins/<name>.lua.
-        2.  At the bottom of the file declare it through lib.lazy:
+        1.  Create lua/plugins/<name>.lua. It opens with the standard header, defines `local M = {}` and exposes the hooks as module functions: `M.configure()` holds the globals the plugin reads while loading and runs before :packadd; `M.after()` holds anything that needs the plugin already loaded and runs after :packadd. A hook the plugin does not need is omitted.
+        2.  At the bottom of the file, before `return M`, declare it through lib.lazy:
 
-                require("lib.lazy").setup{
+                require("lib.lazy").setup({
                     src = "https://github.com/...",
-                    filetypes = { "tex" },
-                    configure = function() ... end,  -- before :packadd
-                    after = function() ... end,      -- after :packadd
-                }
+                    filetypes = { "tex" },    -- load triggers; omitted for an on-demand plugin
+                    configure = M.configure,
+                    after = M.after,
+                })
 
-            Globals the plugin reads while loading go into `configure`; anything that needs the plugin already loaded
-            goes into `after`. The plugin name is derived from `src` and must match the directory vim.pack installs.
+            The plugin name is derived from `src` and must match the directory vim.pack installs.
         3.  Nothing else: no pack.lua entry, no init.lua entry. The lazy plugin is fully self-declared and disappears
         with its file.
+
+    An on-demand plugin declares no `filetypes` and loads through an explicit `require("lib.lazy").load(name)` call. The pattern lives in the adapter itself: its keymaps are stubs that load the plugin and then call the picker function, so the first press pays the load and every later press is instant.
 
     Caveats, documented in lua/lib/lazy.lua: a filetype whose detection depends on a global owned by the plugin must set
     that global at the top level of the adapter file, because the plugin is not on the runtimepath at detection time.
