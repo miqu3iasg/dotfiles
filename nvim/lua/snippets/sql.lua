@@ -5,7 +5,8 @@
 -- generate consistent index names and reusable JOIN clauses, while mirrored
 -- nodes keep table aliases and repeated identifiers synchronized. Keywords
 -- are upper-case, matching the sql-formatter configuration; indentation
--- assumes four spaces.
+-- assumes four spaces. The docm snippet documents migrations and schema
+-- changes with their purpose, notes and a reference.
 --
 -- See: doc/snippets.txt
 -- See: https://github.com/sql-formatter-org/sql-formatter
@@ -254,6 +255,19 @@ return {
 		t({ "/*", " * " }),
 		i(1, "comment"),
 		t({ "", " */" }),
+		i(0),
+	}),
+
+	-- Migration or schema block, above the statements it describes, with
+	-- the purpose, the notes and a reference to the ticket or design doc.
+	s("docm", {
+		t("-- Purpose: "),
+		i(1, "what this change does."),
+		t({ "", "-- Notes: " }),
+		i(2, "constraints, rollback, consequences."),
+		t({ "", "-- See: " }),
+		i(3, "ticket or design document"),
+		t({ "", "" }),
 		i(0),
 	}),
 }
