@@ -1,15 +1,25 @@
 #|
-Kanata configuration for a Brazilian ABNT2 keyboard on Linux. Ctrl also lives
-on Caps Lock and is remapped at the kernel level, so kanata sees it as a
-regular left Ctrl and passes it through untouched. Esc and Alt (the i3 mod key)
-are not remapped on the base layer, and neither are the letter keys.
+Kanata configuration for a Brazilian ABNT2 keyboard on Linux. Requires kanata
+1.12.0 or newer (for tap-hold-require-prior-idle). Ctrl also lives on Caps
+Lock and is remapped at the kernel level, so kanata sees it as a regular left
+Ctrl and passes it through untouched. Esc, Win, AltGr and Alt (the i3 mod key)
+are not remapped.
 
-AltGr and the left Win key are layer keys. AltGr opens the sym layer
-(programming symbols) and Win opens the num layer (a numpad on the right hand
-and brackets on the left hand). Tapping either key toggles its layer on for the
-whole keyboard, and tapping the same key again, or pressing Esc, returns to the
-base layer. Holding either key activates its layer for as long as the key stays
-down.
+There are three kinds of dual-function keys. In all of them a tap types the
+letter and a hold does something else:
+
+- Layer keys. Holding A activates the num layer (a numpad on the right hand and
+  brackets on the left hand) and holding C-cedilla activates the sym layer
+  (programming symbols), for as long as the key stays down. The layers are
+  hold-only, there is no toggle.
+- Shift keys. Holding W gives left Shift and holding O gives right Shift. Each
+  one only becomes Shift when the next key comes from the opposite hand, so
+  fast typing on the same hand stays a tap.
+- Ctrl keys. Holding E gives left Ctrl and holding I gives right Ctrl. Unlike
+  Shift, these work with keys from either hand, so same-hand combos such as
+  Ctrl+W or Ctrl+D in vim are possible.
+
+The H, J, K and L keys are not touched, so they stay free for vim.
 
 Kanata works with physical key codes, so every symbol below is defined by the
 physical key that types it on an ABNT2 layout. The operating system layout
@@ -25,6 +35,16 @@ position, and a few of those keys print a different character on ABNT2.
   when deciding between tap and hold.
   |#
   process-unmapped-keys yes
+
+  #|
+  When a tap-hold key is pressed within this many milliseconds of the previous
+  key press, it is resolved as a tap right away, without waiting for the
+  tap-or-hold decision. This removes the delay on A, C-cedilla, W, O, E and I
+  while typing words. The cost is that a hold only works after a pause of at
+  least this long since the last key. If the delay is still noticeable, raise
+  it. If layers, Shift or Ctrl fire by accident while typing fast, lower it.
+  |#
+  tap-hold-require-prior-idle 150
 )
 
 #|
@@ -39,12 +59,10 @@ their Linux evdev key codes, which are 86 (KEY_102ND) and 89 (KEY_RO).
 )
 
 #|
-Only Esc, the left Win key and AltGr, plus the three letter rows and the key
-right of P, are listed here. Every other key passes through unchanged thanks to
-process-unmapped-keys.
+Only the three letter rows and the key right of P are listed here. Every other
+key passes through unchanged thanks to process-unmapped-keys.
 |#
 (defsrc
-  esc  lmet ralt
   q    w    e    r    t    y    u    i    o    p    [
   a    s    d    f    g    h    j    k    l    scln
   z    x    c    v    b    n    m    ,    .    /
@@ -53,25 +71,44 @@ process-unmapped-keys.
 #|
 Timeouts in milliseconds. The first number of a tap-hold action is the
 tap-repress timeout (how soon a repeated press right after a tap still counts
-as a tap). The second one is the hold timeout. The layer keys use
-tap-hold-press, so the hold starts as soon as another key is pressed, and a
-press shorter than the hold timeout toggles the layer instead. If a slow tap
-still turns into a hold, adjust hold-layer in steps of 20.
+as a tap). The second one is the hold timeout.
+
+All the dual-function keys (A, C-cedilla, W, O, E and I) use tap-hold-release,
+so the hold only wins when another key is pressed and released while the first
+one is still down. This avoids false holds while typing fast. They follow the
+global require-prior-idle value from defcfg.
+
+If a slow tap still turns into a hold, or a fast roll turns into a layer, a
+Shift or a Ctrl, raise hold-layer and hold-mod in steps of 20 to 50. If the
+hold takes too long to kick in, lower them. The Shift and Ctrl keys share
+hold-mod.
 |#
 (defvar
   tap        200
   hold-layer 300
+  hold-mod   200
 )
 
 (defalias
-  ;; The layer keys. A tap toggles the layer on until it is toggled off, and a
-  ;; hold activates the layer for as long as the key stays down.
-  numkey (tap-hold-press $tap $hold-layer (layer-switch num) (layer-while-held num))
-  symkey (tap-hold-press $tap $hold-layer (layer-switch sym) (layer-while-held sym))
+  ;; The home row layer keys. A tap types the letter and a hold activates the
+  ;; layer. A is on the left pinky and C-cedilla (scln) is on the right pinky.
+  anum (tap-hold-release $tap $hold-layer a    (layer-while-held num))
+  csym (tap-hold-release $tap $hold-layer scln (layer-while-held sym))
 
-  ;; Both of these return to the base layer, and escback also types an Esc.
-  back    (layer-switch base)
-  escback (multi esc (layer-switch base))
+  ;; The Shift keys. Keys listed in parentheses are the ones that trigger the
+  ;; tap right away, so only a key from the opposite hand can turn the press
+  ;; into Shift. W is on the left hand, so its list holds the left hand keys.
+  ;; O is on the right hand, so its list holds the right hand keys.
+  wsft (tap-hold-release-keys $tap $hold-mod w lsft
+         (q e r t a s d f g z x c v b 1 2 3 4 5 grv tab))
+  osft (tap-hold-release-keys $tap $hold-mod o rsft
+         (y u i p [ h j k l scln n m , . / 6 7 8 9 0 - =))
+
+  ;; The Ctrl keys. There is no list of keys here, so a key from either hand
+  ;; can turn the press into Ctrl, as long as it is pressed and released while
+  ;; E or I is still down.
+  ectl (tap-hold-release $tap $hold-mod e lctl)
+  ictl (tap-hold-release $tap $hold-mod i rctl)
 
   ;; From here on, every alias is named after the character it types on an
   ;; ABNT2 layout. The first ones are shifted characters from the digit row.
@@ -115,55 +152,51 @@ still turns into a hold, adjust hold-layer in steps of 20.
 )
 
 (deflayer base
-  esc  @numkey @symkey
-  q    w    e    r    t    y    u    i    o    p    [
-  a    s    d    f    g    h    j    k    l    scln
+  q    @wsft @ectl r    t    y    u    @ictl @osft p    [
+  @anum s    d    f    g    h    j    k    l    @csym
   z    x    c    v    b    n    m    ,    .    /
 )
 
 #|
-Toggle or hold Win to get this layer, which puts a numpad on the right hand and
-brackets on the left hand. On the left hand the ring finger types the opening
-brackets and the index finger types the closing ones: w, s and x give [, ( and
-{, while r, f and v give ], ) and }. On the right hand, u, i and o give 7, 8 and
-9, j, k and l give 4, 5 and 6, and m, comma and period give 1, 2 and 3, with 0
-on n and the decimal point on h. The decimal comma, which is what Brazilian
-numbers use, is on g, right next to the decimal point. The remaining right hand
-keys carry the operators: y types =, p types *, the key right of p types /, the
-c-cedilla key types + and the physical slash key types -. The keys q, e, t, a,
-c and b keep typing their letters. The d key and AltGr do nothing in this
-layer, so they are mapped to XX, a no-op. Win and Esc return to the base layer.
+Hold A to get this layer, which puts a numpad on the right hand and brackets on
+the left hand. On the left hand the ring finger types the opening brackets and
+the index finger types the closing ones: w, s and x give [, ( and {, while r, f
+and v give ], ) and }. On the right hand, u, i and o give 7, 8 and 9, j, k and l
+give 4, 5 and 6, and m, comma and period give 1, 2 and 3, with 0 on n and the
+decimal point on h. The decimal comma, which is what Brazilian numbers use, is
+on g, right next to the decimal point. The remaining right hand keys carry the
+operators: y types =, p types *, the key right of p types /, the c-cedilla key
+types + and the physical slash key types -. The keys q, e, t, a, c and b keep
+typing their letters. The d key does nothing in this layer, so it is mapped to
+XX, a no-op.
 
-The z key reloads this configuration file (live reload), so toggling or holding
-Win and pressing z applies any edit without restarting the service. If the new
-file has an error, kanata keeps running with the previous configuration and
-prints the error in its log.
+The z key reloads this configuration file (live reload), so holding A and
+pressing z applies any edit without restarting the service. If the new file
+has an error, kanata keeps running with the previous configuration and prints
+the error in its log.
 |#
 (deflayer num
-  @escback @back XX
   q    @lbkt e   @rbkt t    =    7    8    9    @ast @sl
   a    @lpar XX  @rpar ,    .    4    5    6    @pls
   lrld @lbrc c   @rbrc b    0    1    2    3    -
 )
 
 #|
-Toggle or hold AltGr to get this layer, which keeps programming symbols on the
-left hand and on the outer keys of the right hand. On the left hand, the top
-row types the shifted digits ! @ # $ and %, the home row types { ( ) } followed
-by a backtick on g, and the bottom row types a backslash, [, ], * and +. On the
-right hand, y, u, o and p type ^, &, a vertical bar and ?, the home row keys h,
-j and l and the c-cedilla key type -, =, _ and /, and n, m, period and the
-physical slash key type ~, an apostrophe, a colon and a double quote.
+Hold C-cedilla to get this layer, which keeps programming symbols on the left
+hand and on the outer keys of the right hand. On the left hand, the top row
+types the shifted digits ! @ # $ and %, the home row types { ( ) } followed by
+a backtick on g, and the bottom row types a backslash, [, ], * and +. On the
+right hand, y, u, o and p type ^, &, a vertical bar and ?, the key right of p
+types a slash, the home row keys h, j and l type -, = and _, and n, m, period
+and the physical slash key type ~, an apostrophe, a colon and a double quote.
 
 The characters < > and ; are left out of this layer because they are already
 easy to reach on the base layer, with Shift and comma, Shift and period, and
-the semicolon key itself. The i, k and comma keys, the key right of P and the
-Win key do nothing in this layer, so they are mapped to XX, a no-op. AltGr and
-Esc return to the base layer.
+the semicolon key itself. The i, k and comma keys and the c-cedilla key do
+nothing in this layer, so they are mapped to XX, a no-op.
 |#
 (deflayer sym
-  @escback XX @back
-  @ex  @at  @hsh @dol @pct @car @amp XX   @pipe @qst XX
-  @lbrc @lpar @rpar @rbrc @bt -    =    XX   @und @sl
+  @ex  @at  @hsh @dol @pct @car @amp XX   @pipe @qst @sl
+  @lbrc @lpar @rpar @rbrc @bt -    =    XX   @und XX
   @bsl @lbkt @rbkt @ast @pls @til @sq  XX   @col @dq
 )
