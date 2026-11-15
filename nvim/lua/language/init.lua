@@ -123,6 +123,7 @@ vim.api.nvim_create_autocmd("LspAttach", {
 
 		km("n", "grp", vim.lsp.buf.signature_help, "Show signature help")
 		km("n", "grc", vim.lsp.buf.declaration, "Go to declaration")
+		km("n", "gd", vim.lsp.buf.definition, "Go to definition")
 		km("n", "grw", vim.lsp.buf.workspace_symbol, "Workspace symbols")
 
 		km("n", "grs", function()
