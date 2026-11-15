@@ -84,8 +84,6 @@ vim.pack.add({
 	-- Asynchronous linter runner for external linters such as ruff.
 	{ src = "https://github.com/mfussenegger/nvim-lint" },
 
-	-- fzf-lua is installed through lib.lazy, see lua/plugins/fzf.lua.
-
 	-- vim-fugitive
 	-- Git wrapper for staging, committing, diffing and blaming.
 	{ src = "https://github.com/tpope/vim-fugitive" },
@@ -147,7 +145,7 @@ vim.pack.add({
 	-- Render markdown notes in the browser, needed to read documentations with mermaid diagrams.
 	{ src = "https://github.com/iamcco/markdown-preview.nvim" },
 
-	-- Extra colorschemes, configured in lua/plugins/colorschemes.lua.
+	-- Extra colorschemes.
 	"https://github.com/jaredgorski/fogbell.vim",
 	"https://github.com/amedoeyes/eyes.nvim",
 	"https://github.com/metalelf0/black-metal-theme-neovim",
