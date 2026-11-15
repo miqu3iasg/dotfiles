@@ -29,6 +29,10 @@
 -- :TSInstall c java python lua scheme racket sql markdown javascript typescript
 -- :TSInstall html css json jsonc yaml toml bash latex
 --
+-- `vim.lsp.completion.enable` is wrapped here so that a server detached from a
+-- reloaded buffer does not trip the runtime's "invalid client ID" assert; see
+-- the guard below the snippet tables.
+--
 -- See: lua/language/init.lua
 -- See: lua/plugins/formatting.lua
 -- See: https://github.com/L3MON4D3/LuaSnip
@@ -97,6 +101,22 @@ local TRIGGER_FILETYPES = {
 	yaml = true,
 	toml = true,
 }
+
+-- A server that detaches from a buffer leaves behind the runtime's internal
+-- buffer-reload callback, which re-calls `vim.lsp.completion.enable` with the
+-- client id captured at attach time. If the buffer is reloaded after the
+-- detach, the stale id fails the assert inside the runtime and the buffer's
+-- completion handle is left empty. The wrapper drops dead clients instead, so
+-- the reload becomes a no-op and clients that are still alive are unaffected.
+--
+-- See: https://github.com/neovim/neovim/blob/master/runtime/lua/vim/lsp/completion.lua
+local enable = vim.lsp.completion.enable
+vim.lsp.completion.enable = function(on, client_id, bufnr, opts)
+	if on and not vim.lsp.get_client_by_id(client_id) then
+		return
+	end
+	enable(on, client_id, bufnr, opts)
+end
 
 -- Tracked per buffer, so it survives the client id changing.
 ---@type table<integer, boolean>
