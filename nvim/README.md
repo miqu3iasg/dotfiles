@@ -30,7 +30,7 @@ sudo pacman -S git tmux fzf ripgrep fd nodejs npm jdk21-openjdk \
   texlive-binextra pandoc-cli zathura zathura-pdf-mupdf
 ```
 
-Per-plugin dependencies are documented in the headers of the files that use them. Notes:
+Per-plugin dependencies are documented in the headers of the files that use them, and `:checkhealth config` verifies the executables live. Notes:
 
 - **fzf-lua** needs `fzf`, `grep`, `ripgrep` and `fd`. `lib/substitute.lua` also calls `rg` directly.
 - **LuaSnip** builds `jsregexp` with `make` at install time, so a C toolchain must be on `PATH`.
