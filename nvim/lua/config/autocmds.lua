@@ -103,15 +103,6 @@ vim.api.nvim_create_autocmd("FileType", {
 	end,
 })
 
-vim.api.nvim_create_autocmd("BufRead", {
-	group = vim.api.nvim_create_augroup("dotenv_ft", { clear = true }),
-	desc = "Use dosini syntax highlighting for dotenv files",
-	pattern = { ".env", ".env.*" },
-	callback = function()
-		vim.bo.filetype = "dosini"
-	end,
-})
-
 -- Runs when Neovim starts with no arguments or with a single directory. It is
 -- `nested` so the restored session fires its own autocmds, such as filetype,
 -- and scheduled so it runs after startup has finished.

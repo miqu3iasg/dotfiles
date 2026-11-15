@@ -6,6 +6,7 @@ vim.deprecate = function() end
 require("config.options")
 require("config.keymaps")
 require("config.autocmds")
+require("config.filetypes")
 require("config.commands")
 require("modules.statusline").setup()
 require("modules.scratch").setup()
