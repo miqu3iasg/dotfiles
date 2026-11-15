@@ -70,8 +70,9 @@ THE MODULES
     templates
         Whole-file templates filled on demand: `:Template <name>` inserts a ready structure - the standard file header,
         a shebang, a package line or a class and main skeleton - into the current buffer, with the placeholders opening
-        as LuaSnip jumps. Templates are never applied automatically: the command refuses non-empty buffers and files
-        that already exist on disk, so a template can never overwrite anything. A template is a data file under
+        as LuaSnip jumps. Templates are never applied automatically: the command refuses buffers with content and
+        files that have content on disk - an empty file created beforehand takes a template - so a template can never
+        overwrite content. A template is a data file under
         templates/<name>, written in the single-line placeholder grammar documented in the module's header, so adding
         or customizing one is editing a file, not code. API: M.expand, M.complete, M.setup. Commands:
         :Template.

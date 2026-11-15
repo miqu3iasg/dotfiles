@@ -4,8 +4,8 @@
 -- with a ready structure - file header, shebang, package and class or main
 -- skeleton - with the placeholders opening as LuaSnip jumps. Templates are
 -- never applied automatically: only this command writes them, and only into
--- an empty buffer whose file does not exist yet, so a template can never
--- overwrite anything.
+-- an empty buffer whose file is empty on disk or does not exist, so a
+-- template can never overwrite content.
 --
 -- A template is a data file under templates/<name>, not code: the body is
 -- the file itself, and the placeholders inside it open as jumps. The
@@ -176,8 +176,8 @@ local function name_of(path)
 end
 
 ---Expands one template into the current buffer. Anything that fails - an
----unknown name, a non-empty buffer, an existing file, a broken template -
----notifies instead of expanding.
+---unknown name, a buffer with content, a file with content on disk, a
+---broken template - notifies instead of expanding.
 ---@param name string Template name, the file's basename.
 function M.expand(name)
 	local path
@@ -190,8 +190,17 @@ function M.expand(name)
 	if not path then
 		return vim.notify(("Template '%s' does not exist."):format(name), vim.log.levels.WARN)
 	end
-	if vim.fn.filereadable(vim.fn.expand("%:p")) == 1 then
-		return vim.notify("Template: the file already exists on disk.", vim.log.levels.WARN)
+	-- A template fills an empty buffer only: the file may not exist or be
+	-- empty on disk, but never have content. Whitespace-only files count as
+	-- empty, so a file created beforehand still takes a template. An unnamed
+	-- buffer has no disk file to check.
+	local disk_file = vim.fn.expand("%")
+	if disk_file ~= "" and vim.fn.filereadable(vim.fn.expand("%:p")) == 1 then
+		for _, line in ipairs(vim.fn.readfile(vim.fn.expand("%:p"))) do
+			if line ~= "" then
+				return vim.notify("Template: the file already has content on disk.", vim.log.levels.WARN)
+			end
+		end
 	end
 	if vim.api.nvim_buf_line_count(0) > 1 or vim.fn.getline(1) ~= "" then
 		return vim.notify("Template: the buffer is not empty.", vim.log.levels.WARN)
