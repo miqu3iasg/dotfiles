@@ -152,6 +152,7 @@ FILES
     doc/reading.txt                  how to read the pages
     README.md                        repo overview
     doc/kickstart.txt                full guide to the config
+    doc/pandoc.txt                   the Pandoc export feature
     doc/<name>.txt                   each page, written at full width for the editor to wrap
     doc/structure.txt                the folder structure
     doc/modules.txt                  the modules layer

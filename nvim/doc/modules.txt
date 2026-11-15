@@ -55,7 +55,7 @@ THE MODULES
         so unsaved changes are exported too. Preview mode rebuilds on every save. The pipeline itself is data:
         pandoc/defaults.yaml, pandoc/metadata.yaml, per-folder defaults, profiles/ and filters/. Results go where
         lib/exports.lua points and open in zathura or xdg-open. API: M.build, M.open, M.preview, M.setup. Buffer-local
-        commands: :Pandoc, :PandocPreview.
+        commands: :Pandoc, :PandocPreview. The feature page is doc/pandoc.txt.
 
     notes
         A flat vault of Markdown notes managed from Neovim: quick drafts and typed notes from user-maintained templates,
