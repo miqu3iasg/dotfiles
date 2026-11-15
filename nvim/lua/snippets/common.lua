@@ -112,7 +112,7 @@ local comment_styles = {
 	ps1 = { kind = "block", open = "<#", close = "#>", mid = "  ", close_indent = "" },
 	python = {
 		kind = "docstring",
-		open = { "#!/usr/bin/env python3", "# -*- coding: utf-8 -*-", '"""' },
+		open = { '"""' },
 		close = '"""',
 	},
 }
@@ -758,9 +758,18 @@ local function build_spdx(_, _)
 end
 
 -- `shebang`: interpreter line for the current filetype, `sh` by default.
+-- Python headers are docstrings only, so the interpreter line is typed
+-- with this snippet; a choice offers the coding tag Python reads.
 local function build_shebang(_, _)
 	local ft = vim.bo.filetype
 	local line = shebang_by_ft[ft] or "#!/usr/bin/env sh"
+	if ft == "python" then
+		return sn(nil, {
+			t(line),
+			c(1, { t({ "", "# -*- coding: utf-8 -*-" }), t("") }),
+			i(0),
+		})
+	end
 	return sn(nil, { t(line), i(0) })
 end
 

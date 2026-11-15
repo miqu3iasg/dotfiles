@@ -78,7 +78,8 @@ FILE HEADERS
         - In `ahead` the copyright line opens the header, Google proprietary style: `Copyright (c) YEAR HOLDER. All
         rights reserved.`
 
-    Supporting snippets around the headers: `shb` for a shebang line, `spdx` for a standalone license line, `see` and
+    Supporting snippets around the headers: `shb` for a shebang line (Python headers are docstrings only, so the
+    interpreter line comes from this snippet), `spdx` for a standalone license line, `see` and
     `seec` for `See:` references (the latter pasting the clipboard), `path` for the file path, `refs` and `drefs` for
     reference lists, and `mail`, `gh` and `author` for contact fields.
 
