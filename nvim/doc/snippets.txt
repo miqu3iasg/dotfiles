@@ -94,14 +94,12 @@ PER LANGUAGE
     of the format:
 
         lua/snippets/java.lua     Javadoc (Oracle) + Google Java Style
-        lua/snippets/js.lua       JSDoc + the TypeScript JSDoc support
         lua/snippets/python.lua   PEP 257 + Google Style section 3.8
-        lua/snippets/go.lua       Go doc comments (go.dev/doc/comment)
         lua/snippets/c.lua        Linux kernel-doc
         lua/snippets/lua.lua      LuaLS annotations (LuaCATS)
         lua/snippets/sql.lua      plain SQL comments, plus schema/migration blocks
 
-    The other snippet files (lisp, markdown, latex, typst) hold snippets of their own kind and do not implement this
+    The other snippet files (lisp, markdown, latex) hold snippets of their own kind and do not implement this
     standard.
 
 FILES

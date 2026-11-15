@@ -9,11 +9,11 @@
 -- may need to be installed manually.
 --
 -- On Arch Linux, most system-level formatters come from pacman: Node.js for the
--- web formatters, clang-format for C and C++, Go, a TeX distribution with
--- latexindent for LaTeX, typstyle for Typst, shfmt for shell, taplo for TOML,
+-- web formatters, clang-format for C and C++, a TeX distribution with
+-- latexindent for LaTeX, shfmt for shell, taplo for TOML,
 -- astyle for Java, nixfmt, perltidy, scalafmt and buf for Protobuf:
 --
--- $ sudo pacman -S nodejs npm clang go texlive-basic texlive-bin texlive-latexextra texlive-fontsextra typstyle shfmt taplo-cli astyle nixfmt perltidy scalafmt buf
+-- $ sudo pacman -S nodejs npm clang texlive-basic texlive-bin texlive-latexextra texlive-fontsextra shfmt taplo-cli astyle nixfmt perltidy scalafmt buf
 --
 -- JavaScript, TypeScript, HTML, CSS, JSON, Markdown, GraphQL and Vue use
 -- Prettier. Prettierd is preferred when available, and Conform falls back to
@@ -71,7 +71,6 @@ require("conform").setup({
 	notify_on_error = true,
 	formatters_by_ft = {
 		lua = { "stylua" },
-		go = { "goimports-reviser", "golines" },
 		c = { "clang_format" },
 		cpp = { "clang_format" },
 		java = { "astyle" },
@@ -95,7 +94,6 @@ require("conform").setup({
 		terraform = { "terraform_fmt" },
 		markdown = { "md_stash_bullets", "prettier_md", "md_restore" },
 		tex = { "latexindent" },
-		typst = { "typstyle" },
 		asm = { "asmfmt" },
 
 		-- Runs on filetypes that have no formatter of their own.
@@ -114,10 +112,6 @@ require("conform").setup({
 			-- Reads the style from `~/.clang-format`.
 			-- See: resources/clang-format.example.yaml
 			prepend_args = { "--style=file" },
-		},
-
-		golines = {
-			prepend_args = { "--base-formatter=gofumpt", "--max-len=100" },
 		},
 
 		-- Prettier with 4 columns of indentation, so nested lists get 4. It uses

@@ -21,13 +21,13 @@
 --
 -- On Arch Linux, install the Tree-sitter CLI and the system dependencies with:
 --
--- $ sudo pacman -S tree-sitter-cli nodejs npm jdk-openjdk typst typstyle
+-- $ sudo pacman -S tree-sitter-cli nodejs npm jdk-openjdk
 -- $ sudo pacman -S texlive-basic texlive-bin texlive-latexextra texlive-fontsextra
 --
 -- Then install the Tree-sitter parsers from Neovim:
 --
 -- :TSInstall c java python lua scheme racket sql markdown javascript typescript
--- :TSInstall html css json jsonc yaml toml bash latex typst
+-- :TSInstall html css json jsonc yaml toml bash latex
 --
 -- See: lua/language/init.lua
 -- See: lua/plugins/formatting.lua
@@ -42,12 +42,9 @@
 ---@type table<string, string>
 local snippet_modules = {
 	tex = "snippets.latex",
-	typst = "snippets.typst",
 	c = "snippets.c",
-	go = "snippets.go",
 	python = "snippets.python",
 	java = "snippets.java",
-	javascript = "snippets.js",
 	latex = "snippets.latex",
 	lisp = "snippets.lisp",
 	lua = "snippets.lua",
@@ -61,9 +58,6 @@ local aliases = {
 	scheme = "lisp",
 	mysql = "sql",
 	plsql = "sql",
-	javascriptreact = "javascript",
-	typescript = "javascript",
-	typescriptreact = "typescript",
 }
 
 ---@type table<string, boolean>
@@ -77,11 +71,9 @@ local common_filetypes = {
 	javascriptreact = true,
 	typescript = true,
 	typescriptreact = true,
-	go = true,
 	sh = true,
 	markdown = true,
 	tex = true,
-	typst = true,
 	sql = true,
 	mysql = true,
 	plsql = true,

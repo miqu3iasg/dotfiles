@@ -1,7 +1,7 @@
 -- lua/lib/exports.lua
 
--- Single source of truth for where exported documents go, shared by the pandoc,
--- vimtex and tinymist setups.
+-- Single source of truth for where exported documents go, shared by the pandoc
+-- and vimtex setups.
 --
 -- Final documents are written to `<root>/exports/<reldir>/<name>.pdf`, and
 -- compilation byproducts from latexmk go to `<root>/.build/<reldir>/<name>/`.
@@ -14,7 +14,6 @@
 -- unnamed buffer is treated as a file called `scratch` in the current directory.
 --
 -- See: lua/plugins/latex.lua
--- See: lua/language/servers/tinymist.lua
 
 local M = {}
 
@@ -102,8 +101,8 @@ function M.output_path(src, ext)
 	return M.exports_dir(src) .. "/" .. M.reldir(src) .. M.basename(src) .. "." .. (ext or "pdf")
 end
 
----Output path template for tools that expand file-name variables themselves,
----such as tinymist. It uses the variables `$root`, `$dir` and `$name` and
+---Output path template for tools that expand file-name variables themselves.
+---It uses the variables `$root`, `$dir` and `$name` and
 ---mirrors `M.output_path`, so the two layouts stay in sync.
 ---@return string
 function M.output_pattern()

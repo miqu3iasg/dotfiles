@@ -1,4 +1,4 @@
-{{+@head+}}
+{{+@shead+}}
 #include <stdio.h>
 
 

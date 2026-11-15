@@ -65,7 +65,7 @@ THE LIBRARIES
         config/keymaps/search.lua. API: M.setup, M.run, M.grep, M.vimgrep, M.buffer_grep, M.get_selection, M.flash.
 
     exports
-        Single source of truth for where exported documents go, shared by the pandoc, vimtex and tinymist setups, so
+        Single source of truth for where exported documents go, shared by the pandoc and vimtex setups, so
         three features write to the same layout. Documents go to <root>/exports/<reldir>/<name>.<ext> and latexmk
         byproducts to <root>/.build/<reldir>/<name>/; <root> is found through the project markers in M.markers, falling
         back to the file's own folder, or forced globally with vim.g.exports_root. An unnamed buffer is treated as a

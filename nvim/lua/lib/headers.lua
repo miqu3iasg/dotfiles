@@ -101,7 +101,6 @@ local comment_styles = {
 	javascript = C_BLOCK,
 	typescript = C_BLOCK,
 	rust = C_BLOCK,
-	go = C_BLOCK,
 	php = C_BLOCK,
 	sql = C_BLOCK,
 	kotlin = C_BLOCK,
@@ -145,7 +144,6 @@ local line_comment_by_ft = {
 	javascript = "//",
 	typescript = "//",
 	rust = "//",
-	go = "//",
 	php = "//",
 	sql = "--",
 	haskell = "--",
@@ -326,12 +324,6 @@ local usage_by_ft = {
 			f(get_basename, {}),
 			t({ "", wrap(style, usage_label("Run:") .. "$ ./") }),
 			f(get_basename, {}),
-		}
-	end,
-	go = function(style)
-		return {
-			t({ "", wrap(style, usage_label("Run:") .. "$ go run ") }),
-			f(get_filename, {}),
 		}
 	end,
 	php = function(style)

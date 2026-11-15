@@ -197,8 +197,8 @@ THE PLUGIN SET
     Formatting and linting
 
         conform.nvim runs external formatters on demand and on save, with a chain per filetype in
-        lua/plugins/formatting.lua: stylua (Lua), goimports-reviser + golines (Go), clang-format (C/C++), astyle (Java),
-        ruff (Python), prettierd (web), yamlfmt, taplo, sql-formatter, latexindent, typstyle, asmfmt and others, with
+        lua/plugins/formatting.lua: stylua (Lua), clang-format (C/C++), astyle (Java),
+        ruff (Python), prettierd (web), yamlfmt, taplo, sql-formatter, latexindent, asmfmt and others, with
         trim_whitespace and trim_newlines as the fallback chain for every filetype. The on/off state lives in
         lib/autoformat.lua with global and buffer-local scopes (:FormatEnable, :FormatDisable). External linters run
         through nvim-lint (lua/language/lint.lua); Python is linted with ruff, which is the same tool conform
@@ -230,10 +230,6 @@ THE PLUGIN SET
         contents, and a hook that copies the compiled PDF to exports/. Needs a TeX Live installation and a SyncTeX
         viewer (zathura).
 
-    Typst
-
-        tinymist, through the LSP stack; PDF export needs the typst CLI and formatting needs typstyle.
-
     Lisp
 
         Conjure, loaded lazily for Scheme, Common Lisp, Racket and Clojure, configured for MIT Scheme as the REPL.
@@ -255,13 +251,13 @@ THE PLUGIN SET
 LANGUAGE SERVERS
     The stack is in lua/language/. One module per server under servers/:
 
-        clangd (C/C++), cssls, emmet_language_server, eslint, gopls (Go), html, lua_ls (with lazydev.nvim), marksman
-        (Markdown), pyright (Python), tailwindcss, texlab (LaTeX), tinymist (Typst) and vtsls (TypeScript/JavaScript).
+        clangd (C/C++), cssls, emmet_language_server, eslint, html, lua_ls (with lazydev.nvim), marksman
+        (Markdown), pyright (Python), tailwindcss, texlab (LaTeX) and vtsls (TypeScript/JavaScript).
 
     lua/language/init.lua holds the shared setup: mason.nvim installs the servers (scheduled after startup,
     automatic_enable off), the shape of each module is validated (a malformed module becomes a startup error instead of
     a broken attach), each config is passed to vim.lsp.config, and one LspAttach autocmd sets the buffer-local LSP
-    behavior. Most native LSP mappings are kept as-is; a few are replaced by fzf-lua pickers.
+    behavior. The native LSP mappings are kept as-is.
 
     Server modules follow the UserLspServerModule contract in lua/language/types.lua: a `config` table for
     vim.lsp.config and an optional `on_attach(client, bufnr)` hook.
@@ -363,14 +359,14 @@ LIB
         lazy           the lazy loader (see PLUGIN MANAGEMENT)
         autoformat     single source of truth of the autoformat state, with global and buffer-local scopes
         substitute     pre-fills :substitute or a project-wide substitution on the command line; needs ripgrep
-        exports        single source of truth for export paths, shared by pandoc, vimtex and tinymist: documents go to
+        exports        single source of truth for export paths, shared by pandoc and vimtex: documents go to
         <root>/exports/<reldir>/ and latexmk byproducts to <root>/.build/<reldir>/; <root> is found through markers or
         forced with vim.g.exports_root
         system         OS name detection
 
 FILETYPE OVERRIDES
     after/ftplugin/<ft>.lua holds buffer-local options for each filetype, applied after the runtime ftplugins: PEP 8 for
-    Python, gofmt style for Go, per-language comment and fold settings, toolchain commands, and so on. Logic shared by
+    Python, per-language comment and fold settings, toolchain commands, and so on. Logic shared by
     two or more filetypes goes in lib/ instead. after/queries/ holds Tree-sitter query overrides, such as Markdown
     text objects.
 
@@ -379,7 +375,7 @@ REQUIREMENTS
     Arch Linux:
 
         sudo pacman -S git tmux fzf ripgrep fd nodejs npm jdk21-openjdk \
-          clang go typst typstyle texlive-basic texlive-latex \
+          clang texlive-basic texlive-latex \
           texlive-latexextra texlive-binextra pandoc-cli zathura \
           zathura-pdf-mupdf
 

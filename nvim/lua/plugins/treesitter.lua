@@ -52,9 +52,7 @@ vim.env.PYTHONIOENCODING = "utf-8"
 local ts = require("nvim-treesitter")
 
 ts.install({
-	"typst",
 	"vimdoc",
-	"go",
 	"c",
 	"lua",
 	"python",

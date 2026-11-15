@@ -1,9 +1,9 @@
 -- lua/language/init.lua
 
 -- Language servers for frontend development (HTML, CSS, Tailwind CSS, Emmet and
--- TypeScript/JavaScript), LaTeX, Typst, Markdown and Lua, plus Python through
--- pyright, C and C++ through clangd and Go through gopls. Each server is
--- configured in its own module under `lua/language/servers/`, while this file holds
+-- TypeScript/JavaScript), LaTeX, Markdown and Lua, plus Python through
+-- pyright and C and C++ through clangd. Each server is configured in its own
+-- module under `lua/language/servers/`, while this file holds
 -- the shared setup: the Mason installation, the global capabilities, the
 -- buffer-local keymaps and the enable/toggle state. Formatting stays with
 -- conform for every language (see lua/plugins/formatting.lua). Python is also
@@ -16,10 +16,9 @@
 -- the plugin manager; the lazydev.nvim setup lives in the lua_ls module, where
 -- it takes effect. Mason manages the language servers, but some of them rely on
 -- external runtimes and command-line tools. On Arch Linux, install Node.js and
--- npm for the JavaScript-based servers, a JDK for Java, and the Typst CLI and
--- typstyle for Typst compilation and formatting:
+-- npm for the JavaScript-based servers and a JDK for Java:
 --
--- $ sudo pacman -S nodejs npm jdk-openjdk typst typstyle
+-- $ sudo pacman -S nodejs npm jdk-openjdk
 --
 -- Texlab provides the LaTeX language-server features, and its chktex options
 -- need chktex, but compiling LaTeX documents needs a TeX Live installation.
@@ -31,10 +30,9 @@
 -- The configuration requests the installation of the language servers at
 -- startup. They can also be installed manually from Neovim:
 --
--- :MasonInstall clangd css-lsp emmet-language-server eslint-lsp gopls html-lsp lua-language-server marksman pyright tailwindcss-language-server texlab tinymist vtsls jdtls
+-- :MasonInstall clangd css-lsp emmet-language-server eslint-lsp html-lsp lua-language-server marksman pyright tailwindcss-language-server texlab vtsls jdtls
 --
--- Tinymist uses `typstyle` for formatting, and its PDF export also requires the
--- `typst` executable. Mason only installs the servers, so each one is still
+-- Mason only installs the servers, so each one is still
 -- configured individually in `lua/language/servers/`, and only the servers declared
 -- below are enabled.
 --
@@ -61,14 +59,12 @@ local modules = {
 	"cssls",
 	"emmet_language_server",
 	"eslint",
-	"gopls",
 	"html",
 	"lua_ls",
 	"marksman",
 	"pyright",
 	"tailwindcss",
 	"texlab",
-	"tinymist",
 	"vtsls",
 }
 

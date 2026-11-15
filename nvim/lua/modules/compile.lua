@@ -34,7 +34,6 @@ local DEFAULT_COMMAND = {
 	c = "cc -o %:r.out % && ./%:r.out",
 	cpp = "c++ -std=c++23 -o %:r.out % && ./%:r.out",
 	java = "javac -d out % && java -cp out %:t:r",
-	go = "go run %",
 }
 
 -- Each Python traceback frame becomes an entry and the indented source lines
