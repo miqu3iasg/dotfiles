@@ -12,8 +12,8 @@ hi IncSearch term=bold,underline,reverse cterm=reverse gui=reverse
 hi Search term=reverse ctermbg=11 guibg=Yellow
 hi MoreMsg term=bold ctermfg=2 gui=bold guifg=SeaGreen
 hi ModeMsg term=bold cterm=bold gui=bold
-hi LineNr ctermfg=0 guifg=bg
-hi CursorLineNr term=bold cterm=bold ctermfg=0 gui=bold guifg=bg
+hi LineNr ctermfg=130 guifg=Brown
+hi CursorLineNr term=bold cterm=bold ctermfg=130 gui=bold guifg=Brown
 hi Question term=standout ctermfg=2 gui=bold guifg=SeaGreen
 hi StatusLine term=bold,reverse cterm=bold,reverse gui=bold,reverse
 hi StatusLineNC term=reverse cterm=reverse gui=reverse
