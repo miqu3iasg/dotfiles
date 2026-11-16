@@ -1,10 +1,9 @@
 -- lua/lib/exports.lua
 
--- Single source of truth for where exported documents go, shared by the pandoc
--- and vimtex setups.
+-- Single source of truth for where exported documents go, used by the pandoc
+-- setup.
 --
--- Final documents are written to `<root>/exports/<reldir>/<name>.pdf`, and
--- compilation byproducts from latexmk go to `<root>/.build/<reldir>/<name>/`.
+-- Final documents are written to `<root>/exports/<reldir>/<name>.pdf`.
 -- `<reldir>` is the folder of the note relative to `<root>`, so notes with the
 -- same file name in different folders never overwrite each other. `<root>` is
 -- found through `M.markers`, falling back to the note's own folder. Setting
@@ -12,15 +11,11 @@
 --
 -- Every function takes a `src`, which is a buffer number or a file path. An
 -- unnamed buffer is treated as a file called `scratch` in the current directory.
---
--- See: lua/plugins/latex.lua
 
 local M = {}
 
 ---@type string
 M.exports_dirname = "exports"
----@type string
-M.build_dirname = ".build"
 
 -- Markers are searched in order, from highest to lowest priority. Markers inside
 -- the same inner table have equal priority, and the closest parent with any of
@@ -52,7 +47,7 @@ local function path_of(src)
 	return src
 end
 
----Root folder that holds `exports/` and `.build/` for `src`. `vim.g.exports_root`
+---Root folder that holds `exports/` for `src`. `vim.g.exports_root`
 ---wins over everything when set. Otherwise it is the closest parent matching
 ---`M.markers`, falling back to the folder of `src`.
 ---@param src integer|string
@@ -107,12 +102,6 @@ end
 ---@return string
 function M.output_pattern()
 	return ("$root/%s/$dir/$name"):format(M.exports_dirname)
-end
-
----@param src integer|string
----@return string
-function M.build_dir(src)
-	return M.root(src) .. "/" .. M.build_dirname .. "/" .. M.reldir(src) .. M.basename(src)
 end
 
 return M

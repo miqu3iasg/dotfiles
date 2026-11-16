@@ -8,7 +8,7 @@
 --
 -- The menu opens automatically only on the filetypes listed in
 -- `TRIGGER_FILETYPES`. On every other filetype completion is manual, and the
--- LSP omnifunc is also available, which VimTeX hooks into as well.
+-- LSP omnifunc is also available.
 --
 -- LuaSnip must be declared in `pack.lua` and installed through the plugin
 -- manager. Snippet definitions live under `lua/snippets/` and are loaded lazily
@@ -22,12 +22,11 @@
 -- On Arch Linux, install the Tree-sitter CLI and the system dependencies with:
 --
 -- $ sudo pacman -S tree-sitter-cli nodejs npm jdk-openjdk
--- $ sudo pacman -S texlive-basic texlive-bin texlive-latexextra texlive-fontsextra
 --
 -- Then install the Tree-sitter parsers from Neovim:
 --
 -- :TSInstall c java python lua scheme racket sql markdown javascript typescript
--- :TSInstall html css json jsonc yaml toml bash latex
+-- :TSInstall html css json jsonc yaml toml bash
 --
 -- `vim.lsp.completion.enable` is wrapped here so that a server detached from a
 -- reloaded buffer does not trip the runtime's "invalid client ID" assert; see
@@ -45,11 +44,9 @@
 -- filetypes that inherit it.
 ---@type table<string, string>
 local snippet_modules = {
-	tex = "snippets.latex",
 	c = "snippets.c",
 	python = "snippets.python",
 	java = "snippets.java",
-	latex = "snippets.latex",
 	lisp = "snippets.lisp",
 	lua = "snippets.lua",
 	sql = "snippets.sql",
@@ -77,7 +74,6 @@ local common_filetypes = {
 	typescriptreact = true,
 	sh = true,
 	markdown = true,
-	tex = true,
 	sql = true,
 	mysql = true,
 	plsql = true,
@@ -95,7 +91,6 @@ local TRIGGER_FILETYPES = {
 	htmlangular = true,
 	css = true,
 	scss = true,
-	tex = true,
 	json = true,
 	jsonc = true,
 	yaml = true,

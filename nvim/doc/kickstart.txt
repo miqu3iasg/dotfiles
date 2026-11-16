@@ -180,8 +180,7 @@ THE PLUGIN SET
 
         nvim-treesitter for syntax-aware parsing and highlighting, plus nvim-treesitter-textobjects for motions and
         selections. Parsers are requested for automatic installation in lua/plugins/treesitter.lua (max 4 concurrent
-        jobs); highlighting per filetype is activated separately. TeX buffers keep Vim's legacy syntax engine because
-        VimTeX depends on its highlight groups. Needs the tree-sitter CLI on PATH.
+        jobs); highlighting per filetype is activated separately. Needs the tree-sitter CLI on PATH.
 
     Completion and snippets
 
@@ -195,7 +194,7 @@ THE PLUGIN SET
 
         conform.nvim runs external formatters on demand and on save, with a chain per filetype in
         lua/plugins/formatting.lua: stylua (Lua), clang-format (C/C++), astyle (Java),
-        ruff (Python), prettierd (web), yamlfmt, taplo, sql-formatter, latexindent, asmfmt and others, with
+        ruff (Python), prettierd (web), yamlfmt, taplo, sql-formatter, asmfmt and others, with
         trim_whitespace and trim_newlines as the fallback chain for every filetype. The on/off state lives in
         lib/autoformat.lua with global and buffer-local scopes (:FormatEnable, :FormatDisable). External linters run
         through nvim-lint (lua/language/lint.lua); Python is linted with ruff, which is the same tool conform
@@ -222,12 +221,6 @@ THE PLUGIN SET
         obsidian.nvim for wikilinks, completion and vault features; img-clip.nvim pastes clipboard images into files.
         The note creation and search workflow is a config module, NOTES below.
 
-    LaTeX
-
-        VimTeX, loaded lazily on the first tex buffer: compilation, PDF viewer sync, motions, folding, table of
-        contents, and a hook that copies the compiled PDF to exports/. Needs a TeX Live installation and a SyncTeX
-        viewer (zathura).
-
     Lisp
 
         Conjure, loaded lazily for Scheme, Common Lisp, Racket and Clojure, configured for MIT Scheme as the REPL.
@@ -249,7 +242,7 @@ LANGUAGE SERVERS
     The stack is in lua/language/. One module per server under servers/:
 
         clangd (C/C++), cssls, emmet_language_server, eslint, html, lua_ls (with lazydev.nvim), marksman
-        (Markdown), pyright (Python), tailwindcss, texlab (LaTeX) and vtsls (TypeScript/JavaScript).
+        (Markdown), pyright (Python), tailwindcss and vtsls (TypeScript/JavaScript).
 
     lua/language/init.lua holds the shared setup: mason.nvim installs the servers (scheduled after startup,
     automatic_enable off), the shape of each module is validated (a malformed module becomes a startup error instead of
@@ -356,8 +349,8 @@ LIB
         lazy           the lazy loader (see PLUGIN MANAGEMENT)
         autoformat     single source of truth of the autoformat state, with global and buffer-local scopes
         substitute     pre-fills :substitute or a project-wide substitution on the command line; needs ripgrep
-        exports        single source of truth for export paths, shared by pandoc and vimtex: documents go to
-        <root>/exports/<reldir>/ and latexmk byproducts to <root>/.build/<reldir>/; <root> is found through markers or
+        exports        single source of truth for export paths, used by pandoc: documents go to
+        <root>/exports/<reldir>/; <root> is found through markers or
         forced with vim.g.exports_root
         system         OS name detection
 
@@ -372,9 +365,7 @@ REQUIREMENTS
     Arch Linux:
 
         sudo pacman -S git tmux fzf ripgrep fd nodejs npm jdk21-openjdk \
-          clang texlive-basic texlive-latex \
-          texlive-latexextra texlive-binextra pandoc-cli zathura \
-          zathura-pdf-mupdf
+          clang pandoc-cli zathura zathura-pdf-mupdf
 
     Language servers, formatters and linters are installed through Mason (:MasonInstall ...), and the requests happen
     automatically at startup for the servers declared in the LSP stack. Notes: LuaSnip needs a C toolchain at install

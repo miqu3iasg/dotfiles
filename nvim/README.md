@@ -26,8 +26,7 @@ Neovim 0.12 or newer. On Arch Linux, the rest installs with:
 
 ```sh
 sudo pacman -S git tmux fzf ripgrep fd nodejs npm jdk21-openjdk \
-  clang texlive-basic texlive-latex texlive-latexextra \
-  texlive-binextra pandoc-cli zathura zathura-pdf-mupdf
+  clang pandoc-cli zathura zathura-pdf-mupdf
 ```
 
 Per-plugin dependencies are documented in the headers of the files that use them, and `:checkhealth config` verifies the executables live. Notes:

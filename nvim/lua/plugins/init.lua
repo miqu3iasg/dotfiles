@@ -19,7 +19,6 @@ for _, mod in ipairs({
 	"plugins.git",
 	"plugins.unnecessary-shit",
 	"plugins.oil",
-	"plugins.latex",
 	"plugins.lisp",
 	"plugins.markdown",
 }) do

@@ -9,11 +9,10 @@
 -- may need to be installed manually.
 --
 -- On Arch Linux, most system-level formatters come from pacman: Node.js for the
--- web formatters, clang-format for C and C++, a TeX distribution with
--- latexindent for LaTeX, shfmt for shell, taplo for TOML,
+-- web formatters, clang-format for C and C++, shfmt for shell, taplo for TOML,
 -- astyle for Java, nixfmt, perltidy, scalafmt and buf for Protobuf:
 --
--- $ sudo pacman -S nodejs npm clang texlive-basic texlive-bin texlive-latexextra texlive-fontsextra shfmt taplo-cli astyle nixfmt perltidy scalafmt buf
+-- $ sudo pacman -S nodejs npm clang shfmt taplo-cli astyle nixfmt perltidy scalafmt buf
 --
 -- JavaScript, TypeScript, HTML, CSS, JSON, Markdown, GraphQL and Vue use
 -- Prettier. Prettierd is preferred when available, and Conform falls back to
@@ -93,7 +92,6 @@ require("conform").setup({
 		dockerfile = { "dockerfmt" },
 		terraform = { "terraform_fmt" },
 		markdown = { "md_stash_bullets", "prettier_md", "md_restore" },
-		tex = { "latexindent" },
 		asm = { "asmfmt" },
 
 		-- Runs on filetypes that have no formatter of their own.

@@ -98,7 +98,7 @@ PER LANGUAGE
         lua/snippets/lua.lua      LuaLS annotations (LuaCATS)
         lua/snippets/sql.lua      plain SQL comments, plus schema/migration blocks
 
-    The other snippet files (lisp, markdown, latex) hold snippets of their own kind and do not implement this
+    The other snippet files (lisp, markdown) hold snippets of their own kind and do not implement this
     standard.
 
 FILES

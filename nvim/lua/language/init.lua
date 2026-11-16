@@ -1,7 +1,7 @@
 -- lua/language/init.lua
 
 -- Language servers for frontend development (HTML, CSS, Tailwind CSS, Emmet and
--- TypeScript/JavaScript), LaTeX, Markdown and Lua, plus Python through
+-- TypeScript/JavaScript), Markdown and Lua, plus Python through
 -- pyright and C and C++ through clangd. Each server is configured in its own
 -- module under `lua/language/servers/`, while this file holds
 -- the shared setup: the Mason installation, the global capabilities, the
@@ -20,17 +20,10 @@
 --
 -- $ sudo pacman -S nodejs npm jdk-openjdk
 --
--- Texlab provides the LaTeX language-server features, and its chktex options
--- need chktex, but compiling LaTeX documents needs a TeX Live installation.
--- These packages provide the core distribution, LaTeX packages and additional
--- build utilities:
---
--- $ sudo pacman -S texlive-basic texlive-latex texlive-latexextra texlive-binextra
---
 -- The configuration requests the installation of the language servers at
 -- startup. They can also be installed manually from Neovim:
 --
--- :MasonInstall clangd css-lsp emmet-language-server eslint-lsp html-lsp lua-language-server marksman pyright tailwindcss-language-server texlab vtsls jdtls
+-- :MasonInstall clangd css-lsp emmet-language-server eslint-lsp html-lsp lua-language-server marksman pyright tailwindcss-language-server vtsls jdtls
 --
 -- Mason only installs the servers, so each one is still
 -- configured individually in `lua/language/servers/`, and only the servers declared
@@ -64,7 +57,6 @@ local modules = {
 	"marksman",
 	"pyright",
 	"tailwindcss",
-	"texlab",
 	"vtsls",
 }
 

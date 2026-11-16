@@ -24,7 +24,7 @@
 -- on the runtimepath at detection time.
 --
 -- See: lua/config/pack.lua
--- See: lua/plugins/latex.lua
+-- See: lua/plugins/lisp.lua
 
 ---@class lazy.Spec
 ---@field src string Plugin source, as a vim.pack spec.

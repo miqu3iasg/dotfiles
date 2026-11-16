@@ -62,22 +62,18 @@ local function check_formatters()
 	check_tool("shfmt", "shell", true)
 	check_tool("yamlfmt", "YAML", true)
 	check_tool("taplo", "TOML", true)
-	check_tool("latexindent", "LaTeX", true)
 	check_tool("asmfmt", "assembly", true)
 	check_tool("sql-formatter", "SQL", true)
 	check_tool("prettierd", "web filetypes", true)
 	check_tool("prettier", "web filetypes, fallback of prettierd", true)
 end
 
----Markdown export and preview through pandoc, and the LaTeX toolchain that
----texlab and VimTeX rely on.
+---Markdown export and preview through pandoc.
 local function check_documents()
 	vim.health.start("documents")
 
 	check_tool("pandoc", "Pandoc export and preview", true)
 	check_tool("zathura", "PDF preview", true)
-	check_tool("latexmk", "LaTeX compilation through VimTeX", true)
-	check_tool("chktex", "texlab lint options", true)
 end
 
 ---Java tools, used by the jdtls module, which is started outside the LSP stack.

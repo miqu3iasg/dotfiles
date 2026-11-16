@@ -76,7 +76,7 @@ COMMANDS
 
 FILES
     lua/modules/pandoc.lua          the export module; requirements in its header
-    lua/lib/exports.lua             where exports go, shared with VimTeX
+    lua/lib/exports.lua             where exports go
     after/ftplugin/markdown.lua     the Markdown buffers that load the module
     lua/pandoc/defaults.yaml            the pipeline
     lua/pandoc/metadata.yaml            the default appearance

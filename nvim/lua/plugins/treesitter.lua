@@ -30,13 +30,6 @@
 -- separate operations: requesting installation does not mean a parser
 -- is already available when a buffer is opened.
 --
--- LaTeX is a special case. VimTeX relies on Vim's legacy syntax engine
--- for its syntax groups and conceal rules, so Tree-sitter highlighting
--- must not attach directly to `tex` or `latex` buffers. The LaTeX parser
--- remains installed because it can be useful for highlighting LaTeX
--- math inside Markdown documents. This exception preserves VimTeX's
--- behavior while allowing Tree-sitter to handle other supported languages.
---
 -- The indentation configuration is intentionally left inactive because
 -- Tree-sitter indentation is not enabled globally. If indentation is
 -- enabled later, it should be restricted to languages where its results
@@ -44,8 +37,6 @@
 --
 -- See: https://github.com/nvim-treesitter/nvim-treesitter
 -- See: :h vim-treesitter
--- See: :h vimtex-faq-treesitter
--- See: https://github.com/lervag/vimtex/wiki/Syntax
 
 vim.env.PYTHONIOENCODING = "utf-8"
 
@@ -69,7 +60,6 @@ ts.install({
 	"sql",
 	"markdown",
 	"markdown_inline",
-	"latex",
 	"bash",
 	"yaml",
 	"json",
@@ -86,20 +76,6 @@ ts.install({
 
 local group = vim.api.nvim_create_augroup("TreesitterSetup", { clear = true })
 
--- Filetypes whose highlighting is handled by Vim's legacy syntax engine,
--- keyed by filetype, so they are excluded from Tree-sitter highlighting.
--- The `latex` parser remains installed for LaTeX math highlighting inside
--- Markdown buffers, but `tex`/`latex` buffers must not attach it because
--- VimTeX depends on the legacy engine's highlight groups and conceal rules.
---
--- See: :h vimtex-faq-treesitter
--- See: https://github.com/lervag/vimtex/wiki/Syntax
----@type table<string, boolean>
-local ts_highlight_excluded = {
-	tex = true,
-	latex = true,
-}
-
 -- Enable Tree-sitter highlighting when a buffer's filetype is detected.
 vim.api.nvim_create_autocmd("FileType", {
 	group = group,
@@ -108,10 +84,6 @@ vim.api.nvim_create_autocmd("FileType", {
 	callback = function(event)
 		local lang = vim.treesitter.language.get_lang(event.match) or event.match
 		local buf = event.buf
-
-		if ts_highlight_excluded[event.match] or ts_highlight_excluded[lang] then
-			return
-		end
 
 		-- Start highlighting immediately if the parser is available.
 		pcall(vim.treesitter.start, buf, lang)
