@@ -14,4 +14,4 @@ require("plugins")
 require("modules.scratch").setup()
 require("modules.compile").setup()
 
-vim.cmd.colorscheme("plain")
+vim.cmd.colorscheme("insanity")

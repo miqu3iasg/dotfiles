@@ -96,7 +96,7 @@ end
 local colors = {
 	-- single background; the only other "surface" tone is `cursorline`
 	bg = "#000000",
-	cursorline = "#111111", -- state tone: cursorline, selected menu item, matchparen, references
+	cursorline = "#111111", -- state tone: cursorline, statusline, selected menu item, matchparen, references
 	popup_bg = "#0d0d0d", -- completion menu and docs popup
 	popup_sel = "#1c1c1c", -- selected item inside the popup
 
@@ -271,8 +271,8 @@ local groups = {
 	SpellRare = { link = "Normal" },
 
 	-- Status line
-	StatusLine = { bg = colors.bg, fg = colors.fg_2, nocombine = true },
-	StatusLineNC = { bg = colors.bg, fg = colors.statusline_nc, nocombine = true },
+	StatusLine = { bg = colors.cursorline, fg = colors.fg_2, nocombine = true },
+	StatusLineNC = { bg = colors.popup_bg, fg = colors.statusline_nc, nocombine = true },
 	StatuslineTerm = { link = "StatusLine" },
 	StatuslineTermNC = { link = "StatusLineNC" },
 
