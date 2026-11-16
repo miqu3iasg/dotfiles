@@ -113,7 +113,7 @@ vim.pack.add({
 	{ src = "https://github.com/neovim/nvim-lspconfig" },
 
 	-- mini.nvim
-	-- Library of small independent modules: align, splitjoin and treesitter
+	-- Library of small independent modules: align and treesitter
 	-- textobjects for mini.ai.
 	{ src = "https://github.com/nvim-mini/mini.nvim" },
 

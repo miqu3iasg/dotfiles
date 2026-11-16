@@ -15,24 +15,6 @@ local ts = ai.gen_spec.treesitter
 
 require("mini.align").setup({})
 
-local split_join = require("mini.splitjoin")
-
--- The default toggle mapping is disabled, since one key doing two opposite
--- things is how you end up undoing your own work.
-split_join.setup({
-	mappings = {
-		toggle = "",
-	},
-})
-
-vim.keymap.set({ "n", "x" }, "<leader>sj", function()
-	split_join.join()
-end, { desc = "Join arguments" })
-
-vim.keymap.set({ "n", "x" }, "<leader>sk", function()
-	split_join.split()
-end, { desc = "Split arguments" })
-
 -- The treesitter-based objects need the textobjects queries to exist, or they
 -- silently select nothing.
 -- See: lua/plugins/treesitter.lua
