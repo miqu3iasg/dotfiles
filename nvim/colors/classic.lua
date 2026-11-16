@@ -1,8 +1,25 @@
 -- colors/classic.lua
 
--- For those who preserve tradition.
+-- For those who preserve tradition. A colorscheme in the spirit of the
+-- classic light-on-black C look: blue comments, yellow keywords, orange
+-- strings, pink preprocessor - and everything else left at the default
+-- text color, so only the structure of code is colored.
+--
+-- Design decisions:
+--
+-- - No terminal colors are defined: `:terminal` keeps Neovim's defaults,
+--   because the scheme colors syntax, not terminal output.
+-- - Treesitter captures mirror the legacy :syntax groups explicitly (the
+--   defaults link several of them to Special, which would break the look).
+-- - YAML frontmatter is themed in the global namespace on purpose: in this
+--   scheme the frontmatter treatment is deliberately the same as plain YAML.
+-- - Diff and search colors are shared with hollow: both schemes wanted the
+--   same quiet, tinted-bg treatment, so the values are kept in sync by hand.
 --
 -- Copyright (c) Miquéias Alves Medeiros <https://github.com/miqu3iasg>
+--
+-- See: lua/lib/colors.lua      the shared color helpers this builds on
+-- See: colors/hollow.lua       shares the diff and search palettes
 --
 -- SPDX-License-Identifier: Vim
 
@@ -11,11 +28,12 @@ if vim.fn.exists("syntax_on") == 1 then
 	vim.cmd("syntax reset")
 end
 vim.o.termguicolors = true
+vim.o.background = "dark"
 vim.g.colors_name = "classic"
 
-local set_hl = vim.api.nvim_set_hl
+local colors = require("lib.colors")
 
--- Pallete
+-- Palette
 local p = {
 	-- Neutrals
 	black = "#000000", -- background
@@ -80,96 +98,6 @@ local p = {
 }
 
 local md = p.markdown
-
--- Helpers
-
-local GUI_ATTRS = { "bold", "italic", "underline", "undercurl", "reverse", "strikethrough" }
-
--- xterm-256 has a 6x6x6 color cube (levels 0,95,135,175,215,255) and a
--- 24-step gray ramp (8,18,...,238). For every hex we compute the closest
--- candidate in each and keep the nearest one (euclidean RGB distance).
--- Results are cached, so the cost is paid once per distinct color
-
-local CUBE = { 0, 95, 135, 175, 215, 255 }
-local cterm_cache = {}
-
-local function rgb(hex)
-	return tonumber(hex:sub(2, 3), 16), tonumber(hex:sub(4, 5), 16), tonumber(hex:sub(6, 7), 16)
-end
-
-local function dist2(r1, g1, b1, r2, g2, b2)
-	return (r1 - r2) ^ 2 + (g1 - g2) ^ 2 + (b1 - b2) ^ 2
-end
-
-local function nearest_cube_level(v)
-	local best_i, best_d = 1, math.huge
-	for i, c in ipairs(CUBE) do
-		local d = math.abs(v - c)
-		if d < best_d then
-			best_i, best_d = i, d
-		end
-	end
-	return best_i - 1
-end
-
-local function hex_to_256(hex)
-	if cterm_cache[hex] then
-		return cterm_cache[hex]
-	end
-
-	local r, g, b = rgb(hex)
-
-	-- Best color-cube candidate
-	local ri, gi, bi = nearest_cube_level(r), nearest_cube_level(g), nearest_cube_level(b)
-	local cube_d = dist2(r, g, b, CUBE[ri + 1], CUBE[gi + 1], CUBE[bi + 1])
-
-	-- Best gray-ramp candidate
-	local step = math.max(0, math.min(23, math.floor(((r + g + b) / 3 - 8) / 10 + 0.5)))
-	local gv = 8 + 10 * step
-	local gray_d = dist2(r, g, b, gv, gv, gv)
-
-	local idx = gray_d < cube_d and (232 + step) or (16 + 36 * ri + 6 * gi + bi)
-	cterm_cache[hex] = idx
-	return idx
-end
-
-local function is_hex(v)
-	return type(v) == "string" and v:match("^#%x%x%x%x%x%x$") ~= nil
-end
-
--- Turns a group spec into `nvim_set_hl` options.
--- ctermfg/ctermbg are derived from fg/bg unless given explicitly.
-local function normalize(spec)
-	if type(spec) == "string" then
-		return { link = spec, force = true }
-	end
-
-	local opts = vim.deepcopy(spec)
-
-	if is_hex(opts.fg) and not opts.ctermfg then
-		opts.ctermfg = hex_to_256(opts.fg)
-	end
-	if is_hex(opts.bg) and not opts.ctermbg then
-		opts.ctermbg = hex_to_256(opts.bg)
-	end
-
-	if not opts.cterm then
-		opts.cterm = {}
-		for _, attr in ipairs(GUI_ATTRS) do
-			if opts[attr] then
-				-- terminals without undercurl support fall back to underline
-				opts.cterm[attr == "undercurl" and "underline" or attr] = true
-			end
-		end
-	end
-	return opts
-end
-
-local function apply(groups, ns)
-	for name, spec in pairs(groups) do
-		set_hl(ns or 0, name, normalize(spec))
-	end
-end
 
 -- Highlight groups
 
@@ -470,15 +398,13 @@ local links = {
 
 -- Apply
 
-vim.o.background = "dark"
-
-apply(links)
-apply(editor)
-apply(syntax)
-apply(popup)
-apply(treesitter)
-apply(diagnostics)
-apply(diff)
-apply(markdown)
-apply(frontmatter)
-apply(plugins)
+colors.apply(links)
+colors.apply(editor)
+colors.apply(syntax)
+colors.apply(popup)
+colors.apply(treesitter)
+colors.apply(diagnostics)
+colors.apply(diff)
+colors.apply(markdown)
+colors.apply(frontmatter)
+colors.apply(plugins)
