@@ -398,7 +398,7 @@ local groups = {
 	["@number.float"] = { link = "Constant" },
 
 	["@string"] = { link = "String" },
-	["@string.documentation"] = { fg = colors.green, italic = true },
+	["@string.documentation"] = { fg = colors.green },
 	["@string.regexp"] = { fg = colors.magenta },
 	["@string.escape"] = { fg = colors.br_cyan },
 	["@string.special"] = { fg = colors.br_cyan },
