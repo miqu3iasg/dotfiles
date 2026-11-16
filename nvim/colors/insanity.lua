@@ -1,15 +1,33 @@
 -- colors/insanity.lua
 
--- For those who are insane.
+-- For those who are insane. Grays everywhere, green strings and cyan
+-- keywords, on pure black: a near-monochrome scheme that only breaks its
+-- neutrality for status signals (diagnostics, diff, search).
+--
+-- Ported from bruhtus' Vimscript theme; this Lua version extends it with
+-- full treesitter, LSP semantic token, help, LaTeX (vimtex) and completion
+-- menu coverage.
+--
+-- Design decisions:
+--
+-- - Desaturation is applied uniformly: every chromatic palette color is run
+--   through `desaturate` with a fixed factor, so adding a color keeps the
+--   overall mood without hand-tuning each value.
+-- - Markdown gets its own desaturation factor (`MD_SAT`), slightly stronger
+--   than the rest, since markdown prose sits close to the UI.
+-- - YAML frontmatter is themed through its own namespace, active only in
+--   markdown windows, so plain YAML files are untouched.
+-- - Comments and classic groups carry no background on purpose, so the
+--   cursorline shows through them.
 --
 -- Copyright (c) Robertus Chris <diawan@pm.me>
 -- Copyright (c) Miquéias Medeiros <contatomiqueiasalvesdev@gmail.com>
 --
+-- See: lua/lib/colors.lua     the shared color helpers this builds on
+-- See: colors/enfocadomod.lua   sibling port from the same upstream author
 -- See: https://github.com/bruhtus/dotfiles/blob/master/.vim/colors/insanity.vim
 --
 -- SPDX-License-Identifier: MIT
-
-local M = {}
 
 vim.cmd("highlight clear")
 if vim.fn.exists("syntax_on") == 1 then
@@ -19,77 +37,7 @@ vim.o.termguicolors = true
 vim.g.colors_name = "insanity"
 vim.o.background = "dark"
 
--- Helpers
-
-local function rgb(hex)
-	return tonumber(hex:sub(2, 3), 16), tonumber(hex:sub(4, 5), 16), tonumber(hex:sub(6, 7), 16)
-end
-
--- Mixes `fg` over `bg` with the given alpha (0..1)
-local function blend(fg, bg, alpha)
-	local fr, fgr, fb = rgb(fg)
-	local br, bgr, bb = rgb(bg)
-	local function mix(f, b)
-		return math.floor(f * alpha + b * (1 - alpha) + 0.5)
-	end
-	return string.format("#%02x%02x%02x", mix(fr, br), mix(fgr, bgr), mix(fb, bb))
-end
-
-local function hi(group, opts)
-	vim.api.nvim_set_hl(0, group, opts)
-end
-
--- Desaturate theme colors
-local function desaturate(hex, factor)
-	local r, g, b = rgb(hex)
-	r, g, b = r / 255, g / 255, b / 255
-	local max, min = math.max(r, g, b), math.min(r, g, b)
-	local l = (max + min) / 2
-	if max == min then
-		return hex
-	end
-
-	local d = max - min
-	local s = l > 0.5 and d / (2 - max - min) or d / (max + min)
-	local h
-	if max == r then
-		h = (g - b) / d + (g < b and 6 or 0)
-	elseif max == g then
-		h = (b - r) / d + 2
-	else
-		h = (r - g) / d + 4
-	end
-	h = h / 6
-	s = s * factor
-
-	local function hue(p, q, t)
-		if t < 0 then
-			t = t + 1
-		end
-		if t > 1 then
-			t = t - 1
-		end
-		if t < 1 / 6 then
-			return p + (q - p) * 6 * t
-		end
-		if t < 1 / 2 then
-			return q
-		end
-		if t < 2 / 3 then
-			return p + (q - p) * (2 / 3 - t) * 6
-		end
-		return p
-	end
-
-	local q = l < 0.5 and l * (1 + s) or l + s - l * s
-	local p = 2 * l - q
-	return string.format(
-		"#%02x%02x%02x",
-		math.floor(hue(p, q, h + 1 / 3) * 255 + 0.5),
-		math.floor(hue(p, q, h) * 255 + 0.5),
-		math.floor(hue(p, q, h - 1 / 3) * 255 + 0.5)
-	)
-end
+local lib = require("lib.colors")
 
 -- Palette (grays, green strings and cyan keywords)
 
@@ -138,21 +86,21 @@ local colors = {
 }
 
 -- Tints derived from the palette
-colors.visual_bg = blend(colors.fg_1, colors.bg, 0.35) -- neutral gray, no hue
+colors.visual_bg = lib.blend(colors.fg_1, colors.bg, 0.35) -- neutral gray, no hue
 
 -- Colors used for Markdown
 local MD_SAT = 0.8
 local md = {
 	title = "#ffffff", -- headings and bold: brighter than body text
-	blue = desaturate("#5f87ff", MD_SAT),
-	violet = desaturate("#af87d7", MD_SAT),
-	br_violet = desaturate("#af87ff", MD_SAT),
+	blue = lib.desaturate("#5f87ff", MD_SAT),
+	violet = lib.desaturate("#af87d7", MD_SAT),
+	br_violet = lib.desaturate("#af87ff", MD_SAT),
 	prop = "#738296", -- frontmatter keys (same as hollow)
 }
 
 -- Terminal colors
 
-local terminal = {
+lib.terminal_colors({
 	colors.bg,
 	colors.red,
 	colors.green,
@@ -169,11 +117,7 @@ local terminal = {
 	colors.br_magenta,
 	colors.br_cyan,
 	colors.fg_3,
-}
-
-for i, color in ipairs(terminal) do
-	vim.g["terminal_color_" .. (i - 1)] = color
-end
+})
 
 -- Highlight groups
 
@@ -677,9 +621,7 @@ local groups = {
 	BlinkCmpSignatureHelpActiveParameter = { link = "LspSignatureActiveParameter" },
 }
 
-for group, opts in pairs(groups) do
-	hi(group, opts)
-end
+lib.apply(groups)
 
 -- Markdown
 local markdown_markup = {
@@ -708,46 +650,22 @@ local markdown_markup = {
 }
 
 for name, opts in pairs(markdown_markup) do
-	hi("@markup." .. name .. ".markdown", opts)
-	hi("@markup." .. name .. ".markdown_inline", opts)
-	hi("@markup.math.latex", { fg = md.blue })
+	vim.api.nvim_set_hl(0, "@markup." .. name .. ".markdown", lib.normalize(opts))
+	vim.api.nvim_set_hl(0, "@markup." .. name .. ".markdown_inline", lib.normalize(opts))
+	vim.api.nvim_set_hl(0, "@markup.math.latex", lib.normalize({ fg = md.blue }))
 end
 
 -- Heading markers (#) stay gray; only the heading text is white
-hi("@markup.heading.marker.markdown", { fg = colors.fg_1 })
+vim.api.nvim_set_hl(0, "@markup.heading.marker.markdown", { fg = colors.fg_1 })
 for i = 1, 6 do
-	hi(("@markup.heading.%d.marker.markdown"):format(i), { fg = colors.fg_1 })
+	vim.api.nvim_set_hl(0, ("@markup.heading.%d.marker.markdown"):format(i), { fg = colors.fg_1 })
 end
 
 -- Only *inline* code gets the popup background; fenced blocks stay flat
-hi("@markup.raw.markdown_inline", { fg = md.blue, bg = colors.popup_bg })
+vim.api.nvim_set_hl(0, "@markup.raw.markdown_inline", { fg = md.blue, bg = colors.popup_bg })
 
 -- Frontmatter (YAML injected into markdown) uses its own namespace, so the
 -- property color never leaks into plain YAML files
-local frontmatter_ns = vim.api.nvim_create_namespace("insanity_markdown")
-vim.api.nvim_set_hl(frontmatter_ns, "@property.yaml", { fg = md.prop })
-
-local function sync_frontmatter_ns()
-	for _, win in ipairs(vim.api.nvim_list_wins()) do
-		local buf = vim.api.nvim_win_get_buf(win)
-		if vim.bo[buf].filetype == "markdown" then
-			vim.api.nvim_win_set_hl_ns(win, frontmatter_ns)
-			vim.w[win].insanity_markdown_ns = true
-		elseif vim.w[win].insanity_markdown_ns then
-			vim.api.nvim_win_set_hl_ns(win, 0)
-			vim.w[win].insanity_markdown_ns = nil
-		end
-	end
-end
-
-vim.api.nvim_create_autocmd({ "FileType", "BufWinEnter", "BufEnter", "WinEnter" }, {
-	group = vim.api.nvim_create_augroup("InsanityMarkdown", { clear = true }),
-	callback = sync_frontmatter_ns,
+lib.frontmatter("insanity_markdown", {
+	["@property.yaml"] = { fg = md.prop },
 })
-sync_frontmatter_ns()
-
--- Exposed so other themes (e.g. lualine) can reuse the palette
-M.colors = colors
-M.blend = blend
-
-return M
