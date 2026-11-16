@@ -214,8 +214,8 @@ THE PLUGIN SET
     Git
 
         vim-fugitive for repository operations (staging, committing, diffing, blaming), vim-rhubarb so :GBrowse builds
-        GitHub URLs, and gitsigns.nvim for hunk-level markers, staging and blame. fzf-lua-based browsing is registered
-        only when fzf-lua is available. Destructive remote operations are left to the terminal. See lua/plugins/git.lua.
+        GitHub URLs, and gitsigns.nvim for hunk-level markers, staging and blame. Destructive remote operations are
+        left to the terminal. See lua/plugins/git.lua.
 
     Markdown and notes
 

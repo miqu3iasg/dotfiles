@@ -1,10 +1,7 @@
 -- lua/plugins/git.lua
 
--- Git workflow inside Neovim, built on vim-fugitive for repository operations,
--- gitsigns.nvim for hunk-level changes and fzf-lua for browsing branches,
--- commits and diffs. The fzf-lua keymaps are stubs: the plugin loads on demand
--- through `lib.lazy`, like in its own adapter, so the first press pays the
--- load.
+-- Git workflow inside Neovim, built on vim-fugitive for repository operations
+-- and gitsigns.nvim for hunk-level changes.
 --
 -- Git must be installed and the current directory must belong to a repository.
 -- vim-rhubarb is required for `:GBrowse` to build GitHub URLs. Destructive
@@ -25,7 +22,6 @@
 -- See: https://github.com/tpope/vim-fugitive
 -- See: https://github.com/tpope/vim-rhubarb
 -- See: https://github.com/lewis6991/gitsigns.nvim
--- See: https://github.com/ibhagwan/fzf-lua
 
 local keys = require("lib.keys")
 local map = keys.map
@@ -164,53 +160,3 @@ require("gitsigns").setup({
 		bmap({ "o", "x" }, "ih", "<cmd>Gitsigns select_hunk<cr>", "Select hunk")
 	end,
 })
-
----Load fzf-lua on first use and return it. The loader is guarded, so after the
----first keypress this is a cached require.
----See: lua/plugins/fzf.lua
----@return table
-local function fzf()
-	require("lib.lazy").load("fzf-lua")
-	return require("fzf-lua")
-end
-
-map("n", "<leader>gfb", function()
-	fzf().git_branches({
-		header = "<enter> checkout | <C-a> new branch from query | <C-x> delete | <C-d> force delete",
-		actions = {
-			["ctrl-a"] = {
-				fn = function(selected)
-					local name = vim.trim(selected[1] or "")
-					if name ~= "" then
-						vim.schedule(function()
-							vim.cmd("Git switch -c " .. name)
-						end)
-					end
-				end,
-				field_index = "{q}",
-			},
-		},
-	})
-end, "Git branches (checkout / <C-a> new)")
-
-map("n", "<leader>gfc", function()
-	fzf().git_commits()
-end, "Git commits (project)")
-map("n", "<leader>gfu", function()
-	fzf().git_bcommits()
-end, "Git commits (current file)")
-map("n", "<leader>gfs", function()
-	fzf().git_status()
-end, "Git status (modified files)")
-map("n", "<leader>gfh", function()
-	fzf().git_hunks()
-end, "Git hunks")
-map("n", "<leader>gfd", function()
-	fzf().git_diff()
-end, "Git diff")
-map("n", "<leader>gfa", function()
-	fzf().git_stash()
-end, "Git stash (apply/pop/drop)")
-map("n", "<leader>gff", function()
-	fzf().git_files({ cmd = "git ls-files --cached --others --exclude-standard" })
-end, "Git files")
