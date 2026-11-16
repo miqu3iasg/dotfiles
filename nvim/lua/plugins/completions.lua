@@ -243,14 +243,24 @@ end
 
 local map = vim.keymap.set
 
--- Opens the completion menu on demand where there is no autotrigger.
+-- Opens the completion menu on demand: LSP when a client supports it, buffer
+-- words otherwise. The check runs on every press, so a buffer whose LSP has
+-- not attached yet falls back to keyword completion, and the same key switches
+-- to LSP completion once the client attaches. `vim.lsp.completion.get()` goes
+-- straight to the enabled clients, so it neither enters the `^X` submode (the
+-- omnifunc returns -2, which keeps completion mode waiting on the async
+-- response) nor depends on the buffer's `omnifunc`. With the menu open the key
+-- accepts the selected item instead, rather than closing it with a fresh `^X`.
 map("i", "<C-y>", function()
-	if vim.bo.omnifunc == "" then
-		vim.notify("No LSP completion available for this buffer", vim.log.levels.WARN)
+	if vim.fn.pumvisible() == 1 then
+		return "<C-y>" -- Returned keys are not remapped, so this is the builtin.
+	end
+	if vim.lsp.get_clients({ bufnr = 0, method = "textDocument/completion" })[1] then
+		vim.lsp.completion.get()
 		return ""
 	end
-	return "<C-x><C-o>"
-end, { expr = true, desc = "Trigger LSP completion" })
+	return "<C-n>" -- Builtin keyword completion.
+end, { expr = true, desc = "LSP completion, buffer words as fallback" })
 
 map("i", "<CR>", function()
 	return vim.fn.pumvisible() == 1 and "<C-y>" or "<CR>"
