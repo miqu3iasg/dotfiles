@@ -1,30 +1,11 @@
 -- colors/insanity.lua
 
--- For those who are insane. Grays everywhere, green strings and cyan
--- keywords, on pure black: a near-monochrome scheme that only breaks its
--- neutrality for status signals (diagnostics, diff, search).
---
--- Ported from bruhtus' Vimscript theme; this Lua version extends it with
--- full treesitter, LSP semantic token, help, LaTeX (vimtex) and completion
--- menu coverage.
---
--- Design decisions:
---
--- - Desaturation is applied uniformly: every chromatic palette color is run
---   through `desaturate` with a fixed factor, so adding a color keeps the
---   overall mood without hand-tuning each value.
--- - Markdown gets its own desaturation factor (`MD_SAT`), slightly stronger
---   than the rest, since markdown prose sits close to the UI.
--- - YAML frontmatter is themed through its own namespace, active only in
---   markdown windows, so plain YAML files are untouched.
--- - Comments and classic groups carry no background on purpose, so the
---   cursorline shows through them.
+-- For those who are insane.
 --
 -- Copyright (c) Robertus Chris <diawan@pm.me>
 -- Copyright (c) Miquéias Medeiros <contatomiqueiasalvesdev@gmail.com>
 --
--- See: lua/lib/colors.lua     the shared color helpers this builds on
--- See: colors/enfocadomod.lua   sibling port from the same upstream author
+-- See: lua/lib/colors.lua
 -- See: https://github.com/bruhtus/dotfiles/blob/master/.vim/colors/insanity.vim
 --
 -- SPDX-License-Identifier: MIT
@@ -58,7 +39,6 @@ local colors = {
 	linenr_above = "#2e2e2e",
 
 	border = "#2a2a2a",
-	border_subtle = "#0f0f0f",
 	split = "#5a5a5a",
 	statusline_nc = "#878769",
 
@@ -491,86 +471,6 @@ local groups = {
 	gitcommitUntrackedFile = { link = "Link" },
 	gitcommitSummary = { link = "String" },
 
-	-- Filetype: LaTeX (vimtex)
-	--
-	-- vimtex 2.0+ replaced the legacy built-in tex.vim syntax groups with its
-	-- own set (see :help vimtex-syntax-reference). Most specific command and
-	-- argument groups are just `highlight def link`ed to a small set of
-	-- "primitive" groups (texCmd, texMathZone, texOpt, etc.) unless a
-	-- colorscheme overrides them directly. Targeting those primitives here
-	-- means newer/less common command families still get sensible colors
-	-- automatically instead of silently falling back to plain text.
-	--
-	-- Split: prose you actually typed (running text, document/section
-	-- titles, the *content* wrapped by \textbf/\emph/\textit) stays neutral
-	-- gray so it reads like the rest of the document. LaTeX *syntax*
-	-- (commands, environments, macro definitions) gets the same muted cyan
-	-- used for Statement/keywords elsewhere in the theme, so code and text
-	-- are unmistakable at a glance without introducing new hues. Math zones
-	-- get no background: only the delimiters ($, \[, \]) are colored, so
-	-- prose vs. math is clear just from the "frame" around it.
-
-	texCmd = { link = "Statement" }, -- \foo, \item, ...
-	texCmdType = { link = "Statement" }, -- \textbf, \emph, \tiny, ...
-	texCmdEnv = { link = "Statement" }, -- \begin, \end
-	texEnvArgName = { fg = colors.magenta }, -- {itemize}, {figure}, ...
-	texOpt = { fg = colors.fg_3 }, -- [options], key=value args like inside \lstset{}
-	texArg = { link = "Normal" }, -- generic {argument} body: still just text
-
-	texCmdPart = { fg = colors.fg_3, bold = true }, -- \part, \chapter, \section, ...
-	texCmdRef = { link = "texCmd" }, -- \ref, \label, \cite, \pageref, \eqref, ...
-	texRefArg = { fg = colors.cyan, underline = true }, -- the {label-name} being referenced
-	texCmdAccent = { fg = colors.fg_2 }, -- \', \", \^, ...
-	texCmdGreek = { fg = colors.magenta }, -- \alpha, \beta, ...
-	texCmdNew = { fg = colors.fg_3, bold = true }, -- \newcommand, \def, \let
-	texCmdNewenv = { fg = colors.fg_3, bold = true }, -- \newenvironment
-
-	texTitleArg = { fg = colors.fg_3, bold = true }, -- \title{...}: the document title
-	texPartArgTitle = { fg = colors.fg_3 }, -- \section{...}, \chapter{...}: still prose
-
-	-- Style commands color the text they wrap, not the command name.
-	texStyleBold = { bold = true },
-	texStyleItal = { italic = true },
-	texStyleUnder = { underline = true },
-	texStyleBoth = { bold = true, italic = true },
-	texStyleBoldUnder = { bold = true, underline = true },
-	texStyleItalUnder = { italic = true, underline = true },
-	texStyleBoldItalUnder = { bold = true, italic = true, underline = true },
-
-	-- Math zones: content stays neutral (reads like prose), only the
-	-- delimiters get color, so $...$ and \[...\] visually "frame"
-	-- themselves against surrounding text without any background fill.
-	texMathDelimZoneX = { fg = colors.cyan, bold = true }, -- $...$
-	texMathDelimZoneY = { fg = colors.cyan, bold = true }, -- $$...$$
-	texMathDelimZoneTI = { fg = colors.cyan, bold = true }, -- \(...\)
-	texMathDelimZoneZ = { fg = colors.cyan, bold = true }, -- \[...\]
-	texMathDelimZoneV = { fg = colors.cyan, bold = true },
-	texMathDelimZoneW = { fg = colors.cyan, bold = true },
-	texMathDelimZoneT = { fg = colors.cyan, bold = true },
-	texMathDelimZoneEnv = { fg = colors.cyan, bold = true },
-	texMathDelimZoneEnsured = { fg = colors.cyan, bold = true },
-	texMathDelimZoneLabel = { fg = colors.cyan, bold = true },
-
-	texComment = { link = "Comment" },
-	texCommentTodo = { link = "Todo" },
-	texSpecialChar = { fg = colors.fg_3 }, -- %, &, _, \\, escaped specials
-	texSymbol = { fg = colors.fg_3 }, -- table separators, ligature markers, literal symbols
-	texLigature = { fg = colors.fg_1 }, -- --, ---, ``, '': typographic, not code
-	texZone = { fg = colors.fg_2 }, -- verbatim/listings body: still literal text
-	texError = { link = "ErrorMsg" },
-
-	texFileArg = { fg = colors.fg_3 }, -- filenames in \input, \includegraphics, \bibliography, ...
-	texLength = { fg = colors.magenta }, -- 12pt, 3.5cm, ...
-	texParm = { fg = colors.fg_1 }, -- #1, #2 macro parameters
-
-	-- vimtex compiler/status messages (health checks, :VimtexCompile output)
-	VimtexSuccess = { link = "DiagnosticOk" },
-	VimtexWarning = { link = "WarningMsg" },
-	VimtexError = { link = "DiagnosticError" },
-	VimtexInfo = { link = "DiagnosticInfo" },
-	VimtexTodo = { link = "Todo" },
-	VimtexFatal = { link = "ErrorMsg" },
-
 	-- Plugins: git
 	Added = { fg = colors.green },
 	Changed = { fg = colors.yellow },
@@ -582,43 +482,6 @@ local groups = {
 	-- Plugins: indent-blankline
 	IblIndent = { fg = colors.linenr_above },
 	IblScope = { fg = colors.fg_0 },
-
-	-- Plugins: nvim-cmp
-	CmpBorder = { fg = colors.border_subtle, bg = colors.bg },
-	CmpDocBorder = { fg = colors.border_subtle, bg = colors.bg },
-
-	CmpItemAbbr = { link = "Pmenu" },
-	CmpItemAbbrDeprecated = { fg = colors.fg_1, strikethrough = true },
-	CmpItemAbbrMatch = { link = "PmenuMatch" },
-	CmpItemAbbrMatchFuzzy = { link = "PmenuMatch" },
-	CmpItemKind = { link = "Special" },
-	CmpItemMenu = { link = "Comment" },
-
-	-- Plugins: blink.cmp
-	BlinkCmpMenu = { fg = colors.fg_2, bg = colors.popup_bg },
-	BlinkCmpMenuBorder = { fg = colors.border_subtle, bg = colors.popup_bg },
-	BlinkCmpMenuSelection = { fg = colors.fg_3, bg = colors.popup_sel },
-	BlinkCmpScrollBarThumb = { bg = colors.fg_0 },
-	BlinkCmpScrollBarGutter = { bg = colors.popup_bg },
-
-	BlinkCmpLabel = { fg = colors.fg_2 },
-	BlinkCmpLabelDeprecated = { fg = colors.fg_1, strikethrough = true },
-	BlinkCmpLabelMatch = { fg = colors.fg_3, bold = true },
-	BlinkCmpLabelDetail = { fg = colors.comment },
-	BlinkCmpLabelDescription = { fg = colors.comment },
-
-	BlinkCmpKind = { fg = colors.fg_1 },
-	BlinkCmpSource = { fg = colors.comment },
-	BlinkCmpGhostText = { fg = colors.comment },
-
-	BlinkCmpDoc = { fg = colors.fg_2, bg = colors.popup_bg },
-	BlinkCmpDocBorder = { fg = colors.border_subtle, bg = colors.popup_bg },
-	BlinkCmpDocSeparator = { fg = colors.border, bg = colors.popup_bg },
-	BlinkCmpDocCursorLine = { bg = colors.popup_sel },
-
-	BlinkCmpSignatureHelp = { fg = colors.fg_2, bg = colors.popup_bg },
-	BlinkCmpSignatureHelpBorder = { fg = colors.border_subtle, bg = colors.popup_bg },
-	BlinkCmpSignatureHelpActiveParameter = { link = "LspSignatureActiveParameter" },
 }
 
 lib.apply(groups)
