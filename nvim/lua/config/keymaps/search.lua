@@ -64,7 +64,7 @@ km("n", "<leader>eg", function()
 	search.grep(vim.fn.input("Grep> "))
 end, { desc = "Grep in project (regex)" })
 
-km("n", "<leader>er", function()
+km("n", "<leader>ew", function()
 	search.grep(vim.fn.expand("<cword>"), "-F -w")
 end, { desc = "Grep word under cursor in project" })
 
@@ -87,8 +87,8 @@ km("n", "<leader>ei", "[I", { desc = "List lines with word under cursor" })
 
 -- Files, buffers and history
 km("n", "<leader>ef", ":find *", { desc = "Find file by name" })
-km("n", "<leader>eu", ":ls<cr>:b<space>", { desc = "Pick buffer" })
-km("n", "<leader>ep", "<cmd>oldfiles<cr>:edit #<", { desc = "Pick recent file" })
-km("n", "<leader>ea", "<cmd>marks<cr>:normal! `", { desc = "Pick mark" })
+km("n", "<leader>eb", ":ls<cr>:b<space>", { desc = "Pick buffer" })
+km("n", "<leader>eo", "<cmd>oldfiles<cr>:edit #<", { desc = "Pick recent file" })
+km("n", "<leader>em", "<cmd>marks<cr>:normal! `", { desc = "Pick mark" })
 km("n", "<leader>eh", ":help ", { desc = "Search help" })
 km("n", "<leader>eH", ":helpgrep ", { desc = "Grep in all help files" })
