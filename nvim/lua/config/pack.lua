@@ -144,10 +144,4 @@ vim.pack.add({
 	-- markdown-preview.nvim
 	-- Render markdown notes in the browser, needed to read documentations with mermaid diagrams.
 	{ src = "https://github.com/iamcco/markdown-preview.nvim" },
-
-	-- Extra colorschemes.
-	"https://github.com/jaredgorski/fogbell.vim",
-	"https://github.com/amedoeyes/eyes.nvim",
-	"https://github.com/metalelf0/black-metal-theme-neovim",
-	"https://github.com/kryptamine/gruber-darker-renaissance",
 })

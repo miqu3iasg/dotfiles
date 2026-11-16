@@ -115,8 +115,7 @@ ADDING A MODULE
         - gets called from init.lua (feature at startup, like statusline and scratch) or from the file that triggers it.
 
 ADDING A COLORSCHEME
-    Custom schemes live in colors/<name>.lua and are activated with `vim.cmd.colorscheme`. Third-party schemes are
-    installed from pack.lua, as plain src entries.
+    Custom schemes live in colors/<name>.lua and are activated with `vim.cmd.colorscheme`.
 
 VERSIONING AND LOCK
     Plugin revisions are pinned by nvim-pack-lock.json, written by vim.pack. Treat it as generated: update plugins

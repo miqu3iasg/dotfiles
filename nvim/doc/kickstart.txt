@@ -243,8 +243,7 @@ THE PLUGIN SET
     Colorschemes
 
         Custom colorschemes live in colors/: hollow (the default), brightburn, classic, artifact, enfocadomod and
-        insanity. Extra third-party schemes (fogbell, eyes.nvim, black-metal, gruber-darker-renaissance) are installed
-        from pack.lua.
+        insanity.
 
 LANGUAGE SERVERS
     The stack is in lua/language/. One module per server under servers/:
