@@ -31,6 +31,15 @@ THE LIBRARIES
         the verdict in vim.b.bigfile. Every feature that needs to switch off on big buffers asks this module, so the
         thresholds are defined once. API: M.is_big.
 
+    colors
+        Color and highlight helpers for the colorschemes in colors/: hex parsing, blending a color over a
+        background, HSL desaturation and the xterm-256 conversion with its cache. A string spec links to the named
+        group; a table spec derives ctermfg/ctermbg from its hex colors and mirrors every GUI attribute into cterm,
+        so a scheme renders the same on any terminal. Also applies whole group tables, writes the :terminal
+        palette and owns the markdown-frontmatter namespace, kept active only in markdown windows. The only state
+        is the conversion cache, which memoizes pure results. API: M.rgb, M.blend, M.desaturate, M.to256,
+        M.normalize, M.apply, M.terminal_colors, M.frontmatter.
+
     headers
         Comment and file-header machinery owned by the snippets: per-filetype comment styles
         (line, block and docstring), shebangs, filename and date helpers, the declarative header field constructors

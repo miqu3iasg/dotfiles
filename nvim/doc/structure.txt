@@ -37,7 +37,8 @@ THE TREE
 TOP-LEVEL FOLDERS
     colors/
         Colorschemes are runtimepath-loaded by `vim.cmd.colorscheme`, so they live in the conventional colors/ folder,
-        outside lua/. One file per scheme; the scheme name is the file name.
+        outside lua/. One file per scheme; the scheme name is the file name. The color machinery they share (blending,
+        the xterm-256 conversion, highlight application, the markdown-frontmatter namespace) lives in lua/lib/colors.lua.
 
     after/
         The after/ directory is loaded after everything else in the runtimepath, which is exactly what filetype
