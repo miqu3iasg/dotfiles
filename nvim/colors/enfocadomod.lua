@@ -4,17 +4,26 @@
 -- concept of 'how themes should be', focusing on what is really
 -- important to developers: the code and nothing else.
 --
+-- Design decisions:
+--
+-- - Saturation is scaled globally by SATURATION (1.0 = original Enfocado),
+--   applied to every palette color, so the mood survives palette edits.
+-- - The semantic pseudo-groups (Accent, Text, Dimmed, Match, ...) are kept
+--   from the original as the theme's own vocabulary; links target them
+--   instead of raw colors.
+-- - `nocombine` is set on the quiet groups on purpose, matching upstream.
+--
 -- Copyright (c) Wuelner Martínez <wuelner.martinez@outlook.com>
 -- Copyright (c) Robertus Chris <diawan@pm.me>
 -- Copyright (c) Miquéias Medeiros <contatomiqueiasalvesdev@gmail.com>
 --
+-- See: lua/lib/colors.lua       the shared color helpers this builds on
+-- See: colors/insanity.lua      sibling port from the same upstream author
 -- See: https://github.com/wuelnerdotexe/vim-enfocado
 --
 -- Reference: https://github.com/bruhtus/dotfiles/blob/master/.vim/colors/enfocadomod.vim
 --
 -- SPDX-License-Identifier: MIT
-
-local M = {}
 
 vim.cmd("highlight clear")
 if vim.fn.exists("syntax_on") == 1 then
@@ -24,79 +33,7 @@ vim.o.termguicolors = true
 vim.g.colors_name = "enfocadomod"
 vim.o.background = "dark"
 
--- Helpers
-
-local function rgb(hex)
-	return tonumber(hex:sub(2, 3), 16), tonumber(hex:sub(4, 5), 16), tonumber(hex:sub(6, 7), 16)
-end
-
--- Mixes `fg` over `bg` with the given alpha (0..1)
-local function blend(fg, bg, alpha)
-	local fr, fgr, fb = rgb(fg)
-	local br, bgr, bb = rgb(bg)
-	local function mix(f, b)
-		return math.floor(f * alpha + b * (1 - alpha) + 0.5)
-	end
-	return string.format("#%02x%02x%02x", mix(fr, br), mix(fgr, bgr), mix(fb, bb))
-end
-
--- Scales the HSL saturation of `hex` by `factor` (1 = unchanged, 0 = gray).
--- Hue and lightness are preserved; grays are unaffected.
-local function desaturate(hex, factor)
-	local r, g, b = rgb(hex)
-	r, g, b = r / 255, g / 255, b / 255
-	local max, min = math.max(r, g, b), math.min(r, g, b)
-	local l = (max + min) / 2
-	if max == min then
-		return hex
-	end
-
-	local d = max - min
-	local s = l > 0.5 and d / (2 - max - min) or d / (max + min)
-	local h
-	if max == r then
-		h = (g - b) / d + (g < b and 6 or 0)
-	elseif max == g then
-		h = (b - r) / d + 2
-	else
-		h = (r - g) / d + 4
-	end
-	h = h / 6
-
-	s = s * factor
-
-	local function hue(p, q, t)
-		if t < 0 then
-			t = t + 1
-		end
-		if t > 1 then
-			t = t - 1
-		end
-		if t < 1 / 6 then
-			return p + (q - p) * 6 * t
-		end
-		if t < 1 / 2 then
-			return q
-		end
-		if t < 2 / 3 then
-			return p + (q - p) * (2 / 3 - t) * 6
-		end
-		return p
-	end
-
-	local q = l < 0.5 and l * (1 + s) or l + s - l * s
-	local p = 2 * l - q
-	return string.format(
-		"#%02x%02x%02x",
-		math.floor(hue(p, q, h + 1 / 3) * 255 + 0.5),
-		math.floor(hue(p, q, h) * 255 + 0.5),
-		math.floor(hue(p, q, h - 1 / 3) * 255 + 0.5)
-	)
-end
-
-local function hi(group, opts)
-	vim.api.nvim_set_hl(0, group, opts)
-end
+local lib = require("lib.colors")
 
 -- Saturation multiplier applied to every chromatic color in the palette
 -- (1.0 = original Enfocado, lower = more muted).
@@ -130,17 +67,16 @@ local colors = {
 	br_orange = "#ffaf87",
 	br_violet = "#af87ff",
 
-	base = "#000000",
 	search = "#ff00ff",
 }
 
 -- Mute every color by the same proportion (grays are unaffected)
 for name, hex in pairs(colors) do
-	colors[name] = desaturate(hex, SATURATION)
+	colors[name] = lib.desaturate(hex, SATURATION)
 end
 
 -- Comments: dim_0 pulled toward the background
-colors.comment = blend(colors.dim_0, colors.bg_0, 0.6)
+colors.comment = lib.blend(colors.dim_0, colors.bg_0, 0.6)
 
 colors.accent_0 = colors.green
 colors.accent_1 = colors.blue
@@ -149,7 +85,7 @@ colors.br_accent_1 = colors.blue
 
 -- Terminal colors
 
-local terminal = {
+lib.terminal_colors({
 	colors.bg_1,
 	colors.red,
 	colors.green,
@@ -166,11 +102,7 @@ local terminal = {
 	colors.br_magenta,
 	colors.br_cyan,
 	colors.fg_1,
-}
-
-for i, color in ipairs(terminal) do
-	vim.g["terminal_color_" .. (i - 1)] = color
-end
+})
 
 -- Highlight groups
 
@@ -399,17 +331,6 @@ local groups = {
 	diffOnly = { link = "Text" },
 	diffRemoved = { link = "DiffDelete" },
 	diffSubname = { link = "Title" },
-
-	-- Plugins: vim-sneak (commented out in the original)
-	-- SneakLabel = { bg = colors.base, fg = colors.br_yellow },
 }
 
-for group, opts in pairs(groups) do
-	hi(group, opts)
-end
-
--- Exposed so other themes (e.g. lualine) can reuse the palette
-M.colors = colors
-M.blend = blend
-
-return M
+lib.apply(groups)
