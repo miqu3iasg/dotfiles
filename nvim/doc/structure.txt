@@ -27,9 +27,8 @@ THE TREE
     |  |- language/           the language server stack
     |  |- snippets/           LuaSnip snippets, one file per filetype
     |  |- archived/           deprecated modules, off the runtimepath
-    |- lua/pandoc/                Pandoc pipeline: defaults, metadata, profiles
+    |- lua/pandoc/            Pandoc pipeline: defaults, metadata, profiles
     |                         and Lua filters
-    |- resources/             example configuration for external tools
     |- spell/                 custom spell files
     |- doc/                   the doc pages, plain text (this folder)
     |- nvim-pack-lock.json    revision lock file written by vim.pack
@@ -51,10 +50,6 @@ TOP-LEVEL FOLDERS
         language), profiles/ (per-document styles, such as abnt.yaml) and filters/ (wikilinks, metadata blocks). The
         Lua module lua/modules/pandoc.lua orchestrates these files; it holds no document logic itself. The feature
         page is doc/pandoc.txt.
-
-    resources/
-        Example configuration files for external tools that the config does not own (clang-format.example.yaml). Kept
-        out of lua/ because they are reference material, never loaded.
 
     doc/
         The doc pages describing the config, plain text in the style of a man page, written at full width for the

@@ -1,7 +1,0 @@
-# StyLua: https://github.com/JohnnyMorganz/StyLua
-# Copy to the project root. Pins the same style as the Neovim configuration:
-# the StyLua defaults, with tabs, 4-wide indents and a 120-column budget.
-
-indent_type = "Tabs"
-indent_width = 4
-column_width = 120

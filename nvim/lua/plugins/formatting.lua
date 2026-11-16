@@ -109,8 +109,8 @@ require("conform").setup({
 		},
 
 		clang_format = {
-			-- Reads the style from `~/.clang-format`.
-			-- See: resources/clang-format.example.yaml
+			-- Reads the style from `~/.clang-format`, which links to
+			-- `~/dotfiles/clang/.clang-format`.
 			prepend_args = { "--style=file" },
 		},
 

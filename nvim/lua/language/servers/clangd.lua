@@ -11,7 +11,7 @@
 -- :MasonInstall clangd
 --
 -- See: lua/plugins/formatting.lua
--- See: resources/clang-format.example.yaml
+-- See: ~/dotfiles/clang/  (the clang-format style, linked from ~/.clang-format)
 -- See: https://clangd.llvm.org
 
 ---@type UserLspServerModule
