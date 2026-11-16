@@ -143,14 +143,11 @@ colors.visual_bg = blend(colors.fg_1, colors.bg, 0.35) -- neutral gray, no hue
 -- Colors used for Markdown
 local MD_SAT = 0.8
 local md = {
-	text = "#b9b9b9", -- fg_0
-	title = "#dedede", -- fg_1
-	cyan = desaturate("#5fafaf", MD_SAT), -- cyan
+	title = "#ffffff", -- headings and bold: brighter than body text
 	blue = desaturate("#5f87ff", MD_SAT),
 	violet = desaturate("#af87d7", MD_SAT),
-	green = desaturate("#7a9c7a", MD_SAT),
 	br_violet = desaturate("#af87ff", MD_SAT),
-	br_blue = desaturate("#5fafff", MD_SAT),
+	prop = "#738296", -- frontmatter keys (same as hollow)
 }
 
 -- Terminal colors
@@ -686,27 +683,27 @@ end
 
 -- Markdown
 local markdown_markup = {
-	strong = { fg = md.green, bold = true },
-	italic = { fg = md.cyan, italic = true },
+	strong = { fg = md.title, bold = true },
+	italic = { fg = colors.fg_1, italic = true },
 	strikethrough = { strikethrough = true },
 	underline = { underline = true },
-	heading = { fg = md.title },
-	["heading.1"] = { fg = md.title },
-	["heading.2"] = { fg = md.title },
-	["heading.3"] = { fg = md.title },
-	["heading.4"] = { fg = md.title },
-	["heading.5"] = { fg = md.title },
-	["heading.6"] = { fg = md.title },
-	quote = { fg = md.text },
+	heading = { fg = md.title, bold = true },
+	["heading.1"] = { fg = md.title, bold = true },
+	["heading.2"] = { fg = md.title, bold = true },
+	["heading.3"] = { fg = md.title, bold = true },
+	["heading.4"] = { fg = md.title, bold = true },
+	["heading.5"] = { fg = md.title, bold = true },
+	["heading.6"] = { fg = md.title, bold = true },
+	quote = { fg = colors.fg_1, italic = true },
 	math = { fg = md.blue },
 	link = { fg = md.blue },
 	["link.label"] = { fg = md.violet },
-	["link.url"] = { fg = md.blue },
+	["link.url"] = { fg = md.blue, underline = true },
 	raw = { fg = md.blue },
 	["raw.block"] = { fg = md.blue },
-	["raw.delimiter"] = { fg = md.text },
-	list = { fg = md.blue },
-	["list.checked"] = { fg = md.br_violet },
+	["raw.delimiter"] = { fg = colors.comment },
+	list = { fg = colors.fg_1 },
+	["list.checked"] = { fg = colors.fg_1 },
 	["list.unchecked"] = { fg = md.br_violet },
 }
 
@@ -715,6 +712,39 @@ for name, opts in pairs(markdown_markup) do
 	hi("@markup." .. name .. ".markdown_inline", opts)
 	hi("@markup.math.latex", { fg = md.blue })
 end
+
+-- Heading markers (#) stay gray; only the heading text is white
+hi("@markup.heading.marker.markdown", { fg = colors.fg_1 })
+for i = 1, 6 do
+	hi(("@markup.heading.%d.marker.markdown"):format(i), { fg = colors.fg_1 })
+end
+
+-- Only *inline* code gets the popup background; fenced blocks stay flat
+hi("@markup.raw.markdown_inline", { fg = md.blue, bg = colors.popup_bg })
+
+-- Frontmatter (YAML injected into markdown) uses its own namespace, so the
+-- property color never leaks into plain YAML files
+local frontmatter_ns = vim.api.nvim_create_namespace("insanity_markdown")
+vim.api.nvim_set_hl(frontmatter_ns, "@property.yaml", { fg = md.prop })
+
+local function sync_frontmatter_ns()
+	for _, win in ipairs(vim.api.nvim_list_wins()) do
+		local buf = vim.api.nvim_win_get_buf(win)
+		if vim.bo[buf].filetype == "markdown" then
+			vim.api.nvim_win_set_hl_ns(win, frontmatter_ns)
+			vim.w[win].insanity_markdown_ns = true
+		elseif vim.w[win].insanity_markdown_ns then
+			vim.api.nvim_win_set_hl_ns(win, 0)
+			vim.w[win].insanity_markdown_ns = nil
+		end
+	end
+end
+
+vim.api.nvim_create_autocmd({ "FileType", "BufWinEnter", "BufEnter", "WinEnter" }, {
+	group = vim.api.nvim_create_augroup("InsanityMarkdown", { clear = true }),
+	callback = sync_frontmatter_ns,
+})
+sync_frontmatter_ns()
 
 -- Exposed so other themes (e.g. lualine) can reuse the palette
 M.colors = colors

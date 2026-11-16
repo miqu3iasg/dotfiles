@@ -442,7 +442,7 @@ local markdown = {
 	["@markup.strikethrough.markdown_inline"] = { fg = md.strike, strikethrough = true },
 
 	-- Inline code and math
-	["@markup.raw.markdown_inline"] = { fg = md.code },
+	["@markup.raw.markdown_inline"] = { fg = md.code, bg = p.popup_bg },
 	["@markup.math.markdown_inline"] = { fg = md.code },
 	["@markup.math.markdown"] = { fg = md.code },
 	["@markup.math.latex"] = { fg = md.code }, -- injected latex inside math (also affects .tex)
