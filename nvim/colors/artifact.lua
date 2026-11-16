@@ -5,6 +5,8 @@
 --
 -- Copyright (c) Miquéias Medeiros <contatomiqueiasalvesdev@gmail.com>
 --
+-- See: lua/lib/colors.lua
+--
 -- SPDX-License-Identifier: MIT
 
 vim.cmd("highlight clear")
@@ -15,52 +17,31 @@ vim.o.termguicolors = true
 vim.o.background = "dark"
 vim.g.colors_name = "artifact"
 
-local set_hl = vim.api.nvim_set_hl
+local lib = require("lib.colors")
+
 local transparent = vim.g.artifact_transparent == true
 local underline_on = vim.g.artifact_underline ~= false
 local italic_on = vim.g.artifact_italic == true
 
-local function hex2rgb(h)
-	h = h:gsub("#", "")
-	return tonumber(h:sub(1, 2), 16), tonumber(h:sub(3, 4), 16), tonumber(h:sub(5, 6), 16)
-end
-
--- Mixes fg over bg with opacity a (0..1).
-local function blend(fg, a, bg)
-	local fr, fgr, fb = hex2rgb(fg)
-	local br, bgr, bb = hex2rgb(bg)
-	local function ch(f, b)
-		return math.floor(math.max(0, math.min(255, a * f + (1 - a) * b)) + 0.5)
-	end
-	return string.format("#%02x%02x%02x", ch(fr, br), ch(fgr, bgr), ch(fb, bb))
-end
-
--- Nearest xterm-256 index, from the 6x6x6 cube or the gray ramp.
-local levels = { 0, 95, 135, 175, 215, 255 }
-local function to256(hex)
-	local r, g, b = hex2rgb(hex)
-	local function cv(v)
-		if v < 48 then
-			return 0
-		elseif v < 115 then
-			return 1
+-- Applies the user flags: underline/undercurl live behind
+-- `g:artifact_underline`, italic behind `g:artifact_italic`. Specs stay
+-- declarative; the flags strip attributes before anything is set.
+local function gate(groups)	for _, spec in pairs(groups) do
+		if type(spec) == "table" then
+			if not underline_on then
+				spec.underline = nil
+				spec.undercurl = nil
+			end
+			if not italic_on then
+				spec.italic = nil
+			end
 		end
-		return math.floor((v - 35) / 40)
 	end
-	local ri, gi, bi = cv(r), cv(g), cv(b)
-	local cr, cg, cb = levels[ri + 1], levels[gi + 1], levels[bi + 1]
-	local cube_idx = 16 + 36 * ri + 6 * gi + bi
-	local cube_d = (r - cr) ^ 2 + (g - cg) ^ 2 + (b - cb) ^ 2
+	return groups
+end
 
-	local avg = (r + g + b) / 3
-	local gray_i = math.max(0, math.min(23, math.floor((avg - 8) / 10 + 0.5)))
-	local gv = 8 + gray_i * 10
-	local gray_d = (r - gv) ^ 2 + (g - gv) ^ 2 + (b - gv) ^ 2
-
-	if gray_d < cube_d then
-		return 232 + gray_i
-	end
-	return cube_idx
+local function apply(tbl)
+	lib.apply(gate(tbl))
 end
 
 local P = {
@@ -87,8 +68,10 @@ local P = {
 	orange = "#c8935a",
 	red = "#b85050",
 
-	teal = "#5f9f9f",
-	blood = "#b85050",
+	diff_add_bg = "#1f2f4f",
+	diff_change_bg = "#3f2f4f",
+	diff_delete_bg = "#1f3f3f",
+	diff_text_bg = "#6f2f2f",
 }
 
 -- The single accent color (keywords, current line number, TODO badge).
@@ -117,11 +100,7 @@ local c = {
 	type = P.bright, -- types: weight and brightness, not hue
 	keyword = P.accent,
 	func = P.fg,
-	constant = P.pink,
 	number = P.pink,
-	operator = P.fg,
-	property = P.fg,
-	punct = P.fg,
 	alt = P.cyan,
 	red = P.red,
 	warn = P.orange,
@@ -131,93 +110,12 @@ local NONE = "NONE"
 local bg_main = transparent and NONE or c.bg
 local bg_float = transparent and NONE or "#0e0e0e"
 
-local diff_add = blend(P.bright, 0.12, P.bg)
-local diff_change = blend(P.teal, 0.22, P.bg)
-local diff_delete = blend(P.blood, 0.35, P.bg)
+local diff_add = lib.blend(P.bright, P.bg, 0.12)
+local diff_change = lib.blend(P.cyan, P.bg, 0.22)
+local diff_delete = lib.blend(P.red, P.bg, 0.35)
 local code_bg = P.surface
-local faint = blend(P.dim, 0.5, P.bg)
 
-local fmt_keys = { "strikethrough", "undercurl", "underline", "nocombine", "reverse", "italic", "bold" }
-
-local function parse_fmt(fmt)
-	local out = {}
-	if type(fmt) ~= "string" or fmt == "none" or fmt == NONE then
-		return out
-	end
-	for part in fmt:gmatch("[^,%s]+") do
-		local rest = part
-		local progressed = true
-		while progressed and #rest > 0 do
-			progressed = false
-			for _, key in ipairs(fmt_keys) do
-				if rest:sub(1, #key) == key then
-					if
-						(underline_on or (key ~= "underline" and key ~= "undercurl"))
-						and (italic_on or key ~= "italic")
-					then
-						out[key] = true
-					end
-					rest = rest:sub(#key + 1)
-					progressed = true
-					break
-				end
-			end
-		end
-	end
-	return out
-end
-
-local function is_hex(v)
-	return type(v) == "string" and v:sub(1, 1) == "#"
-end
-
-local function build(spec)
-	local def = parse_fmt(spec.fmt)
-	local cterm = {}
-	for k in pairs(def) do
-		cterm[k == "undercurl" and "underline" or k] = true
-	end
-	def.cterm = cterm
-	if spec.fg then
-		def.fg = spec.fg
-		if is_hex(spec.fg) then
-			def.ctermfg = to256(spec.fg)
-		end
-	end
-	if spec.bg then
-		def.bg = spec.bg
-		if is_hex(spec.bg) then
-			def.ctermbg = to256(spec.bg)
-		end
-	end
-	if spec.sp then
-		def.sp = spec.sp
-	end
-	return def
-end
-
-local function hi(group, spec)
-	if spec.link then
-		set_hl(0, group, { link = spec.link })
-	else
-		set_hl(0, group, build(spec))
-	end
-end
-
-local function apply(tbl)
-	for group, spec in pairs(tbl) do
-		hi(group, spec)
-	end
-end
-
-local function link_all(tbl)
-	for from, to in pairs(tbl) do
-		set_hl(0, from, { link = to, force = true })
-	end
-end
-
--- Single editor table. (It used to be split in "editor" + "classic", where
--- the second silently overrode the first.)
+-- Editor UI
 local editor = {
 	Normal = { fg = c.fg, bg = bg_main },
 	NormalNC = { fg = c.fg, bg = bg_main },
@@ -225,10 +123,9 @@ local editor = {
 	ColorColumn = { bg = c.line },
 	Conceal = { fg = c.func },
 	Cursor = { fg = P.bg, bg = P.fg },
-	CursorIM = { fg = P.bg, bg = P.bright },
 	CursorColumn = { bg = c.line },
 	CursorLine = { bg = NONE },
-	CursorLineNr = { fg = P.accent, fmt = "bold" },
+	CursorLineNr = { fg = P.accent, bold = true },
 	CursorLineSign = { bg = bg_main },
 	CursorLineFold = { fg = c.fg, bg = bg_main },
 	LineNr = { fg = c.ui, bg = bg_main },
@@ -241,19 +138,19 @@ local editor = {
 	NonText = { fg = c.ui },
 	SpecialKey = { fg = P.cyan },
 	Whitespace = { fg = "#282828" },
-	Directory = { fg = c.type, fmt = "bold" },
-	Title = { fg = P.bright, fmt = "bold" },
-	Underlined = { fg = c.fg, fmt = "underline" },
+	Directory = { fg = c.type, bold = true },
+	Title = { fg = P.bright, bold = true },
+	Underlined = { fg = c.fg, underline = true },
 	Ignore = { fg = c.ui },
 
 	Visual = { bg = c.visual },
-	VisualNOS = { bg = c.visual, fmt = "underline" },
+	VisualNOS = { bg = c.visual, underline = true },
 	Search = { fg = P.bright, bg = alert.search },
-	CurSearch = { fg = P.bg, bg = alert.current, fmt = "bold" },
-	IncSearch = { fg = P.bg, bg = alert.current, fmt = "bold" },
+	CurSearch = { fg = P.bg, bg = alert.current, bold = true },
+	IncSearch = { fg = P.bg, bg = alert.current, bold = true },
 	Substitute = { fg = P.bg, bg = P.mid },
-	MatchParen = { fg = P.white, bg = P.match, fmt = "bold" },
-	QuickFixLine = { bg = c.line, fmt = "bold" },
+	MatchParen = { fg = P.white, bg = P.match, bold = true },
+	QuickFixLine = { bg = c.line, bold = true },
 
 	-- Dedicated group for yank flash. Use it in your TextYankPost autocmd:
 	--   vim.hl.on_yank({ higroup = "YankHighlight" })
@@ -261,9 +158,9 @@ local editor = {
 
 	ErrorMsg = { fg = P.bright, bg = P.red },
 	WarningMsg = { fg = P.red },
-	ModeMsg = { fg = P.fg, fmt = "bold" },
-	MoreMsg = { fg = P.green, fmt = "bold" },
-	Question = { fg = P.green, fmt = "bold" },
+	ModeMsg = { fg = P.fg, bold = true },
+	MoreMsg = { fg = P.green, bold = true },
+	Question = { fg = P.green, bold = true },
 	MsgSeparator = { fg = c.ui, bg = c.line },
 
 	VertSplit = { fg = P.rule, bg = bg_main },
@@ -281,27 +178,27 @@ local editor = {
 
 	TitleBar = { fg = c.fg, bg = bg_main },
 	TitleBarNC = { fg = c.ui, bg = bg_main },
-	ToolbarButton = { fg = c.type, bg = c.line, fmt = "bold" },
+	ToolbarButton = { fg = c.type, bg = c.line, bold = true },
 	ToolbarLine = { bg = bg_main },
 
-	SpellBad = { sp = P.red, fmt = "underline" },
-	SpellCap = { sp = P.mid, fmt = "underline" },
-	SpellLocal = { sp = P.cyan, fmt = "underline" },
-	SpellRare = { sp = P.mid, fmt = "underline" },
+	SpellBad = { sp = P.red, underline = true },
+	SpellCap = { sp = P.mid, underline = true },
+	SpellLocal = { sp = P.cyan, underline = true },
+	SpellRare = { sp = P.mid, underline = true },
 
-	DiffAdd = { fg = P.fg, bg = "#1f2f4f" },
-	DiffChange = { fg = P.fg, bg = "#3f2f4f" },
-	DiffDelete = { fg = P.cyan, bg = "#1f3f3f" },
-	DiffText = { fg = P.bright, bg = "#6f2f2f", fmt = "bold" },
+	DiffAdd = { fg = P.fg, bg = P.diff_add_bg },
+	DiffChange = { fg = P.fg, bg = P.diff_change_bg },
+	DiffDelete = { fg = P.cyan, bg = P.diff_delete_bg },
+	DiffText = { fg = P.bright, bg = P.diff_text_bg, bold = true },
 	Added = { fg = P.green },
 	Changed = { fg = P.yellow },
 	Removed = { fg = P.red },
-	diffFile = { fg = c.type, fmt = "bold" },
+	diffFile = { fg = c.type, bold = true },
 	diffLine = { fg = c.alt },
 
 	NormalFloat = { fg = c.fg, bg = bg_float },
 	FloatBorder = { fg = c.ui, bg = bg_float },
-	FloatTitle = { fg = c.type, bg = bg_float, fmt = "bold" },
+	FloatTitle = { fg = c.type, bg = bg_float, bold = true },
 	FloatFooter = { fg = c.ui, bg = bg_float },
 	Pmenu = { fg = P.fg, bg = bg_float },
 	PmenuSel = { fg = P.bright, bg = P.visual },
@@ -309,11 +206,11 @@ local editor = {
 	PmenuKindSel = { fg = P.bright, bg = P.visual },
 	PmenuExtra = { fg = c.ui, bg = bg_float },
 	PmenuExtraSel = { fg = P.bright, bg = P.visual },
-	PmenuMatch = { fg = P.accent, bg = bg_float, fmt = "bold" },
-	PmenuMatchSel = { fg = P.accent, bg = P.visual, fmt = "bold" },
+	PmenuMatch = { fg = P.accent, bg = bg_float, bold = true },
+	PmenuMatchSel = { fg = P.accent, bg = P.visual, bold = true },
 	PmenuSbar = { bg = P.surface },
 	PmenuThumb = { bg = P.dim },
-	WildMenu = { fg = P.bright, bg = P.visual, fmt = "bold" },
+	WildMenu = { fg = P.bright, bg = P.visual, bold = true },
 
 	Terminal = { fg = c.fg, bg = bg_main },
 	TermCursor = { fg = P.bg, bg = P.fg },
@@ -321,6 +218,7 @@ local editor = {
 	debugBreakpoint = { fg = c.red },
 }
 
+-- Vim syntax groups
 local syntax = {
 	Comment = { fg = P.note },
 	Constant = { fg = P.pink },
@@ -331,22 +229,22 @@ local syntax = {
 	Float = { fg = P.pink },
 	Identifier = { fg = P.fg },
 	Function = { fg = P.fg },
-	Statement = { fg = c.keyword, fmt = "bold" },
-	Conditional = { fg = c.keyword, fmt = "bold" },
-	Repeat = { fg = c.keyword, fmt = "bold" },
-	Label = { fg = c.keyword, fmt = "bold" },
+	Statement = { fg = c.keyword, bold = true },
+	Conditional = { fg = c.keyword, bold = true },
+	Repeat = { fg = c.keyword, bold = true },
+	Label = { fg = c.keyword, bold = true },
 	Operator = { fg = P.fg },
-	Keyword = { fg = c.keyword, fmt = "bold" },
-	Exception = { fg = c.keyword, fmt = "bold" },
+	Keyword = { fg = c.keyword, bold = true },
+	Exception = { fg = c.keyword, bold = true },
 	PreProc = { fg = P.orange },
 	Include = { fg = P.orange },
 	Define = { fg = P.orange },
 	Macro = { fg = P.orange },
 	PreCondit = { fg = P.orange },
-	Type = { fg = c.type, fmt = "bold" },
-	StorageClass = { fg = c.type, fmt = "bold" },
-	Structure = { fg = c.type, fmt = "bold" },
-	Typedef = { fg = c.type, fmt = "bold" },
+	Type = { fg = c.type, bold = true },
+	StorageClass = { fg = c.type, bold = true },
+	Structure = { fg = c.type, bold = true },
+	Typedef = { fg = c.type, bold = true },
 	Special = { fg = P.orange },
 	SpecialChar = { fg = P.orange },
 	Tag = { fg = P.orange },
@@ -354,27 +252,29 @@ local syntax = {
 	SpecialComment = { fg = P.note },
 	Debug = { fg = P.orange },
 	Error = { fg = P.bright, bg = P.red },
-	Todo = { fg = P.bg, bg = P.accent, fmt = "bold" },
+	Todo = { fg = P.bg, bg = P.accent, bold = true },
 
 	-- Tags inside comments (TODO, NOTE, WARN...): brighter and bold, but no
 	-- new color. Handy for study notes.
-	["@comment.todo"] = { fg = P.bright, fmt = "bold" },
-	["@comment.note"] = { fg = P.bright, fmt = "bold" },
-	["@comment.warning"] = { fg = P.bright, fmt = "bold" },
-	["@comment.error"] = { fg = P.red, fmt = "bold" },
+	["@comment.todo"] = { fg = P.bright, bold = true },
+	["@comment.note"] = { fg = P.bright, bold = true },
+	["@comment.warning"] = { fg = P.bright, bold = true },
+	["@comment.error"] = { fg = P.red, bold = true },
 }
 
+-- LSP
 local lsp = {
 	-- Hints are not your text: keep them dimmer than comments.
 	LspInlayHint = { fg = P.dim, bg = c.line },
 	LspReferenceText = { bg = c.visual },
 	LspReferenceRead = { bg = c.visual },
-	LspReferenceWrite = { bg = c.visual, fmt = "underline" },
+	LspReferenceWrite = { bg = c.visual, underline = true },
 	LspCodeLens = { fg = P.dim },
 	LspCodeLensSeparator = { fg = P.dim },
-	LspSignatureActiveParameter = { fg = c.type, fmt = "bold,underline" },
+	LspSignatureActiveParameter = { fg = c.type, bold = true, underline = true },
 }
 
+-- Diagnostics
 local diag = {
 	DiagnosticError = { fg = c.red },
 	DiagnosticWarn = { fg = c.warn },
@@ -382,7 +282,7 @@ local diag = {
 	DiagnosticHint = { fg = P.mid },
 	DiagnosticOk = { fg = P.green },
 	DiagnosticUnnecessary = { fg = c.ui },
-	DiagnosticDeprecated = { fg = c.ui, fmt = "strikethrough" },
+	DiagnosticDeprecated = { fg = c.ui, strikethrough = true },
 
 	DiagnosticVirtualTextError = { fg = P.red },
 	DiagnosticVirtualTextWarn = { fg = P.orange },
@@ -390,11 +290,11 @@ local diag = {
 	DiagnosticVirtualTextHint = { fg = P.mid },
 	DiagnosticVirtualTextOk = { fg = P.green },
 
-	DiagnosticUnderlineError = { sp = P.red, fmt = "underline" },
-	DiagnosticUnderlineWarn = { sp = P.orange, fmt = "underline" },
-	DiagnosticUnderlineInfo = { sp = P.cyan, fmt = "underline" },
-	DiagnosticUnderlineHint = { sp = P.mid, fmt = "underline" },
-	DiagnosticUnderlineOk = { sp = P.green, fmt = "underline" },
+	DiagnosticUnderlineError = { sp = P.red, underline = true },
+	DiagnosticUnderlineWarn = { sp = P.orange, underline = true },
+	DiagnosticUnderlineInfo = { sp = P.cyan, underline = true },
+	DiagnosticUnderlineHint = { sp = P.mid, underline = true },
+	DiagnosticUnderlineOk = { sp = P.green, underline = true },
 
 	DiagnosticFloatingError = { fg = c.red },
 	DiagnosticFloatingWarn = { fg = c.warn },
@@ -406,6 +306,7 @@ local diag = {
 	DiagnosticSignHint = { fg = P.mid },
 }
 
+-- Markdown
 -- Heading levels fade in brightness, not in hue.
 local heading_levels = { P.bright, P.bright, P.fg, P.fg, P.mid, P.mid }
 
@@ -414,19 +315,19 @@ local markdown = {
 	["@punctuation.special.markdown"] = { fg = c.fg },
 	["@punctuation.delimiter.markdown"] = { fg = c.fg },
 
-	["@markup.list.markdown"] = { fg = c.alt, fmt = "bold" },
-	["@markup.list.checked.markdown"] = { fg = c.alt, fmt = "bold" },
-	["@markup.list.unchecked.markdown"] = { fg = c.alt, fmt = "bold" },
+	["@markup.list.markdown"] = { fg = c.alt, bold = true },
+	["@markup.list.checked.markdown"] = { fg = c.alt, bold = true },
+	["@markup.list.unchecked.markdown"] = { fg = c.alt, bold = true },
 
-	["@markup.quote.markdown"] = { fg = P.mid, fmt = "italic" },
+	["@markup.quote.markdown"] = { fg = P.mid, italic = true },
 
 	["@markup.raw.block.markdown"] = { fg = c.fg },
 	["@markup.raw.delimiter.markdown"] = { fg = c.alt },
-	["@label.markdown"] = { fg = c.alt, fmt = "italic" },
+	["@label.markdown"] = { fg = c.alt, italic = true },
 
-	["@markup.strong.markdown_inline"] = { fg = P.bright, fmt = "bold" },
-	["@markup.italic.markdown_inline"] = { fg = P.mid, fmt = "italic" },
-	["@markup.strikethrough.markdown_inline"] = { fg = c.ui, fmt = "strikethrough" },
+	["@markup.strong.markdown_inline"] = { fg = P.bright, bold = true },
+	["@markup.italic.markdown_inline"] = { fg = P.mid, italic = true },
+	["@markup.strikethrough.markdown_inline"] = { fg = c.ui, strikethrough = true },
 
 	["@markup.raw.markdown_inline"] = { fg = P.bright, bg = code_bg },
 	-- Math (inline and block) uses the theme's cyan.
@@ -436,19 +337,19 @@ local markdown = {
 	["@punctuation.special.markdown_inline"] = { fg = c.type },
 
 	["@markup.link.markdown_inline"] = { fg = c.ui },
-	["@markup.link.label.markdown_inline"] = { fg = c.type, bg = c.line, fmt = "underline" },
-	["@markup.link.url.markdown_inline"] = { fg = c.alt, fmt = "underline" },
+	["@markup.link.label.markdown_inline"] = { fg = c.type, bg = c.line, underline = true },
+	["@markup.link.url.markdown_inline"] = { fg = c.alt, underline = true },
 
 	["@string.escape.markdown_inline"] = { fg = c.alt },
 	["@conceal.markdown_inline"] = { fg = c.ui },
 
-	["@markup.heading.markdown"] = { fg = P.bright, fmt = "bold" },
+	["@markup.heading.markdown"] = { fg = P.bright, bold = true },
 	["@markup.heading.marker.markdown"] = { fg = P.bright },
 }
 
 for i, color in ipairs(heading_levels) do
-	local fmt = i == 1 and "bold,underline" or "bold"
-	markdown[("@markup.heading.%d.markdown"):format(i)] = { fg = color, fmt = fmt }
+	markdown[("@markup.heading.%d.markdown"):format(i)] =
+		i == 1 and { fg = color, bold = true, underline = true } or { fg = color, bold = true }
 	markdown[("@markup.heading.%d.marker.markdown"):format(i)] = { fg = color }
 end
 
@@ -481,100 +382,10 @@ local markdown_links = {
 	markdownEscape = "@string.escape.markdown_inline",
 }
 
--- Frontmatter YAML gets its own namespace, enabled only in markdown
--- windows. Regular YAML files are left untouched.
-local frontmatter_ns = vim.api.nvim_create_namespace("artifact_markdown")
-local frontmatter = {
-	-- Plain markdown text (no treesitter capture) uses the md color.
-	-- Headings, code, inline math and bold set their own fg, so they win.
-	Normal = { fg = c.md, bg = bg_main },
-	NormalNC = { fg = c.md, bg = bg_main },
-
-	["@property.yaml"] = { fg = c.alt },
-	["@string.yaml"] = { fg = c.fg },
-	["@number.yaml"] = { fg = c.number },
-	["@number.float.yaml"] = { fg = c.number },
-	["@boolean.yaml"] = { fg = c.number },
-	["@constant.builtin.yaml"] = { fg = P.mid },
-	["@label.yaml"] = { fg = c.alt },
-	["@type.yaml"] = { fg = c.alt },
-	["@punctuation.delimiter.yaml"] = { fg = c.ui },
-	["@punctuation.bracket.yaml"] = { fg = c.ui },
-}
-for name, spec in pairs(frontmatter) do
-	set_hl(frontmatter_ns, name, build(spec))
-end
-
--- LaTeX uses :syntax, so treesitter stays off for tex.
-local tex = {
-	texComment = { fg = c.comment },
-	texStatement = { fg = c.keyword },
-	texCmd = { fg = c.keyword },
-	texCmdName = { fg = c.keyword },
-	texCmdEnv = { fg = c.type },
-	texCmdPart = { fg = c.type, fmt = "bold" },
-	texCmdTitle = { fg = c.type, fmt = "bold" },
-	texCmdRef = { fg = c.alt },
-	texCmdClass = { fg = c.type },
-	texCmdPackage = { fg = c.type },
-	texCmdStyle = { fg = c.keyword, fmt = "italic" },
-	texCmdBold = { fg = c.type, fmt = "bold" },
-	texCmdItal = { fg = P.mid, fmt = "italic" },
-	texEnvName = { fg = c.type },
-	texBeginEnd = { fg = c.keyword },
-	texBeginEndName = { fg = c.type },
-	texSection = { fg = c.type, fmt = "bold" },
-	texPartArgTitle = { fg = c.type, fmt = "bold" },
-	texTitleArg = { fg = c.type, fmt = "bold" },
-	texRefArg = { fg = c.alt },
-	texOpt = { fg = P.mid },
-	texOptSep = { fg = c.punct },
-	texArg = { fg = c.fg },
-	texDelim = { fg = c.punct },
-	texMathZone = { fg = c.type },
-	texMathZoneEnv = { fg = c.type },
-	texMathZoneEnvStarred = { fg = c.type },
-	texMathZoneX = { fg = c.type },
-	texMathZoneXX = { fg = c.type },
-	texMathZoneEnsured = { fg = c.type },
-	texMathEnvArgName = { fg = c.alt },
-	texMathDelim = { fg = c.alt },
-	texMathDelimZone = { fg = c.alt },
-	texMathOper = { fg = c.operator },
-	texMathSymbol = { fg = c.type },
-	texMathCmd = { fg = c.keyword },
-	texMathCmdText = { fg = c.keyword },
-	texMathText = { fg = c.fg },
-	texMathSuperSub = { fg = c.alt },
-	texMathSub = { fg = c.type },
-	texMathSuper = { fg = c.type },
-	texNumber = { fg = c.number },
-	texSpecialChar = { fg = c.keyword },
-	texLength = { fg = c.number },
-	texFileArg = { fg = c.string },
-	texFileOpt = { fg = P.mid },
-	texTodo = { fg = P.bg, bg = P.accent, fmt = "bold" },
-	texError = { fg = c.red, fmt = "bold" },
-	texTheoremEnvOpt = { fg = P.mid },
-	texLigature = { fg = c.type },
-	texAccent = { fg = c.type },
-	texUrlArg = { fg = c.alt, fmt = "underline" },
-	texRefOpt = { fg = P.mid },
-	texCiteArg = { fg = c.alt },
-	texLabelArg = { fg = c.alt },
-	texVerbZone = { fg = c.fg, bg = code_bg },
-	texCmdVerb = { fg = c.keyword },
-	texInputFile = { fg = c.string },
-	VimtexInfo = { fg = P.cyan },
-	VimtexWarning = { fg = c.warn },
-	VimtexError = { fg = c.red },
-	VimtexSuccess = { fg = c.type },
-}
-
 local plugins = {}
 
 plugins.oil = {
-	OilDir = { fg = P.bright, fmt = "bold" },
+	OilDir = { fg = P.bright, bold = true },
 	OilDirIcon = { fg = P.bright },
 	OilFile = { fg = c.fg },
 	OilLink = { fg = P.mid },
@@ -582,24 +393,24 @@ plugins.oil = {
 	OilOrphanLink = { fg = c.red },
 	OilOrphanLinkTarget = { fg = c.red },
 	OilHidden = { fg = c.dim },
-	OilDirHidden = { fg = P.dim, fmt = "bold" },
+	OilDirHidden = { fg = P.dim, bold = true },
 	OilFileHidden = { fg = P.dim },
 	OilLinkHidden = { fg = P.dim },
 	OilOrphanLinkHidden = { fg = c.red },
-	OilExecutable = { fg = P.fg, fmt = "bold" },
+	OilExecutable = { fg = P.fg, bold = true },
 	OilSocket = { fg = P.mid },
 
-	OilCreate = { fg = c.type, fmt = "bold" },
-	OilCopy = { fg = c.type, fmt = "bold" },
+	OilCreate = { fg = c.type, bold = true },
+	OilCopy = { fg = c.type, bold = true },
 	OilMove = { fg = c.warn },
 	OilChange = { fg = c.warn },
 	OilDelete = { fg = c.red },
-	OilPurge = { fg = c.red, fmt = "bold" },
-	OilRestore = { fg = c.type, fmt = "bold" },
+	OilPurge = { fg = c.red, bold = true },
+	OilRestore = { fg = c.type, bold = true },
 	OilTrash = { fg = c.ui },
 	OilTrashSourcePath = { fg = c.ui },
 
-	OilTypeDir = { fg = P.bright, fmt = "bold" },
+	OilTypeDir = { fg = P.bright, bold = true },
 	OilTypeFile = { fg = c.ui },
 	OilTypeLink = { fg = P.mid },
 	OilTypeFifo = { fg = c.ui },
@@ -616,71 +427,6 @@ plugins.special = {
 	MasonNormal = { bg = bg_float },
 }
 
-plugins.blink = {
-	BlinkCmpMenu = { link = "Pmenu" },
-	BlinkCmpMenuBorder = { link = "FloatBorder" },
-	BlinkCmpMenuSelection = { link = "PmenuSel" },
-	BlinkCmpScrollBarThumb = { link = "PmenuThumb" },
-	BlinkCmpScrollBarGutter = { link = "PmenuSbar" },
-	BlinkCmpLabel = { link = "Pmenu" },
-	BlinkCmpLabelMatch = { link = "PmenuMatch" },
-	BlinkCmpLabelDeprecated = { fg = c.ui, fmt = "strikethrough" },
-	BlinkCmpLabelDetail = { fg = c.ui },
-	BlinkCmpLabelDescription = { fg = c.ui },
-	BlinkCmpKind = { link = "PmenuKind" },
-	BlinkCmpSource = { link = "PmenuExtra" },
-	BlinkCmpGhostText = { fg = P.dim },
-	BlinkCmpDoc = { link = "NormalFloat" },
-	BlinkCmpDocBorder = { link = "FloatBorder" },
-	BlinkCmpDocSeparator = { link = "FloatBorder" },
-	BlinkCmpDocCursorLine = { bg = c.visual },
-	BlinkCmpSignatureHelp = { link = "NormalFloat" },
-	BlinkCmpSignatureHelpBorder = { link = "FloatBorder" },
-	BlinkCmpSignatureHelpActiveParameter = { fg = c.type, fmt = "bold,underline" },
-}
-
-do
-	local kind_color = {
-		Default = c.keyword,
-		Array = c.keyword,
-		Boolean = c.constant,
-		Class = c.type,
-		Color = c.fg,
-		Constant = c.constant,
-		Constructor = c.type,
-		Enum = c.type,
-		EnumMember = c.constant,
-		Event = P.orange,
-		Field = c.property,
-		File = c.fg,
-		Folder = P.mid,
-		Function = c.func,
-		Interface = c.type,
-		Key = c.keyword,
-		Keyword = c.keyword,
-		Method = c.func,
-		Module = P.mid,
-		Namespace = P.mid,
-		Null = c.type,
-		Number = c.number,
-		Object = c.type,
-		Operator = c.operator,
-		Package = P.mid,
-		Property = c.property,
-		Reference = c.type,
-		Snippet = P.orange,
-		String = c.string,
-		Struct = c.type,
-		Text = c.fg,
-		TypeParameter = c.type,
-		Unit = c.fg,
-		Value = c.fg,
-		Variable = c.fg,
-	}
-	for kind, color in pairs(kind_color) do
-		plugins.blink["BlinkCmpKind" .. kind] = { fg = color }
-	end
-end
 
 plugins.gitsigns = {
 	GitSignsAdd = { link = "Added" },
@@ -708,10 +454,9 @@ plugins.dashboard = {
 	DashboardHeader = { fg = c.keyword },
 	DashboardCenter = { fg = c.fg },
 	DashboardFooter = { fg = c.func },
-	MiniStarterHeader = { fg = c.keyword },
-	MiniStarterFooter = { fg = c.keyword },
 }
 
+-- Links (hi! link)
 local links = {
 	MessageWindow = "Pmenu",
 	PopupNotification = "Todo",
@@ -744,37 +489,38 @@ local links = {
 	LspDiagnosticsVirtualTextHint = "DiagnosticVirtualTextHint",
 }
 
+-- Apply
+
 apply(editor)
 apply(syntax)
 apply(lsp)
 apply(diag)
 apply(markdown)
-apply(tex)
 for _, group in pairs(plugins) do
 	apply(group)
 end
-link_all(links)
-link_all(markdown_links)
+lib.apply(links)
+lib.apply(markdown_links)
 
-local function sync_frontmatter_ns()
-	for _, win in ipairs(vim.api.nvim_list_wins()) do
-		local buf = vim.api.nvim_win_get_buf(win)
-		if vim.bo[buf].filetype == "markdown" then
-			vim.api.nvim_win_set_hl_ns(win, frontmatter_ns)
-			vim.w[win].artifact_markdown_ns = true
-		elseif vim.w[win].artifact_markdown_ns then
-			vim.api.nvim_win_set_hl_ns(win, 0)
-			vim.w[win].artifact_markdown_ns = nil
-		end
-	end
-end
+-- Frontmatter (YAML injected into markdown): plain markdown text (no
+-- treesitter capture) uses the md color; headings, code, inline math and
+-- bold set their own fg, so they win.
+local frontmatter = {
+	Normal = { fg = c.md, bg = bg_main },
+	NormalNC = { fg = c.md, bg = bg_main },
 
-local aug = vim.api.nvim_create_augroup("ArtifactTheme", { clear = true })
-vim.api.nvim_create_autocmd({ "FileType", "BufWinEnter", "BufEnter", "WinEnter" }, {
-	group = aug,
-	callback = sync_frontmatter_ns,
-})
-sync_frontmatter_ns()
+	["@property.yaml"] = { fg = c.alt },
+	["@string.yaml"] = { fg = c.fg },
+	["@number.yaml"] = { fg = c.number },
+	["@number.float.yaml"] = { fg = c.number },
+	["@boolean.yaml"] = { fg = c.number },
+	["@constant.builtin.yaml"] = { fg = P.mid },
+	["@label.yaml"] = { fg = c.alt },
+	["@type.yaml"] = { fg = c.alt },
+	["@punctuation.delimiter.yaml"] = { fg = c.ui },
+	["@punctuation.bracket.yaml"] = { fg = c.ui },
+}
+local aug = lib.frontmatter("artifact_markdown", frontmatter)
 
 -- Oil sometimes resets its groups on open. Apply them again.
 vim.api.nvim_create_autocmd("FileType", {
@@ -782,12 +528,13 @@ vim.api.nvim_create_autocmd("FileType", {
 	pattern = "oil",
 	callback = function()
 		if vim.g.colors_name == "artifact" then
-			apply(plugins.oil)
+			lib.apply(gate(plugins.oil))
 		end
 	end,
 })
 
-local term = {
+-- Terminal palette
+lib.terminal_colors({
 	P.bg,
 	P.red,
 	P.green,
@@ -804,7 +551,4 @@ local term = {
 	P.magenta,
 	P.cyan,
 	P.bright,
-}
-for i, color in ipairs(term) do
-	vim.g["terminal_color_" .. (i - 1)] = color
-end
+})
