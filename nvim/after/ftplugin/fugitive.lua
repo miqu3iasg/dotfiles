@@ -1,11 +1,5 @@
 -- after/ftplugin/fugitive.lua
 
-local opt = vim.opt_local
-
-opt.number = false
-opt.relativenumber = false
-opt.signcolumn = "no"
-
 local function map(lhs, rhs, desc, remap)
 	vim.keymap.set("n", lhs, rhs, {
 		buffer = true,

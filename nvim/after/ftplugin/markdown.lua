@@ -19,8 +19,6 @@ local opt = vim.opt_local
 opt.wrap = true
 opt.linebreak = true
 opt.breakindent = true
-opt.spell = false
-opt.list = false
 opt.fillchars:append({ eob = " " })
 opt.spelllang = { "pt_br", "en_us" }
 opt.textwidth = 100
@@ -30,8 +28,6 @@ opt.formatoptions:append({ "r", "o" })
 opt.suffixesadd:append(".md")
 -- See: lua/plugins/formatting.lua
 opt.expandtab = vim.g.markdown_use_tabs == false
-opt.tabstop = 4
-opt.shiftwidth = 4
 opt.softtabstop = -1
 
 require("modules.pandoc").setup()

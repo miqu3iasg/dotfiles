@@ -11,13 +11,8 @@
 local jdtls = require("language.servers.jdtls")
 local opt = vim.opt_local
 
-opt.wrap = false
-opt.expandtab = true
-opt.tabstop = 4
-opt.shiftwidth = 4
 opt.softtabstop = -1
 opt.textwidth = 120
-opt.spell = false
 opt.formatoptions:remove("t")
 opt.formatoptions:append({ "r", "o" })
 opt.suffixesadd:append(".java")

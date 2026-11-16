@@ -3,8 +3,6 @@
 -- See: https://github.com/chrisbra/csv.vim/blob/master/autoload/csv.vim
 -- See: https://github.com/chrisbra/csv.vim/blob/master/syntax/csv.vim
 
-vim.opt_local.wrap = false
-vim.opt_local.colorcolumn = ""
 vim.b.no_trim_whitespace = true
 
 local map = function(lhs, rhs, desc)

@@ -3,10 +3,6 @@
 local opt = vim.opt_local
 
 opt.foldenable = false
-opt.wrap = false
-opt.number = false
-opt.relativenumber = false
-opt.cursorline = false
 
 local function map(lhs, rhs, desc)
 	vim.keymap.set("n", lhs, rhs, { buffer = true, silent = true, nowait = true, desc = desc })

@@ -9,9 +9,6 @@ local opt = vim.opt_local
 
 -- Tabs, as in stylua's default style.
 opt.expandtab = false
-opt.tabstop = 4
-opt.shiftwidth = 4
-opt.softtabstop = 4
 
 -- Limit used by `gq` and by the color column toggle. Comments are kept within
 -- 120 columns, while stylua decides how long code lines can be.
