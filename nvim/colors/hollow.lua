@@ -298,7 +298,7 @@ local syntax = {
 	PreProc = { fg = p.fg_alt },
 	Special = { fg = p.fg },
 	Ignore = { fg = p.fg },
-	Underlined = { fg = p.fg },
+	Underlined = { fg = p.fg, underline = true },
 	Title = { fg = p.fg, bold = true },
 
 	Delimiter = { fg = t.delim },
@@ -340,6 +340,7 @@ local treesitter = {
 	["@constant.builtin"] = { fg = t.const },
 	["@string.escape"] = { fg = t.special },
 	["@string.special"] = { fg = t.special },
+	["@string.special.url"] = { fg = p.fg_alt, underline = true }, -- URIs (incl. the `comment` parser injection)
 
 	-- Punctuation and operators
 	["@punctuation"] = { fg = t.delim },
