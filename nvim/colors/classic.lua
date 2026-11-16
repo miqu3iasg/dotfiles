@@ -1,25 +1,10 @@
 -- colors/classic.lua
 
--- For those who preserve tradition. A colorscheme in the spirit of the
--- classic light-on-black C look: blue comments, yellow keywords, orange
--- strings, pink preprocessor - and everything else left at the default
--- text color, so only the structure of code is colored.
---
--- Design decisions:
---
--- - No terminal colors are defined: `:terminal` keeps Neovim's defaults,
---   because the scheme colors syntax, not terminal output.
--- - Treesitter captures mirror the legacy :syntax groups explicitly (the
---   defaults link several of them to Special, which would break the look).
--- - YAML frontmatter is themed in the global namespace on purpose: in this
---   scheme the frontmatter treatment is deliberately the same as plain YAML.
--- - Diff and search colors are shared with hollow: both schemes wanted the
---   same quiet, tinted-bg treatment, so the values are kept in sync by hand.
+-- For those who preserve tradition.
 --
 -- Copyright (c) Miquéias Alves Medeiros <https://github.com/miqu3iasg>
 --
--- See: lua/lib/colors.lua      the shared color helpers this builds on
--- See: colors/hollow.lua       shares the diff and search palettes
+-- See: lua/lib/colors.lua
 --
 -- SPDX-License-Identifier: Vim
 

@@ -3,30 +3,15 @@
 -- A hollowed-out variant of the `quiet` colorscheme (Maxence Weynans),
 -- reduced to near-monochrome: pale gray text on pure black, with a single
 -- blue accent left for status signals. Meant for distraction-free,
--- high-contrast editing in true-color terminals or graphical clients.
--- The original Vimscript scheme was ported wholesale to Lua for Neovim.
---
--- Design decisions:
---
--- - `termguicolors` is deliberately not forced: the scheme presumes a
---   true-color client and lets it stay off when the user wants that.
--- - `background` is set at the end, so Neovim re-applies the scheme (its
---   `colors_name` is already set by then); the reload is the documented
---   trigger, not an accident.
--- - The micro-palette `t` gives tiny luminance steps so structure
---   (brackets, delimiters), operations and values separate without ever
---   reading as "color".
--- - Diff and search colors are shared with classic: both schemes wanted the
---   same quiet, tinted-bg treatment, so the values are kept in sync by hand.
--- - YAML frontmatter is themed through its own namespace, active only in
---   markdown windows, so plain YAML files are untouched.
+-- high-contrast editing in true-color terminals or graphical clients
+-- ('termguicolors' required). The original Vimscript scheme was ported
+-- wholesale to Lua for Neovim.
 --
 -- Copyright (c) Maxence Weynans <neutaaaaan@gmail.com>
 -- Copyright (c) Miquéias Alves Medeiros <https://github.com/miqu3iasg>
 --
--- See: lua/lib/colors.lua           the shared color helpers this builds on
--- See: colors/classic.lua           shares the diff and search palettes
--- See: https://github.com/vim/colorschemes   the upstream `quiet` scheme
+-- See: lua/lib/colors.lua
+-- See: `:help license`
 --
 -- SPDX-License-Identifier: Vim
 
@@ -467,28 +452,6 @@ local links = {
 	GitSignsDeletePreview = "DiffDelete",
 	GitSignsDeleteVirtLn = "DiffDelete",
 	GitSignsDeleteVirtLnInLine = "DiffDeleteText",
-
-	-- blink.cmp
-	BlinkCmpMenu = "Pmenu",
-	BlinkCmpMenuBorder = "FloatBorder",
-	BlinkCmpMenuSelection = "PmenuSel",
-	BlinkCmpScrollBarThumb = "PmenuThumb",
-	BlinkCmpScrollBarGutter = "PmenuSbar",
-	BlinkCmpLabel = "Pmenu",
-	BlinkCmpLabelMatch = "PmenuMatch",
-	BlinkCmpKind = "PmenuKind",
-	BlinkCmpSource = "PmenuExtra",
-	BlinkCmpDoc = "NormalFloat",
-	BlinkCmpDocBorder = "FloatBorder",
-	BlinkCmpDocSeparator = "FloatBorder",
-	BlinkCmpSignatureHelp = "NormalFloat",
-	BlinkCmpSignatureHelpBorder = "FloatBorder",
-
-	-- nvim-cmp
-	CmpItemAbbrMatch = "PmenuMatch",
-	CmpItemAbbrMatchFuzzy = "PmenuMatch",
-	CmpItemKind = "PmenuKind",
-	CmpItemMenu = "PmenuExtra",
 
 	-- Markdown legacy :syntax groups (regex highlighter)
 	markdownH1 = "@markup.heading.1.markdown",
