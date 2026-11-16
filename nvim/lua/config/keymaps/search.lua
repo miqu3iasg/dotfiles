@@ -60,35 +60,35 @@ end, { desc = "Flash current line" })
 km("n", "<Esc>", "<cmd>nohlsearch<cr>", { desc = "Clear search highlights" })
 
 -- Grep in the project (quickfix)
-km("n", "<leader>sg", function()
+km("n", "<leader>eg", function()
 	search.grep(vim.fn.input("Grep> "))
 end, { desc = "Grep in project (regex)" })
 
-km("n", "<leader>sr", function()
+km("n", "<leader>er", function()
 	search.grep(vim.fn.expand("<cword>"), "-F -w")
 end, { desc = "Grep word under cursor in project" })
 
-km("v", "<leader>sg", function()
+km("v", "<leader>eg", function()
 	local text = search.get_selection()
 	vim.cmd("normal! \27") -- leave visual mode
 	search.grep(text, "-F")
 end, { desc = "Grep selection in project" })
 
 -- Grep in the current buffer (location list)
-km("n", "<leader>sl", function()
+km("n", "<leader>el", function()
 	search.buffer_grep(vim.fn.input("Buffer grep> "))
 end, { desc = "Grep in current buffer (loclist)" })
 
 -- Lines matching the last search, in the current buffer
-km("n", "<leader>s/", "<cmd>g//#<cr>", { desc = "List lines matching last search" })
+km("n", "<leader>e/", "<cmd>g//#<cr>", { desc = "List lines matching last search" })
 
 -- Lines containing the word under the cursor (also in included files)
-km("n", "<leader>si", "[I", { desc = "List lines with word under cursor" })
+km("n", "<leader>ei", "[I", { desc = "List lines with word under cursor" })
 
 -- Files, buffers and history
-km("n", "<leader>sf", ":find *", { desc = "Find file by name" })
-km("n", "<leader>su", ":ls<cr>:b<space>", { desc = "Pick buffer" })
-km("n", "<leader>sp", "<cmd>oldfiles<cr>:edit #<", { desc = "Pick recent file" })
-km("n", "<leader>sa", "<cmd>marks<cr>:normal! `", { desc = "Pick mark" })
-km("n", "<leader>sh", ":help ", { desc = "Search help" })
-km("n", "<leader>sH", ":helpgrep ", { desc = "Grep in all help files" })
+km("n", "<leader>ef", ":find *", { desc = "Find file by name" })
+km("n", "<leader>eu", ":ls<cr>:b<space>", { desc = "Pick buffer" })
+km("n", "<leader>ep", "<cmd>oldfiles<cr>:edit #<", { desc = "Pick recent file" })
+km("n", "<leader>ea", "<cmd>marks<cr>:normal! `", { desc = "Pick mark" })
+km("n", "<leader>eh", ":help ", { desc = "Search help" })
+km("n", "<leader>eH", ":helpgrep ", { desc = "Grep in all help files" })

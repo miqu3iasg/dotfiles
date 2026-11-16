@@ -148,10 +148,6 @@ vim.api.nvim_create_autocmd("FileType", {
 	end,
 })
 
-vim.keymap.set("n", "<leader>e", "<CMD>Oil<CR>", {
-	desc = "Open parent directory",
-})
-
 vim.keymap.set("n", "go", "<CMD>Oil<CR>", {
 	desc = "Open parent directory",
 })
