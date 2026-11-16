@@ -3,21 +3,37 @@
 -- A hollowed-out variant of the `quiet` colorscheme (Maxence Weynans),
 -- reduced to near-monochrome: pale gray text on pure black, with a single
 -- blue accent left for status signals. Meant for distraction-free,
--- high-contrast editing in true-color terminals or graphical clients
--- ('termguicolors' required). The original Vimscript scheme was ported
--- wholesale to Lua for Neovim.
+-- high-contrast editing in true-color terminals or graphical clients.
+-- The original Vimscript scheme was ported wholesale to Lua for Neovim.
+--
+-- Design decisions:
+--
+-- - `termguicolors` is deliberately not forced: the scheme presumes a
+--   true-color client and lets it stay off when the user wants that.
+-- - `background` is set at the end, so Neovim re-applies the scheme (its
+--   `colors_name` is already set by then); the reload is the documented
+--   trigger, not an accident.
+-- - The micro-palette `t` gives tiny luminance steps so structure
+--   (brackets, delimiters), operations and values separate without ever
+--   reading as "color".
+-- - Diff and search colors are shared with classic: both schemes wanted the
+--   same quiet, tinted-bg treatment, so the values are kept in sync by hand.
+-- - YAML frontmatter is themed through its own namespace, active only in
+--   markdown windows, so plain YAML files are untouched.
 --
 -- Copyright (c) Maxence Weynans <neutaaaaan@gmail.com>
 -- Copyright (c) Miquéias Alves Medeiros <https://github.com/miqu3iasg>
 --
--- See: `:help license`
+-- See: lua/lib/colors.lua           the shared color helpers this builds on
+-- See: colors/classic.lua           shares the diff and search palettes
+-- See: https://github.com/vim/colorschemes   the upstream `quiet` scheme
 --
 -- SPDX-License-Identifier: Vim
 
 vim.cmd("runtime colors/vim.lua")
 vim.g.colors_name = "hollow"
 
-local set_hl = vim.api.nvim_set_hl
+local colors = require("lib.colors")
 
 -- Palette
 local p = {
@@ -27,8 +43,6 @@ local p = {
 	fg = "#d6d6d6", -- default text
 	fg_alt = "#d6d6d6", -- statements, types, preproc
 	string = "#d6d6d6",
-	punct = "#e2e2e2",
-	tailwind = "#e2e2e2",
 	dim = "#707070",
 	comment = "#787470",
 	doc = "#7a7a7a",
@@ -90,7 +104,6 @@ local p = {
 
 	-- Micro-palette for tiny luminance steps so structure, operations and
 	-- values separate without ever reading as "color"
-	-- Default version
 	t = {
 		op = "#ebebeb", -- + - = == => && ||
 		special = "#f6f6f6", -- ${}, escapes, special regex chars
@@ -99,110 +112,10 @@ local p = {
 		bracket = "#bcbcbc", -- ( ) [ ] { }
 		delim = "#989898", -- , ; . :
 	},
-
-	-- Contrast version
-	-- t = {
-	-- 	op = "#f6f6f6", -- + - = == => && ||
-	-- 	special = "#ffffff", -- ${}, escapes, special regex chars
-	-- 	const = "#ededed", -- numbers, booleans, nil
-	-- 	prop = "#b4b4b4", -- fields and properties (obj.field)
-	-- 	bracket = "#9a9a9a", -- ( ) [ ] { }
-	-- 	delim = "#808080", -- , ; . :
-	-- },
 }
 
 local md = p.markdown
 local t = p.t
-
--- Helpers
-
-local GUI_ATTRS = { "bold", "italic", "underline", "undercurl", "reverse", "strikethrough" }
-
--- xterm-256 has a 6x6x6 color cube (levels 0,95,135,175,215,255) and a
--- 24-step gray ramp (8,18,...,238). For every hex we compute the closest
--- candidate in each and keep the nearest one (euclidean RGB distance).
--- Results are cached, so the cost is paid once per distinct color
-
-local CUBE = { 0, 95, 135, 175, 215, 255 }
-local cterm_cache = {}
-
-local function rgb(hex)
-	return tonumber(hex:sub(2, 3), 16), tonumber(hex:sub(4, 5), 16), tonumber(hex:sub(6, 7), 16)
-end
-
-local function dist2(r1, g1, b1, r2, g2, b2)
-	return (r1 - r2) ^ 2 + (g1 - g2) ^ 2 + (b1 - b2) ^ 2
-end
-
-local function nearest_cube_level(v)
-	local best_i, best_d = 1, math.huge
-	for i, c in ipairs(CUBE) do
-		local d = math.abs(v - c)
-		if d < best_d then
-			best_i, best_d = i, d
-		end
-	end
-	return best_i - 1
-end
-
-local function hex_to_256(hex)
-	if cterm_cache[hex] then
-		return cterm_cache[hex]
-	end
-
-	local r, g, b = rgb(hex)
-
-	-- Best color-cube candidate
-	local ri, gi, bi = nearest_cube_level(r), nearest_cube_level(g), nearest_cube_level(b)
-	local cube_d = dist2(r, g, b, CUBE[ri + 1], CUBE[gi + 1], CUBE[bi + 1])
-
-	-- Best gray-ramp candidate
-	local step = math.max(0, math.min(23, math.floor(((r + g + b) / 3 - 8) / 10 + 0.5)))
-	local gv = 8 + 10 * step
-	local gray_d = dist2(r, g, b, gv, gv, gv)
-
-	local idx = gray_d < cube_d and (232 + step) or (16 + 36 * ri + 6 * gi + bi)
-	cterm_cache[hex] = idx
-	return idx
-end
-
-local function is_hex(v)
-	return type(v) == "string" and v:match("^#%x%x%x%x%x%x$") ~= nil
-end
-
--- Turns a group spec into `nvim_set_hl` options.
--- ctermfg/ctermbg are derived from fg/bg unless given explicitly.
-local function normalize(spec)
-	if type(spec) == "string" then
-		return { link = spec, force = true }
-	end
-
-	local opts = vim.deepcopy(spec)
-
-	if is_hex(opts.fg) and not opts.ctermfg then
-		opts.ctermfg = hex_to_256(opts.fg)
-	end
-	if is_hex(opts.bg) and not opts.ctermbg then
-		opts.ctermbg = hex_to_256(opts.bg)
-	end
-
-	if not opts.cterm then
-		opts.cterm = {}
-		for _, attr in ipairs(GUI_ATTRS) do
-			if opts[attr] then
-				-- terminals without undercurl support fall back to underline
-				opts.cterm[attr == "undercurl" and "underline" or attr] = true
-			end
-		end
-	end
-	return opts
-end
-
-local function apply(groups, ns)
-	for name, spec in pairs(groups) do
-		set_hl(ns or 0, name, normalize(spec))
-	end
-end
 
 -- Highlight groups
 
@@ -607,39 +520,17 @@ local links = {
 
 -- Apply
 
-vim.o.background = "dark"
-
-apply(links)
-apply(editor)
-apply(syntax)
-apply(popup)
-apply(treesitter)
-apply(diagnostics)
-apply(diff)
-apply(markdown)
+colors.apply(links)
+colors.apply(editor)
+colors.apply(syntax)
+colors.apply(popup)
+colors.apply(treesitter)
+colors.apply(diagnostics)
+colors.apply(diff)
+colors.apply(markdown)
 
 -- Autocommands
 
-local frontmatter_ns = vim.api.nvim_create_namespace("hollow_markdown")
+colors.frontmatter("hollow_markdown", frontmatter)
 
-apply(frontmatter, frontmatter_ns)
-
-local function sync_frontmatter_ns()
-	for _, win in ipairs(vim.api.nvim_list_wins()) do
-		local buf = vim.api.nvim_win_get_buf(win)
-		if vim.bo[buf].filetype == "markdown" then
-			vim.api.nvim_win_set_hl_ns(win, frontmatter_ns)
-			vim.w[win].hollow_markdown_ns = true
-		elseif vim.w[win].hollow_markdown_ns then
-			vim.api.nvim_win_set_hl_ns(win, 0)
-			vim.w[win].hollow_markdown_ns = nil
-		end
-	end
-end
-
-vim.api.nvim_create_autocmd({ "FileType", "BufWinEnter", "BufEnter", "WinEnter" }, {
-	group = vim.api.nvim_create_augroup("HollowMarkdown", { clear = true }),
-	callback = sync_frontmatter_ns,
-})
-
-sync_frontmatter_ns()
+vim.o.background = "dark"
