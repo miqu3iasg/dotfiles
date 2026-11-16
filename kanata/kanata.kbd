@@ -5,7 +5,7 @@ Lock and is remapped at the kernel level, so kanata sees it as a regular left
 Ctrl and passes it through untouched. Esc, Win, AltGr and Alt (the i3 mod key)
 are not remapped.
 
-There are three kinds of dual-function keys. In all of them a tap types the
+There are two kinds of dual-function keys. In both of them a tap types the
 letter and a hold does something else:
 
 - Layer keys. Holding A activates the num layer (a numpad on the right hand and
@@ -15,9 +15,6 @@ letter and a hold does something else:
 - Shift keys. Holding W gives left Shift and holding O gives right Shift. Each
   one only becomes Shift when the next key comes from the opposite hand, so
   fast typing on the same hand stays a tap.
-- Ctrl keys. Holding E gives left Ctrl and holding I gives right Ctrl. Unlike
-  Shift, these work with keys from either hand, so same-hand combos such as
-  Ctrl+W or Ctrl+D in vim are possible.
 
 The H, J, K and L keys are not touched, so they stay free for vim.
 
@@ -39,10 +36,10 @@ position, and a few of those keys print a different character on ABNT2.
   #|
   When a tap-hold key is pressed within this many milliseconds of the previous
   key press, it is resolved as a tap right away, without waiting for the
-  tap-or-hold decision. This removes the delay on A, C-cedilla, W, O, E and I
-  while typing words. The cost is that a hold only works after a pause of at
-  least this long since the last key. If the delay is still noticeable, raise
-  it. If layers, Shift or Ctrl fire by accident while typing fast, lower it.
+  tap-or-hold decision. This removes the delay on A, C-cedilla, W and O while
+  typing words. The cost is that a hold only works after a pause of at least
+  this long since the last key. If the delay is still noticeable, raise it. If
+  layers or Shift fire by accident while typing fast, lower it.
   |#
   tap-hold-require-prior-idle 150
 )
@@ -73,15 +70,14 @@ Timeouts in milliseconds. The first number of a tap-hold action is the
 tap-repress timeout (how soon a repeated press right after a tap still counts
 as a tap). The second one is the hold timeout.
 
-All the dual-function keys (A, C-cedilla, W, O, E and I) use tap-hold-release,
-so the hold only wins when another key is pressed and released while the first
+All the dual-function keys (A, C-cedilla, W and O) use tap-hold-release, so
+the hold only wins when another key is pressed and released while the first
 one is still down. This avoids false holds while typing fast. They follow the
 global require-prior-idle value from defcfg.
 
-If a slow tap still turns into a hold, or a fast roll turns into a layer, a
-Shift or a Ctrl, raise hold-layer and hold-mod in steps of 20 to 50. If the
-hold takes too long to kick in, lower them. The Shift and Ctrl keys share
-hold-mod.
+If a slow tap still turns into a hold, or a fast roll turns into a layer or a
+Shift, raise hold-layer and hold-mod in steps of 20 to 50. If the hold takes
+too long to kick in, lower them. The Shift keys use hold-mod.
 |#
 (defvar
   tap        200
@@ -103,12 +99,6 @@ hold-mod.
          (q e r t a s d f g z x c v b 1 2 3 4 5 grv tab))
   osft (tap-hold-release-keys $tap $hold-mod o rsft
          (y u i p [ h j k l scln n m , . / 6 7 8 9 0 - =))
-
-  ;; The Ctrl keys. There is no list of keys here, so a key from either hand
-  ;; can turn the press into Ctrl, as long as it is pressed and released while
-  ;; E or I is still down.
-  ectl (tap-hold-release $tap $hold-mod e lctl)
-  ictl (tap-hold-release $tap $hold-mod i rctl)
 
   ;; From here on, every alias is named after the character it types on an
   ;; ABNT2 layout. The first ones are shifted characters from the digit row.
@@ -152,7 +142,7 @@ hold-mod.
 )
 
 (deflayer base
-  q    @wsft @ectl r    t    y    u    @ictl @osft p    [
+  q    @wsft e    r    t    y    u    i    @osft p    [
   @anum s    d    f    g    h    j    k    l    @csym
   z    x    c    v    b    n    m    ,    .    /
 )
