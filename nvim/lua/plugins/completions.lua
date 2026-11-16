@@ -152,8 +152,11 @@ vim.api.nvim_create_autocmd("LspAttach", {
 })
 
 -- Neovim recycles buffer numbers, so a wiped buffer must leave the table, or
--- the buffer that later reuses its number never gets completion.
-vim.api.nvim_create_autocmd("BufWipeout", {
+-- the buffer that later reuses its number never gets completion. A client
+-- restart or reload also detaches the buffer, and the runtime clears the
+-- buffer's completion handle, so the flag must go as well, or the next
+-- `LspAttach` skips re-enabling and the buffer loses completion for good.
+vim.api.nvim_create_autocmd({ "BufWipeout", "LspDetach" }, {
 	group = vim.api.nvim_create_augroup("NativeLspCompletion", { clear = false }),
 	callback = function(ev)
 		completion_bufs[ev.buf] = nil
