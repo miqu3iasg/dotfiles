@@ -1,4 +1,11 @@
-" Dumped from Vim 902 | term=tmux-256color | t_Co=256 | background=dark
+" colors/plain.vim
+
+" The Vim default colorscheme, just as Vim ships it.
+"
+" Copyright (c) Miquéias Medeiros <contatomiqueiasalvesdev@gmail.com>
+"
+" SPDX-License-Identifier: MIT
+
 set background=dark
 hi clear
 if exists("syntax_on") | syntax reset | endif
