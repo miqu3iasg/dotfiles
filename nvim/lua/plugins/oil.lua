@@ -70,6 +70,38 @@ local goto_cwd = goto_dir(function()
 	return vim.fn.getcwd()
 end, "Open cwd")
 
+local keymaps = {
+	-- Disabled to avoid conflicts with the tmux navigation keys.
+	["<C-c>"] = false,
+	["<C-h>"] = false,
+	["<C-l>"] = false,
+	["-"] = "actions.parent",
+	["<CR>"] = "actions.select",
+	["H"] = "actions.parent",
+	["L"] = "actions.select",
+	["sh"] = "actions.select_split",
+	["sv"] = "actions.select_vsplit",
+	["gp"] = {
+		"actions.preview",
+		opts = {
+			vertical = true,
+			split = "botright",
+		},
+	},
+	["gR"] = "actions.refresh",
+	["<C-r>"] = "actions.refresh",
+	["gs"] = "actions.change_sort",
+	["gx"] = {
+		callback = open_with_viewer,
+	},
+	["gy"] = "actions.copy_entry_path",
+	["gh"] = "actions.toggle_hidden",
+	["cd"] = "actions.cd",
+	["q"] = "actions.close",
+	["~"] = goto_home,
+	["_"] = goto_cwd,
+}
+
 oil.setup({
 	default_file_explorer = true,
 	columns = {
@@ -81,37 +113,7 @@ oil.setup({
 		{ "ctime", format = "%d/%m %H:%M" },
 		{ "birthtime", format = "%d/%m %H:%M" },
 	},
-	keymaps = {
-		-- Disabled to avoid conflicts with the tmux navigation keys.
-		["<C-c>"] = false,
-		["<C-h>"] = false,
-		["<C-l>"] = false,
-		["-"] = "actions.parent",
-		["<CR>"] = "actions.select",
-		["H"] = "actions.parent",
-		["L"] = "actions.select",
-		["sh"] = "actions.select_split",
-		["sv"] = "actions.select_vsplit",
-		["gp"] = {
-			"actions.preview",
-			opts = {
-				vertical = true,
-				split = "botright",
-			},
-		},
-		["gR"] = "actions.refresh",
-		["<C-r>"] = "actions.refresh",
-		["gs"] = "actions.change_sort",
-		["gx"] = {
-			callback = open_with_viewer,
-		},
-		["gy"] = "actions.copy_entry_path",
-		["gh"] = "actions.toggle_hidden",
-		["cd"] = "actions.cd",
-		["q"] = "actions.close",
-		["~"] = goto_home,
-		["_"] = goto_cwd,
-	},
+	keymaps = keymaps,
 	delete_to_trash = true,
 	watch_for_changes = true,
 	constrain_cursor = "name",
