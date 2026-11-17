@@ -37,4 +37,14 @@ function M.toggle()
 	vim.notify("Autoformat: " .. (vim.g.disable_autoformat and "OFF" or "ON"))
 end
 
+---Toggle buffer-local autoformat state.
+---@param bufnr? integer Defaults to current buffer.
+---@return boolean enabled New buffer-local state.
+function M.toggle_buffer(bufnr)
+	bufnr = bufnr or 0
+	vim.b[bufnr].disable_autoformat = not vim.b[bufnr].disable_autoformat
+	vim.notify("Buffer autoformat: " .. (vim.b[bufnr].disable_autoformat and "OFF" or "ON"))
+	return not vim.b[bufnr].disable_autoformat
+end
+
 return M

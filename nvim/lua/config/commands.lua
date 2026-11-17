@@ -37,6 +37,10 @@ vim.api.nvim_create_user_command("FormatEnable", function()
 	require("lib.autoformat").enable()
 end, { desc = "Enable autoformat on save" })
 
+vim.api.nvim_create_user_command("FormatToggleBuffer", function()
+	require("lib.autoformat").toggle_buffer()
+end, { desc = "Toggle autoformat for current buffer" })
+
 vim.api.nvim_create_user_command("PackAdd", function(opts)
 	vim.pack.add(opts.fargs)
 end, {
