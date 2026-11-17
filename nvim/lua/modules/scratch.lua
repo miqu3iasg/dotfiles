@@ -166,10 +166,10 @@ function M.setup()
 	end, { desc = "Scratch: open the buffer in a vertical split" })
 
 	local km = vim.keymap.set
-	km("n", "<leader>ss", M.toggle, { desc = "Scratch: toggle" })
-	km("n", "<leader>sb", M.split, { desc = "Scratch: open in vertical split" })
-	km("n", "<leader>sq", M.leave, { desc = "Scratch: leave" })
-	km("n", "<leader>sd", M.wipe, { desc = "Scratch: wipe buffer" })
+	km("n", "<leader>bb", M.toggle, { desc = "Scratch: toggle" })
+	km("n", "<leader>bv", M.split, { desc = "Scratch: open in vertical split" })
+	km("n", "<leader>bq", M.leave, { desc = "Scratch: leave" })
+	km("n", "<leader>bx", M.wipe, { desc = "Scratch: wipe buffer" })
 end
 
 return M
