@@ -104,10 +104,11 @@ local keymaps = {
 
 oil.setup({
 	default_file_explorer = true,
+	-- The group column is omitted: on a single-user system the primary group
+	-- matches the owner, so both columns always display the same text.
 	columns = {
 		"permissions",
 		"owner",
-		"group",
 		"size",
 		{ "mtime", format = "%d/%m %H:%M" },
 		{ "ctime", format = "%d/%m %H:%M" },
