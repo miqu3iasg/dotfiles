@@ -9,6 +9,7 @@
 -- by a global autocmd, not from here.
 --
 -- See: lua/config/keymaps/search.lua
+-- See: :h fuzzy-file-picker (the 'findfunc' recipe in cmdline.txt)
 -- See: lua/config/autocmds.lua
 
 local M = {}
