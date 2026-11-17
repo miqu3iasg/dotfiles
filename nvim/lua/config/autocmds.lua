@@ -20,7 +20,7 @@ vim.api.nvim_create_autocmd("TextYankPost", {
 })
 
 -- Smartcase only makes sense for searches. On the command line it would make
--- completions such as `:find *Foo` case-sensitive, so it is off while typing a
+-- completions such as `:e *Foo` case-sensitive, so it is off while typing a
 -- `:` command and restored afterwards.
 do
 	local group = vim.api.nvim_create_augroup("cg/cmdline_smartcase", { clear = true })

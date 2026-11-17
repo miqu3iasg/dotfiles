@@ -81,7 +81,7 @@ OPTIONS
 
     Navigation
 
-        'path' includes **, making `:find` and `gf` recursive; 'switchbuf' uselast, so buffer jumps reuse the window
+        'path' includes **, making `gf` recursive; 'switchbuf' uselast, so buffer jumps reuse the window
         that last showed the buffer; splits go right and below.
 
     Sessions
@@ -95,7 +95,7 @@ AUTOCMDS
         TextYankPost    highlight yanked text
         FileType        do not continue comments on new lines
         CmdlineEnter    while a `:` command is typed, smartcase is off so completions
-        such as `:find *Foo` stay case-insensitive
+        such as `:e *Foo` stay case-insensitive
         CmdlineEnter    starting a `/` or `?` search always turns hlsearch on
         QuickFixCmdPost    open the quickfix window when a command filled the list with
         entries; an empty list keeps the window closed
@@ -208,7 +208,9 @@ THE PLUGIN SET
 
         fzf-lua wraps fzf for files, buffers, grep, diagnostics and help. It loads on demand, from its own keymaps and
         from the first markdown buffer (the obsidian picker resolves through it). Needs fzf, grep, ripgrep and fd.
-        lib/substitute also calls ripgrep directly for project-wide substitutions.
+        File finding does not need it: lib/search.lua turns `:find` into a native fuzzy picker through 'findfunc'
+        (`:h fuzzy-file-picker`), with the `<dotfiles/nvim>` and `<dev/studies>` scopes. lib/substitute also calls
+        ripgrep directly for project-wide substitutions.
 
     Git
 
