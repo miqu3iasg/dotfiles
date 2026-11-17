@@ -15,6 +15,40 @@
 
 local oil = require("oil")
 
+-- Viewer apps grouped by their supported extensions. The keymap `gx` opens the
+-- entry under the cursor with the matching app, and anything else falls back
+-- to the OS default through `open_external`.
+local app_map = {}
+for app, exts in pairs({
+	zathura = { "pdf", "djvu", "epub", "cbz", "cbr", "xps" },
+	imv = { "png", "jpg", "jpeg", "gif", "webp", "bmp", "svg" },
+	mpv = { "mp4", "mkv", "webm", "mov", "avi", "mp3", "flac", "wav" },
+}) do
+	for _, ext in ipairs(exts) do
+		app_map[ext] = { app }
+	end
+end
+
+---Open the entry under the cursor with its extension's viewer app, falling
+---back to the OS default.
+local function open_with_viewer()
+	local entry = oil.get_cursor_entry()
+	local dir = oil.get_current_dir()
+	if not entry or not dir then
+		return
+	end
+
+	local path = dir .. entry.name
+	local ext = entry.name:match("^.+%.(.+)$")
+	local cmd = ext and app_map[ext:lower()]
+	if cmd then
+		local full_cmd = vim.list_extend(vim.deepcopy(cmd), { path })
+		vim.fn.jobstart(full_cmd, { detach = true })
+	else
+		require("oil.actions").open_external.callback()
+	end
+end
+
 ---Build an oil keymap entry that opens a directory.
 ---@param path_fn fun(): string Returns the directory to open.
 ---@param desc string
@@ -69,53 +103,7 @@ oil.setup({
 		["<C-r>"] = "actions.refresh",
 		["gs"] = "actions.change_sort",
 		["gx"] = {
-			-- Opens with a specific app based on the extension, or falls back to
-			-- the OS default.
-			callback = function()
-				local entry = oil.get_cursor_entry()
-				local dir = oil.get_current_dir()
-				if not entry or not dir then
-					return
-				end
-
-				local path = dir .. entry.name
-				local ext = entry.name:match("^.+%.(.+)$")
-				ext = ext and ext:lower() or nil
-
-				local app_map = {
-					pdf = { "zathura" },
-					djvu = { "zathura" },
-					epub = { "zathura" },
-					cbz = { "zathura" },
-					cbr = { "zathura" },
-					xps = { "zathura" },
-
-					png = { "imv" },
-					jpg = { "imv" },
-					jpeg = { "imv" },
-					gif = { "imv" },
-					webp = { "imv" },
-					bmp = { "imv" },
-					svg = { "imv" },
-
-					mp4 = { "mpv" },
-					mkv = { "mpv" },
-					webm = { "mpv" },
-					mov = { "mpv" },
-					avi = { "mpv" },
-					mp3 = { "mpv" },
-					flac = { "mpv" },
-					wav = { "mpv" },
-				}
-
-				local cmd = ext and app_map[ext]
-				if cmd then
-					local full_cmd = vim.list_extend(vim.deepcopy(cmd), { path })
-					vim.fn.jobstart(full_cmd, { detach = true })
-				else
-					require("oil.actions").open_external.callback()
-				end
-			end,
+			callback = open_with_viewer,
 		},
 		["gy"] = "actions.copy_entry_path",
 		["gh"] = "actions.toggle_hidden",
