@@ -18,6 +18,33 @@ local SESSION_DIR = vim.fn.stdpath("state") .. "/sessions/"
 ---@type table<string, boolean>
 local IGNORED_FILETYPES = { gitcommit = true, gitrebase = true }
 
+---Number of buffers that represent real files on disk.
+---Excludes special buffers (netrw, help, terminals, ...), unnamed buffers and
+---IGNORED_FILETYPES.
+---@return integer
+local function count_file_buffers()
+	local count = 0
+	for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+		local is_file = vim.bo[buf].buftype == "" and vim.api.nvim_buf_get_name(buf) ~= ""
+		if is_file and not IGNORED_FILETYPES[vim.bo[buf].filetype] then
+			count = count + 1
+		end
+	end
+	return count
+end
+
+-- Delete explorer buffers, which are virtual `oil://` buffers, so they are not
+-- written into the session file. The flag is set by the explorer plugin and the
+-- filetype is kept as a fallback.
+-- See: lua/plugins/oil.lua
+local function remove_oil_buffers()
+	for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+		if vim.bo[buf].filetype == "oil" or vim.b[buf].explorer then
+			pcall(vim.api.nvim_buf_delete, buf, { force = true })
+		end
+	end
+end
+
 ---Whether session handling is active (only inside tmux).
 ---@return boolean
 function M.enabled()
@@ -54,33 +81,6 @@ end
 function M.path()
 	local name = vim.fn.getcwd():gsub("/", "__"):gsub("[^%w%-%._]", "_")
 	return SESSION_DIR .. name
-end
-
----Number of buffers that represent real files on disk.
----Excludes special buffers (netrw, help, terminals, ...), unnamed buffers and
----IGNORED_FILETYPES.
----@return integer
-local function count_file_buffers()
-	local count = 0
-	for _, buf in ipairs(vim.api.nvim_list_bufs()) do
-		local is_file = vim.bo[buf].buftype == "" and vim.api.nvim_buf_get_name(buf) ~= ""
-		if is_file and not IGNORED_FILETYPES[vim.bo[buf].filetype] then
-			count = count + 1
-		end
-	end
-	return count
-end
-
--- Delete explorer buffers, which are virtual `oil://` buffers, so they are not
--- written into the session file. The flag is set by the explorer plugin and the
--- filetype is kept as a fallback.
--- See: lua/plugins/oil.lua
-local function remove_oil_buffers()
-	for _, buf in ipairs(vim.api.nvim_list_bufs()) do
-		if vim.bo[buf].filetype == "oil" or vim.b[buf].explorer then
-			pcall(vim.api.nvim_buf_delete, buf, { force = true })
-		end
-	end
 end
 
 ---Restore the session of the current directory, if one exists.
