@@ -65,18 +65,18 @@ local function make_opts()
 				end
 			end,
 
-			height = 0.95,
-			width = 0.90,
-			row = 0.35,
-			col = 0.50,
-			border = "single",
+			-- height = 0.95,
+			-- width = 0.90,
+			-- row = 0.35,
+			-- col = 0.50,
+			-- border = "single",
 
-			-- height = 0.22,
-			-- width = 1.0,
-			-- row = 1.0,
-			-- col = 0.0,
-			-- border = { "", "─", "", "", "", "", "", "" },
-			-- backdrop = false,
+			height = 0.30,
+			width = 1.0,
+			row = 1.0,
+			col = 0.0,
+			border = { "", "─", "", "", "", "", "", "" },
+			backdrop = false,
 
 			title = false,
 			title_flags = false,
@@ -93,7 +93,7 @@ local function make_opts()
 
 		fzf_opts = {
 			["--ansi"] = true,
-			["--layout"] = "default",
+			["--layout"] = "reverse",
 			["--highlight-line"] = true,
 			["--info"] = "inline-right",
 			["--pointer"] = " ",
@@ -211,10 +211,6 @@ km("n", "<leader>fn", function()
 	fzf().files({ cwd = vim.fn.expand("~/dotfiles/nvim") })
 end, { desc = "Fzf: find files in ~/dotfiles/nvim" })
 
-km("n", "<leader>fb", function()
-	fzf().buffers()
-end, { desc = "Fzf: switch between open buffers" })
-
 km("n", "<leader>fo", function()
 	fzf().oldfiles()
 end, { desc = "Fzf: reopen recently edited files" })
@@ -235,14 +231,6 @@ km("n", "<leader>fl", function()
 	fzf().blines()
 end, { desc = "Fzf: search lines in the current buffer" })
 
-km("n", "<leader>fh", function()
-	fzf().help_tags()
-end, { desc = "Fzf: search Neovim help tags" })
-
-km("n", "<leader>fm", function()
-	fzf().man_pages()
-end, { desc = "Fzf: search man pages" })
-
 km("n", "<leader>fx", function()
 	fzf().diagnostics_document()
 end, { desc = "Fzf: list LSP diagnostics in current buffer" })
@@ -250,10 +238,6 @@ end, { desc = "Fzf: list LSP diagnostics in current buffer" })
 km("n", "<leader>fX", function()
 	fzf().diagnostics_workspace()
 end, { desc = "Fzf: list LSP diagnostics in workspace" })
-
-km("n", "<leader>fk", function()
-	fzf().keymaps()
-end, { desc = "Fzf: search all keymaps" })
 
 km("n", "<leader>fc", function()
 	fzf().resume()
