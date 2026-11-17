@@ -14,12 +14,12 @@
 
 local M = {}
 
--- Roots of the fixed scopes of the fuzzy file picker, queried as
--- `:find ~/dotfiles/nvim <name>`. `root` is the expanded form, because
--- `:find` expands `~` in its argument before calling 'findfunc'.
+-- Labels of the fixed scopes of the fuzzy file picker, queried as
+-- `:find <dev/studies> <name>`. `root` is the expanded directory behind
+-- the label; `:find` may also hand over the expanded root when executing.
 local scopes = {
-	{ display = "~/dotfiles/nvim", root = vim.fn.expand("~/dotfiles/nvim") },
-	{ display = "~/dev/repos/studies", root = vim.fn.expand("~/dev/repos/studies") },
+	{ label = "<dotfiles/nvim>", root = vim.fn.expand("~/dotfiles/nvim") },
+	{ label = "<dev/studies>", root = vim.fn.expand("~/dev/repos/studies") },
 }
 
 -- Directories skipped when building the file cache, since `globpath()`
@@ -195,15 +195,21 @@ end
 ---@return string[]
 function M.find(arg)
 	for _, scope in ipairs(scopes) do
-		for _, prefix in ipairs({ scope.display, scope.root }) do
+		for _, prefix in ipairs({ scope.label, scope.root }) do
 			if arg:sub(1, #prefix) == prefix then
 				local query = (arg:sub(#prefix + 1):gsub("^%s*", ""))
 				local names = collect(scope.root)
 
 				if query ~= "" then
-					local matches = vim.tbl_map(function(name)
-						return vim.fn.fnamemodify(name, ":~")
-					end, vim.fn.glob(vim.fn.expand(prefix .. "/" .. query), false, true))
+					-- A wildcard or an exact path keeps the native glob
+					-- semantics, but only against the real root, since the
+					-- label is not a file system path.
+					local matches = {}
+					if prefix == scope.root then
+						matches = vim.tbl_map(function(name)
+							return vim.fn.fnamemodify(name, ":~")
+						end, vim.fn.glob(vim.fn.expand(prefix .. "/" .. query), false, true))
+					end
 					if #matches > 0 then
 						return matches
 					end
@@ -215,10 +221,10 @@ function M.find(arg)
 		end
 	end
 
-	-- The path of a scope is still being typed: complete with all of its files.
+	-- The label of a scope is still being typed: complete with all of its files.
 	local out = {}
 	for _, scope in ipairs(scopes) do
-		if #arg > 0 and scope.display:sub(1, #arg) == arg then
+		if #arg > 0 and scope.label:sub(1, #arg) == arg then
 			vim.list_extend(out, collect(scope.root))
 		end
 	end
