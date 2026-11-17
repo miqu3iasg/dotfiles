@@ -161,5 +161,5 @@ vim.keymap.set("n", "go", "<CMD>Oil<CR>", {
 	desc = "Open parent directory",
 })
 
-vim.keymap.set("n", "g~", goto_home)
-vim.keymap.set("n", "g.", goto_cwd)
+vim.keymap.set("n", "g~", goto_home.callback, { desc = goto_home.desc })
+vim.keymap.set("n", "g.", goto_cwd.callback, { desc = goto_cwd.desc })
