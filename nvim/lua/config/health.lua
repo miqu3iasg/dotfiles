@@ -66,6 +66,11 @@ local function check_formatters()
 	check_tool("sql-formatter", "SQL", true)
 	check_tool("prettierd", "web filetypes", true)
 	check_tool("prettier", "web filetypes, fallback of prettierd", true)
+
+	-- Linters (nvim-lint)
+	check_tool("shellcheck", "shell linting", true)
+	check_tool("hadolint", "Dockerfile linting", true)
+	check_tool("markdownlint", "Markdown linting", true)
 end
 
 ---Markdown export and preview through pandoc.
