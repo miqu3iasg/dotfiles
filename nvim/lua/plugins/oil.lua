@@ -28,6 +28,14 @@ local function goto_dir(path_fn, desc)
 	}
 end
 
+-- Shared between the in-buffer oil keymaps and the global `g~`/`g.` maps.
+local goto_home = goto_dir(function()
+	return vim.fn.expand("~")
+end, "Open home directory")
+local goto_cwd = goto_dir(function()
+	return vim.fn.getcwd()
+end, "Open cwd")
+
 oil.setup({
 	default_file_explorer = true,
 	columns = {
@@ -113,12 +121,8 @@ oil.setup({
 		["gh"] = "actions.toggle_hidden",
 		["cd"] = "actions.cd",
 		["q"] = "actions.close",
-		["~"] = goto_dir(function()
-			return vim.fn.expand("~")
-		end, "Open home directory"),
-		["_"] = goto_dir(function()
-			return vim.fn.getcwd()
-		end, "Open cwd"),
+		["~"] = goto_home,
+		["_"] = goto_cwd,
 	},
 	delete_to_trash = true,
 	watch_for_changes = true,
@@ -157,10 +161,5 @@ vim.keymap.set("n", "go", "<CMD>Oil<CR>", {
 	desc = "Open parent directory",
 })
 
-vim.keymap.set("n", "g~", function()
-	require("oil").open(vim.fn.expand("~"))
-end, { desc = "Open home directory" })
-
-vim.keymap.set("n", "g.", function()
-	require("oil").open(vim.fn.getcwd())
-end, { desc = "Open cwd" })
+vim.keymap.set("n", "g~", goto_home)
+vim.keymap.set("n", "g.", goto_cwd)
