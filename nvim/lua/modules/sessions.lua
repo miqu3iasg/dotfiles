@@ -24,6 +24,29 @@ function M.enabled()
 	return vim.env.TMUX ~= nil
 end
 
+---Force session save regardless of tmux.
+function M.force_save()
+	if count_file_buffers() < 1 then
+		return
+	end
+
+	remove_oil_buffers()
+
+	vim.fn.mkdir(SESSION_DIR, "p")
+	vim.cmd("mksession! " .. vim.fn.fnameescape(M.path()))
+end
+
+---Force session load regardless of tmux.
+---@return boolean restored
+function M.force_load()
+	local path = M.path()
+	if not vim.uv.fs_stat(path) then
+		return false
+	end
+	vim.cmd("silent! source " .. vim.fn.fnameescape(path))
+	return true
+end
+
 ---Absolute path of the session file for the current working directory.
 ---The cwd is flattened into a single file name: `/` becomes `__` and any
 ---character other than letters, digits, `-`, `.` and `_` becomes `_`.
@@ -86,6 +109,13 @@ function M.save()
 
 	vim.fn.mkdir(SESSION_DIR, "p")
 	vim.cmd("mksession! " .. vim.fn.fnameescape(M.path()))
+end
+
+---Register user commands for manual session control.
+function M.setup()
+	local cmd = vim.api.nvim_create_user_command
+	cmd("SessionSave", M.force_save, { desc = "Save session (force)" })
+	cmd("SessionLoad", M.force_load, { desc = "Load session (force)" })
 end
 
 return M
