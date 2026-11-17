@@ -118,6 +118,9 @@ vim.api.nvim_create_autocmd("LspAttach", {
 		km("n", "gd", vim.lsp.buf.definition, "Go to definition")
 		km("n", "grw", vim.lsp.buf.workspace_symbol, "Workspace symbols")
 
+		km("n", "grn", vim.lsp.buf.rename, "Rename symbol")
+		km("n", "gra", vim.lsp.buf.code_action, "Code action")
+
 		km("n", "grs", function()
 			vim.cmd("vsplit")
 			vim.lsp.buf.implementation()
