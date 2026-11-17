@@ -72,7 +72,10 @@ km("n", "<leader>e/", "<cmd>g//#<cr>", { desc = "List lines matching last search
 km("n", "<leader>ei", "[I", { desc = "List lines with word under cursor" })
 
 -- Files, buffers and history
-km("n", "<leader>ef", ":find *", { desc = "Find file by name" })
+km("n", "<leader>ef", ":find ", { desc = "Find file by name" })
+-- Scoped fuzzy find through 'findfunc' (see: lua/lib/search.lua)
+km("n", "<leader>en", ":find n: ", { desc = "Fuzzy find file in ~/dotfiles/nvim" })
+km("n", "<leader>es", ":find s: ", { desc = "Fuzzy find file in ~/dev/repos/studies" })
 km("n", "<leader>eb", ":ls<cr>:b<space>", { desc = "Pick buffer" })
 km("n", "<leader>eo", "<cmd>oldfiles<cr>:edit #<", { desc = "Pick recent file" })
 km("n", "<leader>em", "<cmd>marks<cr>:normal! `", { desc = "Pick mark" })
