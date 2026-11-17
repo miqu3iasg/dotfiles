@@ -32,7 +32,7 @@ oil.setup({
 	default_file_explorer = true,
 	columns = {
 		"permissions",
-		"user",
+		"owner",
 		"group",
 		"size",
 		{ "mtime", format = "%d/%m %H:%M" },
