@@ -60,12 +60,6 @@ end, { desc = "Format buffer" })
 
 vim.keymap.set("n", "<leader>uf", autoformat.toggle, { desc = "Toggle autoformat" })
 
-local md_lists = require("modules.markdown_lists")
-
----Bullet markers saved by buffer while a markdown format is running.
----@type table<integer, string[]>
-local md_bullets = {}
-
 require("conform").setup({
 	notify_on_error = true,
 	formatters_by_ft = {
@@ -91,7 +85,7 @@ require("conform").setup({
 		sql = { "sql_formatter" },
 		dockerfile = { "dockerfmt" },
 		terraform = { "terraform_fmt" },
-		markdown = { "md_stash_bullets", "prettier_md", "md_restore" },
+		markdown = { "prettier_md" },
 		asm = { "asmfmt" },
 
 		-- Runs on filetypes that have no formatter of their own.
@@ -112,36 +106,13 @@ require("conform").setup({
 			prepend_args = { "--style=file" },
 		},
 
-		-- Prettier with 4 columns of indentation, so nested lists get 4. It uses
-		-- `prettier` instead of `prettierd` because prettierd does not accept
+		-- Prettier with 4 columns of indentation and prose-wrap preserve to keep
+		-- original list markers (* and +) instead of rewriting them to -.
+		-- Uses `prettier` instead of `prettierd` because prettierd does not accept
 		-- command-line flags.
 		prettier_md = require("conform.util").merge_formatter_configs(require("conform.formatters.prettier"), {
-			prepend_args = { "--tab-width", "4" },
+			prepend_args = { "--tab-width", "4", "--prose-wrap", "preserve" },
 		}),
-
-		-- Prettier rewrites the `*` and `+` bullets as `-`, or alternates `-` and
-		-- `*` between neighbouring lists. This step and `md_restore` save the
-		-- markers before formatting and put them back afterwards.
-		md_stash_bullets = {
-			format = function(_, ctx, lines, callback)
-				md_bullets[ctx.buf] = md_lists.bullet_markers(lines)
-				callback(nil, lines)
-			end,
-		},
-
-		-- Prettier never writes tabs in lists, so each group of 4 leading spaces
-		-- becomes a tab. Setting `vim.g.markdown_use_tabs = false` turns that off.
-		-- See: after/ftplugin/markdown.lua
-		md_restore = {
-			format = function(_, ctx, lines, callback)
-				lines = md_lists.restore_bullets(lines, md_bullets[ctx.buf])
-				md_bullets[ctx.buf] = nil
-				if vim.g.markdown_use_tabs ~= false then
-					lines = md_lists.tabify(lines, 4)
-				end
-				callback(nil, lines)
-			end,
-		},
 
 		shfmt = {
 			prepend_args = { "-i", "2", "-ci" },
