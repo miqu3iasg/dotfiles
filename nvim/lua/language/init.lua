@@ -85,6 +85,9 @@ end)
 vim.lsp.config("*", {
 	capabilities = vim.lsp.protocol.make_client_capabilities(),
 	workspace = { didChangeWatchedFiles = { dynamicRegistration = false } },
+	-- Modern LSP features (Neovim 0.10+)
+	inlay_hints = { enabled = true },
+	semantic_tokens = { enabled = true },
 })
 
 for _, name in ipairs(modules) do
