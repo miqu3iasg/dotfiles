@@ -11,9 +11,6 @@ km("n", "m", "m", { desc = "Set mark" })
 km({ "n", "v", "o" }, "gm", "`", { desc = "Jump to mark (exact position)" })
 km({ "n", "v", "o" }, "gM", "'", { desc = "Jump to mark (start of line)" })
 
--- Native `]m`/`[m` (next/previous mark) and `]`/`[` (method motion) are left
--- untouched.
-
 -- Delete a named mark using the `dm{a-zA-Z}` convention
 km("n", "dm", function()
 	local ok, char = pcall(vim.fn.getcharstr)

@@ -104,8 +104,6 @@ local keymaps = {
 
 oil.setup({
 	default_file_explorer = true,
-	-- The group column is omitted: on a single-user system the primary group
-	-- matches the owner, so both columns always display the same text.
 	columns = {
 		"permissions",
 		"owner",
