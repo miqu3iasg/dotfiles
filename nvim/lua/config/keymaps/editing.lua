@@ -141,7 +141,9 @@ km("n", "<leader>cn", [[*``"_cgn]], {
 })
 
 -- Navigation
-km({ "n", "x", "o" }, "<Tab>", "%", {
+-- Normal mode keeps the native <Tab>, which is <C-i> and jumps forward in the
+-- jump list.
+km({ "x", "o" }, "<Tab>", "%", {
 	remap = true,
 	desc = "Jump to matching pair",
 })
