@@ -19,35 +19,6 @@ vim.api.nvim_create_autocmd("TextYankPost", {
 	end,
 })
 
--- Smartcase only makes sense for searches. On the command line it would make
--- completions such as `:find *Foo` case-sensitive, so it is off while typing a
--- `:` command and restored afterwards.
-do
-	local group = vim.api.nvim_create_augroup("cg/cmdline_smartcase", { clear = true })
-	local saved ---@type boolean?
-
-	vim.api.nvim_create_autocmd("CmdlineEnter", {
-		group = group,
-		desc = "Turn smartcase off while typing a command",
-		pattern = ":",
-		callback = function()
-			saved = vim.o.smartcase
-			vim.o.smartcase = false
-		end,
-	})
-
-	vim.api.nvim_create_autocmd("CmdlineLeave", {
-		group = group,
-		desc = "Restore smartcase after a command",
-		pattern = ":",
-		callback = function()
-			if saved ~= nil then
-				vim.o.smartcase = saved
-			end
-		end,
-	})
-end
-
 -- A search always highlights its matches, whatever the previous state was, so
 -- mappings that jump without searching do not have to turn it on themselves.
 vim.api.nvim_create_autocmd("CmdlineEnter", {
