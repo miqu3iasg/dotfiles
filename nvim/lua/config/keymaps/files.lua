@@ -8,6 +8,9 @@
 local keys = require("lib.keys")
 local map = keys.map
 
+-- TODO: atualmente os keymaps estão sujos por conta de código. É necessário refatorar isso,
+-- primeiro criando funções para as keymaps, e depois só chamando elas dentor de cada keymap.set
+
 -- Prompt text, colored by the active colorscheme. Because of `default`, a
 -- colorscheme or user config can still override this group.
 vim.api.nvim_set_hl(0, "FilesPrompt", { link = "Question", default = true })

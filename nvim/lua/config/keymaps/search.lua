@@ -74,5 +74,5 @@ km("n", "<leader>eh", ":help ", { desc = "Search help" })
 km("n", "<leader>eH", ":helpgrep ", { desc = "Grep in all help files" })
 
 -- Find file in a fixed directory (:find searches 'path' recursively)
-km("n", "<leader>en", ":find ~/dotfiles/nvim ", { desc = "Find file in ~/dotfiles/nvim" })
-km("n", "<leader>es", ":find ~/dev/repos/studies ", { desc = "Find file in ~/dev/repos/studies" })
+km("n", "<leader>en", ":find ~/dotfiles/nvim/", { desc = "Find file in ~/dotfiles/nvim" })
+km("n", "<leader>es", ":find ~/dev/repos/studies/", { desc = "Find file in ~/dev/repos/studies" })

@@ -3,6 +3,7 @@
 -- Keymaps to manage buffers.
 --
 -- See: lua/lib/buffers.lua
+-- See: lua/modules/scratch.lua
 
 local buffers = require("lib.buffers")
 
