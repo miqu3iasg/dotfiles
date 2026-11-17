@@ -65,19 +65,14 @@ km("n", "<leader>el", function()
 	search.buffer_grep(vim.fn.input("Buffer grep> "))
 end, { desc = "Grep in current buffer (loclist)" })
 
--- Lines matching the last search, in the current buffer
-km("n", "<leader>e/", "<cmd>g//#<cr>", { desc = "List lines matching last search" })
-
--- Lines containing the word under the cursor (also in included files)
-km("n", "<leader>ei", "[I", { desc = "List lines with word under cursor" })
-
 -- Files, buffers and history
 km("n", "<leader>ef", ":find ", { desc = "Find file by name" })
--- Scoped fuzzy find through 'findfunc' (see: lua/lib/search.lua)
-km("n", "<leader>en", ":find <dotfiles/nvim> ", { desc = "Fuzzy find file in ~/dotfiles/nvim" })
-km("n", "<leader>es", ":find <dev/studies> ", { desc = "Fuzzy find file in ~/dev/repos/studies" })
 km("n", "<leader>eb", ":ls<cr>:b<space>", { desc = "Pick buffer" })
 km("n", "<leader>eo", "<cmd>oldfiles<cr>:edit #<", { desc = "Pick recent file" })
 km("n", "<leader>em", "<cmd>marks<cr>:normal! `", { desc = "Pick mark" })
 km("n", "<leader>eh", ":help ", { desc = "Search help" })
 km("n", "<leader>eH", ":helpgrep ", { desc = "Grep in all help files" })
+
+-- Find file in a fixed directory (:find searches 'path' recursively)
+km("n", "<leader>en", ":find ~/dotfiles/nvim ", { desc = "Find file in ~/dotfiles/nvim" })
+km("n", "<leader>es", ":find ~/dev/repos/studies ", { desc = "Find file in ~/dev/repos/studies" })
