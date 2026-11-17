@@ -120,6 +120,11 @@ oil.setup({
 		end, "Open cwd"),
 	},
 	delete_to_trash = true,
+	watch_for_changes = true,
+	constrain_cursor = "name",
+	lsp_file_methods = {
+		autosave_changes = "unmodified",
+	},
 	view_options = {
 		show_hidden = true,
 	},
