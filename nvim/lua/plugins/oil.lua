@@ -58,6 +58,7 @@ oil.setup({
 			},
 		},
 		["gR"] = "actions.refresh",
+		["<C-r>"] = "actions.refresh",
 		["gs"] = "actions.change_sort",
 		["gx"] = {
 			-- Opens with a specific app based on the extension, or falls back to
