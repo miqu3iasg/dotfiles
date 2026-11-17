@@ -30,8 +30,8 @@ local ignored_dirs = { ".git", "node_modules", "target", "dist", ".venv", "venv"
 -- `CmdlineEnter` autocmd in `setup()`.
 local files = {}
 
----Collect the file names under `root`, cached per root. Relative names for
----the project root, `~`-shortened ones for the fixed scopes.
+---Collect the file names under `root`, cached per root. Full paths so that
+---`:find` can open them directly (`~` is not expanded inside `:find`).
 ---@param root string
 ---@return string[]
 local function collect(root)
@@ -47,7 +47,7 @@ local function collect(root)
 			skip = skip or name:find("^" .. dir .. "/") ~= nil or name:find("/" .. dir .. "/") ~= nil
 		end
 		if not skip then
-			table.insert(names, vim.fn.fnamemodify(name, root == "." and ":." or ":~"))
+			table.insert(names, vim.fn.fnamemodify(name, ":p"))
 		end
 	end
 
@@ -218,7 +218,7 @@ function M.find(arg)
 					local matches = {}
 					if prefix == scope.root then
 						matches = vim.tbl_map(function(name)
-							return vim.fn.fnamemodify(name, ":~")
+							return vim.fn.fnamemodify(name, ":p")
 						end, vim.fn.glob(vim.fn.expand(prefix .. "/" .. query), false, true))
 					end
 					if #matches > 0 then
