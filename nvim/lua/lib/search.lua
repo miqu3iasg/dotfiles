@@ -81,31 +81,6 @@ function M.setup()
 			files = {}
 		end,
 	})
-
-	-- Accept the first completion match on <Enter>, like a fuzzy finder does.
-	-- Only on the `:` command line, and only when there is an active
-	-- completion menu with a match already selected (nothing chosen yet).
-	-- shortcut: cmdcomplete_info() may return no `matches` outside `:find`,
-	-- so guard the field access instead of indexing blindly.
-	vim.api.nvim_create_autocmd("CmdlineLeavePre", {
-		group = group,
-		pattern = ":",
-		callback = function()
-			if vim.fn.getcmdtype() ~= ":" then
-				return
-			end
-			local ok, info = pcall(vim.fn.cmdcomplete_info)
-			if not ok or not info or not info.matches then
-				return
-			end
-			if #info.matches == 0 or info.selected ~= -1 then
-				return
-			end
-			if vim.fn.getcmdline():match("^%s*fin%d?%s") then
-				vim.fn.setcmdline(("find %s"):format(info.matches[1]))
-			end
-		end,
-	})
 end
 
 ---Get the text of the current visual selection. Must be called while still in
@@ -205,6 +180,15 @@ end
 ---@param arg string
 ---@return string[]
 function M.find(arg)
+	-- If the argument already starts with a scope root (full path, e.g. when
+	-- selecting an item from the completion menu), return it directly so
+	-- `:find` opens that exact file.
+	for _, scope in ipairs(scopes) do
+		if arg:sub(1, #scope.root) == scope.root then
+			return { arg }
+		end
+	end
+
 	for _, scope in ipairs(scopes) do
 		for _, prefix in ipairs({ scope.label, scope.root }) do
 			if arg:sub(1, #prefix) == prefix then
