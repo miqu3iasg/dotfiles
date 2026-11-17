@@ -9,9 +9,9 @@
 local M = {}
 
 -- Cutoff values shared by every feature that checks for big buffers.
-local max_size = 1.5 * 1024 * 1024
-local max_line_length = 1000
-local sample_lines = 200
+local max_size = 5 * 1024 * 1024
+local max_line_length = 2000
+local sample_lines = 500
 
 ---Check whether a buffer should be treated as a big file. A buffer is big when
 ---its file is larger than `max_size` bytes, or when any of its first
