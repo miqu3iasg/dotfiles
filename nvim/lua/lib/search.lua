@@ -179,10 +179,10 @@ end
 ---arguments keep the native glob semantics.
 ---@param arg string
 ---@return string[]
-function M.find(arg)
+function M.find(arg, completing)
 	-- If the argument already starts with a scope root (full path, e.g. when
 	-- selecting an item from the completion menu), return it directly so
-	-- `:find` opens that exact file.
+	-- \`:find\` opens that exact file.
 	for _, scope in ipairs(scopes) do
 		if arg:sub(1, #scope.root) == scope.root then
 			return { arg }
@@ -211,7 +211,13 @@ function M.find(arg)
 					return match_fuzzy(names, query)
 				end
 
-				return names
+				-- Empty query: only show files in the pum when completing.
+				-- On execution (Enter) return nothing so \`:find\` doesn't open
+				-- an arbitrary first file; the user picks from the pum.
+				if completing then
+					return names
+				end
+				return {}
 			end
 		end
 	end
@@ -227,7 +233,7 @@ function M.find(arg)
 		return out
 	end
 
-	-- Wildcard and exact path arguments keep the glob semantics of `:find`.
+	-- Wildcard and exact path arguments keep the glob semantics of `\`:find\``.
 	if arg:find("[/~*]") then
 		local matches = vim.fn.glob(vim.fn.expand(arg), false, true)
 		if #matches > 0 then
@@ -237,5 +243,6 @@ function M.find(arg)
 
 	return match_fuzzy(collect("."), arg)
 end
+
 
 return M
