@@ -58,7 +58,9 @@ local function ensure_gate()
 	-- There is no pattern on purpose. A table lookup is as cheap as the event
 	-- matching, and every lazy plugin stays inspectable in one place with
 	-- `:autocmd LazyPack`.
-	vim.api.nvim_create_autocmd("FileType", {
+	-- Also listen to BufEnter to catch plugins that register filetypes after
+	-- the initial FileType event.
+	vim.api.nvim_create_autocmd({ "FileType", "BufEnter" }, {
 		group = vim.api.nvim_create_augroup("LazyPack", { clear = true }),
 		callback = function(ev)
 			local names = ft_map[ev.match]
