@@ -14,10 +14,12 @@
 
 local M = {}
 
--- File scopes of the fuzzy file picker, queried as `:find n: <name>`.
+-- Roots of the fixed scopes of the fuzzy file picker, queried as
+-- `:find ~/dotfiles/nvim <name>`. `root` is the expanded form, because
+-- `:find` expands `~` in its argument before calling 'findfunc'.
 local scopes = {
-	n = "~/dotfiles/nvim",
-	s = "~/dev/repos/studies",
+	{ display = "~/dotfiles/nvim", root = vim.fn.expand("~/dotfiles/nvim") },
+	{ display = "~/dev/repos/studies", root = vim.fn.expand("~/dev/repos/studies") },
 }
 
 -- Directories skipped when building the file cache, since `globpath()`
@@ -171,22 +173,68 @@ function M.vimgrep(pattern)
 	end
 end
 
+---Fuzzy-match `query` against `names`, with the glob magic characters
+---ignored, so wildcard queries still find something.
+---@param names string[]
+---@param query string
+---@return string[]
+local function match_fuzzy(names, query)
+	local fuzzy = (query:gsub("[%*%?%[%]]", ""))
+	if fuzzy == "" then
+		return names
+	end
+	return vim.fn.matchfuzzy(names, fuzzy)
+end
+
 ---The 'findfunc' implementation (`:h findfunc`): match the `:find` argument
----against the cached file names with `matchfuzzy()`. A leading scope alias,
----such as `n:`, restricts the search to that directory; a path-like argument
----falls back to plain glob expansion, like the built-in `:find`.
+---against the cached file names with `matchfuzzy()`. An argument that starts
+---with a scope root, either as typed or as `:find` expands it while
+---executing, restricts the search to that directory; wildcard and exact path
+---arguments keep the native glob semantics.
 ---@param arg string
 ---@return string[]
 function M.find(arg)
-	local alias, query = arg:match("^(%w):%s*(.*)$")
+	for _, scope in ipairs(scopes) do
+		for _, prefix in ipairs({ scope.display, scope.root }) do
+			if arg:sub(1, #prefix) == prefix then
+				local query = (arg:sub(#prefix + 1):gsub("^%s*", ""))
+				local names = collect(scope.root)
 
-	if alias and scopes[alias] then
-		return vim.fn.matchfuzzy(collect(vim.fn.expand(scopes[alias])), query)
-	elseif arg:find("[/~]") then
-		return vim.fn.glob(vim.fn.expand(arg), false, true)
+				if query ~= "" then
+					local matches = vim.tbl_map(function(name)
+						return vim.fn.fnamemodify(name, ":~")
+					end, vim.fn.glob(vim.fn.expand(prefix .. "/" .. query), false, true))
+					if #matches > 0 then
+						return matches
+					end
+					return match_fuzzy(names, query)
+				end
+
+				return names
+			end
+		end
 	end
 
-	return vim.fn.matchfuzzy(collect("."), arg)
+	-- The path of a scope is still being typed: complete with all of its files.
+	local out = {}
+	for _, scope in ipairs(scopes) do
+		if #arg > 0 and scope.display:sub(1, #arg) == arg then
+			vim.list_extend(out, collect(scope.root))
+		end
+	end
+	if #out > 0 then
+		return out
+	end
+
+	-- Wildcard and exact path arguments keep the glob semantics of `:find`.
+	if arg:find("[/~*]") then
+		local matches = vim.fn.glob(vim.fn.expand(arg), false, true)
+		if #matches > 0 then
+			return matches
+		end
+	end
+
+	return match_fuzzy(collect("."), arg)
 end
 
 return M
