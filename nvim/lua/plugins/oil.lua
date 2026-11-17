@@ -125,7 +125,6 @@ oil.setup({
 	},
 	skip_confirm_for_simple_edits = true,
 	skip_confirm_for_delete = true,
-	skip_confirm_for_move = true,
 	preview_win = {
 		border = "single",
 	},
