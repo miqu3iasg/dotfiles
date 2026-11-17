@@ -42,20 +42,6 @@ km("n", "<leader>sw", function()
 	vim.o.hlsearch = true
 end, { desc = "Search word under cursor" })
 
--- Highlights
-km("n", "<leader>hw", function()
-	local lnum, col = vim.fn.line("."), vim.fn.col(".")
-	local _, s, e = unpack(vim.fn.matchstrpos(vim.fn.getline("."), [[\k*\%]] .. col .. [[c\k\+]]))
-	if s < 0 then
-		return
-	end
-	search.flash({ { lnum, s + 1, e - s } })
-end, { desc = "Flash word under cursor" })
-
-km("n", "<leader>hl", function()
-	search.flash({ vim.fn.line(".") })
-end, { desc = "Flash current line" })
-
 -- <Esc> clears the search highlights.
 km("n", "<Esc>", "<cmd>nohlsearch<cr>", { desc = "Clear search highlights" })
 

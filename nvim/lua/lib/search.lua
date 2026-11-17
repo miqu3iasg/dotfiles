@@ -101,18 +101,4 @@ function M.vimgrep(pattern)
 	end
 end
 
----Temporarily highlight `positions` as a visual reference, without searching
----or affecting the search register or `hlsearch`.
----@param positions (integer|integer[])[] Positions in the `matchaddpos()`
----format: a line number, `{ line, col, len }`, etc.
----@param ms? integer Duration in milliseconds.
-function M.flash(positions, ms)
-	local win = vim.api.nvim_get_current_win()
-	local id = vim.fn.matchaddpos("Visual", positions)
-
-	vim.defer_fn(function()
-		pcall(vim.fn.matchdelete, id, win)
-	end, ms or 400)
-end
-
 return M
