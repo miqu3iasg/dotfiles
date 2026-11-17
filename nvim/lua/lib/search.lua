@@ -83,10 +83,21 @@ function M.setup()
 	})
 
 	-- Accept the first completion match on <Enter>, like a fuzzy finder does.
+	-- Only on the `:` command line, and only when there is an active
+	-- completion menu with a match already selected (nothing chosen yet).
+	-- shortcut: cmdcomplete_info() may return no `matches` outside `:find`,
+	-- so guard the field access instead of indexing blindly.
 	vim.api.nvim_create_autocmd("CmdlineLeavePre", {
 		group = group,
+		pattern = ":",
 		callback = function()
-			local info = vim.fn.cmdcomplete_info()
+			if vim.fn.getcmdtype() ~= ":" then
+				return
+			end
+			local ok, info = pcall(vim.fn.cmdcomplete_info)
+			if not ok or not info or not info.matches then
+				return
+			end
 			if #info.matches == 0 or info.selected ~= -1 then
 				return
 			end
