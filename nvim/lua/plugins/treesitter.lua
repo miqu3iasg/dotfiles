@@ -90,9 +90,9 @@ vim.api.nvim_create_autocmd("FileType", {
 
 		-- Enable Tree-sitter indentation only for languages where it has
 		-- been verified to behave correctly.
-		-- local good_ts_indent = { lua = true }
-		-- if good_ts_indent[lang] then
-		--   vim.bo[buf].indentexpr = "v:lua.require'nvim-treesitter'.indentexpr()"
-		-- end
+		local good_ts_indent = { lua = true, python = true, javascript = true, typescript = true }
+		if good_ts_indent[lang] then
+			vim.bo[buf].indentexpr = "v:lua.require'nvim-treesitter'.indentexpr()"
+		end
 	end,
 })
