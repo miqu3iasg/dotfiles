@@ -74,9 +74,11 @@ THE LIBRARIES
         Runs the built-in project searches: `:grep` into the quickfix (M.grep takes a shell-escaped pattern, M.run a
         full command line shared with :Grep), `:vimgrep` with the Vim regex engine (M.vimgrep) and `:lvimgrep` on the
         current buffer (M.buffer_grep). The quickfix window is opened by the QuickFixCmdPost autocmd in
-        config/autocmds.lua, never from here. M.setup only sets the GNU grep fallback for when ripgrep is missing, and
-        M.flash temporarily highlights positions without touching the search register. The keymaps call this from
-        config/keymaps/search.lua. API: M.setup, M.run, M.grep, M.vimgrep, M.buffer_grep, M.get_selection, M.flash.
+        config/autocmds.lua, never from here. `:find` is the native fuzzy file picker through 'findfunc'
+        (`:h fuzzy-file-picker`): M.find fuzzy-matches a per-command-line cache of file names with matchfuzzy(), and
+        the `<dotfiles/nvim>` and `<dev/studies>` labels scope the search to a fixed directory. M.setup sets the GNU
+        grep fallback for when ripgrep is missing, plus the 'findfunc' wiring and its autocmds. The keymaps call this
+        from config/keymaps/search.lua. API: M.setup, M.run, M.grep, M.vimgrep, M.buffer_grep, M.get_selection, M.find.
 
     exports
         Single source of truth for where exported documents go, used by the pandoc setup, so
