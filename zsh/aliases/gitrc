@@ -491,22 +491,129 @@ ghren() {
     gh browse
 }
 
-# Create a GitHub pull request from the current branch.
-# Like `git commit -v`, nvim/vim open the PR diff in a read-only split.
-# Exit non-zero from the editor (e.g. `:cq`) aborts without creating anything.
+_ghpr_help() {
+  printf '%s\n' \
+    'Usage: ghpr [<title>] [gh pr create|edit options...]' \
+    '' \
+    'Create a GitHub pull request from the current branch, or update the' \
+    'open one if it already exists. Opens $EDITOR on the PR body (like' \
+    '`git commit -v`); the commits and the diff are shown below the scissors' \
+    'line and ignored on submit.' \
+    '' \
+    'Modes:' \
+    '  create  No open PR for the branch. <title> is required and the body' \
+    '          starts from the template.' \
+    '  update  An open PR exists. <title> is optional (keeps the current' \
+    '          one) and the body starts from the current PR body.' \
+    '' \
+    'Arguments:' \
+    '  <title>  PR title (must be the first argument, quote it)' \
+    '  [...]    Extra options passed to `gh pr create` or `gh pr edit`' \
+    '' \
+    'Template (create mode, first one found):' \
+    '  1. <repo>/.github/pull_request_template.md' \
+    '  2. <repo>/pull_request_template.md' \
+    '  3. <repo>/docs/pull_request_template.md' \
+    '  4. ~/dev/resources/templates/pr.md (default)' \
+    '' \
+    'Editor:' \
+    '  Save and quit to submit; exit non-zero (e.g. `:cq`) to abort.' \
+    '  An empty or unchanged body also aborts.' \
+    '' \
+    'Examples:' \
+    '  ghpr "Fix login redirect"              # create' \
+    '  ghpr "Add retry to uploads" --draft    # create as draft' \
+    '  ghpr                                   # update: edit current body' \
+    '  ghpr "Better title"                    # update: new title + body' \
+    '  ghpr --add-reviewer octocat            # update: add reviewer'
+}
+
+# Create a GitHub pull request from the current branch, or update the open
+# one. Opens $EDITOR on a real `gitcommit` buffer (COMMIT_EDITMSG), like
+# `git commit -v`: the PR body on top (repository template or current PR
+# body) and below a scissors line the commits and the full diff, which are
+# discarded on submit.
+# Exit non-zero from the editor (e.g. `:cq`) aborts without changing anything.
+# Usage: ghpr [<title>] [gh pr create|edit options...]
 # References:
 #   - https://zsh.sourceforge.io/Doc/Release/Shell-Grammar.html (always block)
 #   - https://zsh.sourceforge.io/Doc/Release/Expansion.html (`z` flag, split words with quoting)
+#   - https://zsh.sourceforge.io/Doc/Release/Expansion.html#Filename-Generation (`(#i)`, `(N)`)
+#   - https://cli.github.com/manual/gh_pr_list (--head, --state, --jq)
+#   - https://cli.github.com/manual/gh_pr_edit
+#   - https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/creating-a-pull-request-template-for-your-repository
 #   - default branch on remote repo: https://davidwalsh.name/get-default-branch-name
 ghpr() {
+  setopt local_options extended_glob
+
+  if [ "$1" = '-h' ] || [ "$1" = '--help' ]; then
+    _ghpr_help
+    return 0
+  fi
+
   local inside_worktree
   inside_worktree=$(git rev-parse --is-inside-work-tree) || return "$?"
   [ "$inside_worktree" = false ] && echo 'Not inside git worktree' && return 1
 
   command -v gh >/dev/null || { echo 'gh CLI not installed' && return 1 }
 
-  local template_path="$HOME/dev/resources/templates/pr.md"
-  [[ -r "$template_path" ]] || { echo "PR template not found: $template_path" && return 1 }
+  local branch
+  branch=$(git branch --show-current) || return "$?"
+  [ -z "$branch" ] && { echo 'Detached HEAD' && return 1 }
+
+  # Title: optional first argument (anything not starting with `-`).
+  local title=''
+  if [ "$#" -gt 0 ] && [[ "$1" != -* ]]; then
+    title="$1"
+    shift
+  fi
+
+  # Open PR for this branch, if any: "<number> <url>".
+  local pr_info pr_number pr_url pr_title pr_body
+  pr_info=$(gh pr list --head "$branch" --state open --limit 1 \
+    --json number,url --jq '.[] | "\(.number) \(.url)"') ||
+    { echo 'Failed to query GitHub (check: gh auth status)' && return 1 }
+
+  local mode=create
+  if [ -n "$pr_info" ]; then
+    mode=update
+    pr_number="${pr_info%% *}"
+    pr_url="${pr_info#* }"
+    pr_title=$(gh pr view "$pr_number" --json title --jq .title) || return "$?"
+    pr_body=$(gh pr view "$pr_number" --json body --jq .body) || return "$?"
+    # Bodies edited on the GitHub web UI come with CRLF line endings.
+    pr_body="${pr_body//$'\r'/}"
+    [ -z "$title" ] && title="$pr_title"
+  else
+    if [ -z "$title" ]; then
+      [ "$#" -gt 0 ] &&
+        { echo 'The title must be the first argument (run: ghpr --help)' && return 1 }
+      _ghpr_help
+      return 0
+    fi
+  fi
+
+  [[ -z "${title//[[:space:]]/}" ]] &&
+    { echo 'Empty title (run: ghpr --help)' && return 1 }
+
+  # Template (create mode): the repository's own (same places GitHub looks
+  # at, case insensitive), otherwise the default one.
+  local template_path=''
+  if [ "$mode" = create ]; then
+    local git_root
+    git_root=$(git rev-parse --show-toplevel) || return "$?"
+
+    local -a repo_templates
+    repo_templates=(
+      "$git_root"/(#i).github/pull_request_template.md(N)
+      "$git_root"/(#i)pull_request_template.md(N)
+      "$git_root"/(#i)docs/pull_request_template.md(N)
+    )
+
+    template_path="$HOME/dev/resources/templates/pr.md"
+    (( ${#repo_templates} )) && template_path="${repo_templates[1]}"
+    [[ -r "$template_path" ]] || { echo "PR template not found: $template_path" && return 1 }
+  fi
 
   # `$EDITOR` may carry arguments (e.g. `nvim --clean`), so split it first.
   local -a editor_cmd
@@ -514,19 +621,26 @@ ghpr() {
   command -v "${editor_cmd[1]}" >/dev/null ||
     { echo "Editor not found: ${editor_cmd[1]}" && return 1 }
 
-  local branch
-  branch=$(git branch --show-current) || return "$?"
-  [ -z "$branch" ] && { echo 'Detached HEAD' && return 1 }
-
   local upstream_reference
   upstream_reference="$(git for-each-ref --format='%(upstream:short)' --count=1 --omit-empty "$(git symbolic-ref -q HEAD)")" || return "$?"
-  [ -z "$upstream_reference" ] && { echo "Branch '$branch' not pushed (run: ggp)" && return 1 }
+  [ "$mode" = create ] && [ -z "$upstream_reference" ] &&
+    { echo "Branch '$branch' not pushed (run: ggp)" && return 1 }
 
   local remote_name="${upstream_reference%%/*}" # something like `origin`
+  [ -z "$remote_name" ] && remote_name=origin
 
-  local unpushed
-  unpushed=$(git log --oneline "$upstream_reference..HEAD") || return "$?"
-  [ -n "$unpushed" ] && { printf "Unpushed commits on '%s' (run: gp):\n%s\n" "$branch" "$unpushed" && return 1 }
+  if [ -n "$upstream_reference" ]; then
+    local unpushed
+    unpushed=$(git log --oneline "$upstream_reference..HEAD") || return "$?"
+    if [ -n "$unpushed" ]; then
+      if [ "$mode" = create ]; then
+        printf "Unpushed commits on '%s' (run: gp):\n%s\n" "$branch" "$unpushed"
+        return 1
+      fi
+      # Only the text is being updated, so this is just a heads-up.
+      printf "Warning: unpushed commits on '%s' (the PR does not have them yet):\n%s\n" "$branch" "$unpushed"
+    fi
+  fi
 
   # Base branch for the diff: the remote HEAD (e.g. `origin/main`), set by
   # `git clone`; only on clones without it fall back to a `gh repo view`.
@@ -534,7 +648,7 @@ ghpr() {
   base_reference=$(git symbolic-ref -q --short "refs/remotes/$remote_name/HEAD") ||
     base_reference=$(gh repo view --json defaultBranchRef --jq "\"$remote_name/\" + .defaultBranchRef.name" 2>/dev/null)
 
-  if [ -n "$base_reference" ]; then
+  if [ "$mode" = create ] && [ -n "$base_reference" ]; then
     [ "$branch" = "${base_reference#*/}" ] &&
       { echo "On default branch '${base_reference#*/}': nothing to PR" && return 1 }
 
@@ -543,44 +657,92 @@ ghpr() {
     [ -z "$ahead" ] && { echo "No commits ahead of $base_reference" && return 1 }
   fi
 
-  local body_file diff_file keep_body
-  body_file=$(mktemp "${TMPDIR:-/tmp}/ghpr-XXXXXX.md") ||
-    { echo 'Failed to create temporary file' && return 1 }
+  local body_dir body_file final_body keep_body
+  body_dir=$(mktemp -d "${TMPDIR:-/tmp}/ghpr-XXXXXX") ||
+    { echo 'Failed to create temporary directory' && return 1 }
+  # The name makes vim/nvim (and VS Code, emacs...) detect `gitcommit`.
+  body_file="$body_dir/COMMIT_EDITMSG"
+  final_body="$body_dir/body.md"
 
   # The `always` block removes the temporary files even on `ctrl-c`.
   {
-    cat "$template_path" > "$body_file" || return "$?"
+    # Same scissors line as `git commit -v`: everything below it is dropped.
+    # Without a base reference there is nothing to diff against, so only the
+    # body and the header are written.
+    {
+      if [ "$mode" = update ]; then
+        printf '%s\n' "$pr_body"
+      else
+        cat "$template_path"
+      fi
+      printf '\n\n# ------------------------ >8 ------------------------\n'
+      printf '# Do not modify or remove the line above.\n'
+      printf '# Everything below it is ignored.\n#\n'
+      if [ "$mode" = update ]; then
+        printf '# Updating PR #%s: %s\n' "$pr_number" "$pr_url"
+        printf '# Title: %s\n' "$title"
+      else
+        printf '# Title:    %s\n# Template: %s\n' "$title" "$template_path"
+      fi
+      if [ -n "$base_reference" ]; then
+        printf '#\n# Commits (%s..HEAD):\n\n' "$base_reference"
+        git log --reverse --format='%h %s' "$base_reference..HEAD"
+        printf '\n'
+        git diff --stat --patch "$base_reference...HEAD"
+      fi
+    } > "$body_file" || return "$?"
 
     editor_cmd+=("$body_file")
-
-    # Without a base reference there is nothing to diff against, so the
-    # split is skipped.
-    if [ -n "$base_reference" ] && [[ "${editor_cmd[1]##*/}" == (nvim|vim) ]]; then
-      diff_file=$(mktemp "${TMPDIR:-/tmp}/ghpr-diff-XXXXXX.patch") ||
-        { echo 'Failed to create temporary file' && return 1 }
-      git diff --patch "$base_reference...HEAD" > "$diff_file" || return "$?"
+    if [[ "${editor_cmd[1]##*/}" == (nvim|vim) ]]; then
       editor_cmd+=(
-        -c "vertical rightbelow split $diff_file"
-        -c 'setlocal readonly nomodifiable'
-        -c 'wincmd p'
+        -c 'setlocal filetype=gitcommit'
+        # gitcommit sets textwidth=72, which would hard-wrap the PR body.
+        -c 'setlocal textwidth=0 wrap linebreak'
       )
     fi
-
     "${editor_cmd[@]}" || { echo 'Aborted: editor exited with an error' && return 1 }
 
-    if ! [ -s "$body_file" ] || cmp -s "$body_file" "$template_path"; then
-      echo 'Aborted: empty or unchanged PR body'
+    local body
+    body="$(sed '/^# -* >8 -*$/,$d' "$body_file")" || return "$?"
+
+    if [[ -z "${body//[[:space:]]/}" ]]; then
+      echo 'Aborted: empty PR body'
       return 1
     fi
 
-    gh pr create --fill --body-file "$body_file" || {
-      keep_body=1
-      echo "PR not created: body kept at $body_file"
-      return 1
-    }
+    if [ "$mode" = update ]; then
+      if [[ "$body" == "$pr_body" && "$title" == "$pr_title" && "$#" -eq 0 ]]; then
+        echo 'Aborted: nothing to update'
+        return 1
+      fi
+    else
+      local template_body
+      template_body="$(<"$template_path")"
+      if [[ "$body" == "$template_body" ]]; then
+        echo 'Aborted: unchanged PR body'
+        return 1
+      fi
+    fi
+
+    printf '%s\n' "$body" > "$final_body" || return "$?"
+
+    if [ "$mode" = update ]; then
+      gh pr edit "$pr_number" --title "$title" --body-file "$final_body" "$@" || {
+        keep_body=1
+        echo "PR not updated: draft kept at $body_file"
+        return 1
+      }
+      echo "PR #$pr_number updated: $pr_url"
+    else
+      gh pr create --title "$title" --body-file "$final_body" "$@" || {
+        keep_body=1
+        echo "PR not created: draft kept at $body_file"
+        return 1
+      }
+    fi
   } always {
-    [ -n "$diff_file" ] && rm -f "$diff_file"
-    [ -z "$keep_body" ] && rm -f "$body_file"
+    rm -f "$final_body"
+    [ -z "$keep_body" ] && rm -rf "$body_dir"
   }
 }
 
