@@ -11,6 +11,10 @@
 --
 -- $ sudo pacman -S zathura zathura-pdf-mupdf zathura-djvu zathura-cb imv mpv xdg-utils
 --
+-- The `g-` map opens oil in a temporary horizontal split used as a file picker:
+-- selecting a file closes the split and opens the file in the window the split
+-- came from.
+--
 -- See: https://github.com/stevearc/oil.nvim
 
 local oil = require("oil")
@@ -49,6 +53,48 @@ local function open_with_viewer()
 	end
 end
 
+---Select the entry under the cursor.
+---
+---When oil was opened, the window holds the handle of the window it came from in `vim.w.oil_origin_win`.
+---In that case, selecting a file closes the split and opens the file in the origin window. Directories,
+---and any buffer without a valid origin window, fall back to the default `actions.select` behavior
+---(navigating inside the current window).
+---
+---Used by the `<CR>` and `L` oil keymaps.
+---@return nil
+local function select_entry()
+	local origin = vim.w.oil_origin_win ---@type integer?
+	local entry = oil.get_cursor_entry() ---@type oil.Entry?
+	local dir = oil.get_current_dir() ---@type string?
+	local default = require("oil.actions").select.callback
+
+	if not origin or not vim.api.nvim_win_is_valid(origin) or not entry or not dir then
+		return default()
+	end
+
+	local path = dir .. entry.name ---@type string
+	local stat = vim.uv.fs_stat(path)
+	if entry.type == "directory" or (stat and stat.type == "directory") then
+		return default()
+	end
+
+	vim.api.nvim_win_close(0, true)
+	vim.api.nvim_set_current_win(origin)
+	vim.cmd.edit(vim.fn.fnameescape(path))
+end
+
+---Open oil in a temporary horizontal split that acts as a file picker.
+---
+---The current window is stored in `vim.w.oil_origin_win` of the new split, so
+---`select_entry` can open the chosen file back in it.
+---@return nil
+local function open_picker_split()
+	local origin = vim.api.nvim_get_current_win()
+	vim.cmd("belowright split")
+	vim.w.oil_origin_win = origin
+	oil.open()
+end
+
 ---Build an oil keymap entry that opens a directory.
 ---@param path_fn fun(): string Returns the directory to open.
 ---@param desc string
@@ -70,15 +116,17 @@ local goto_cwd = goto_dir(function()
 	return vim.fn.getcwd()
 end, "Open cwd")
 
+local select_desc = "Select (opens in origin window if from split)"
+
 local keymaps = {
 	-- Disabled to avoid conflicts with the tmux navigation keys.
 	["<C-c>"] = false,
 	["<C-h>"] = false,
 	["<C-l>"] = false,
 	["-"] = "actions.parent",
-	["<CR>"] = "actions.select",
+	["<CR>"] = { callback = select_entry, desc = select_desc },
 	["H"] = "actions.parent",
-	["L"] = "actions.select",
+	["L"] = { callback = select_entry, desc = select_desc },
 	["sh"] = "actions.select_split",
 	["sv"] = "actions.select_vsplit",
 	["gp"] = {
@@ -148,6 +196,10 @@ vim.api.nvim_create_autocmd("FileType", {
 
 vim.keymap.set("n", "go", "<CMD>Oil<CR>", {
 	desc = "Open parent directory",
+})
+
+vim.keymap.set("n", "g-", open_picker_split, {
+	desc = "Open parent directory in horizontal split picker",
 })
 
 vim.keymap.set("n", "g~", goto_home.callback, { desc = goto_home.desc })
