@@ -204,3 +204,46 @@ map("x", "<localleader>ib", wrap("**", "**"), "Bold selection")
 map("x", "<localleader>ie", wrap("_", "_"), "Italic selection")
 map("x", "<localleader>ic", wrap("`", "`"), "Inline code selection")
 map("x", "<localleader>is", wrap("~~", "~~"), "Strikethrough selection")
+
+-- Headline navigation and level editing for Markdown headings.
+
+map("n", "]h", function()
+	local row = vim.fn.line(".")
+	for i = row + 1, vim.fn.line("$") do
+		if vim.fn.getline(i):match("^#+%s") then
+			vim.api.nvim_win_set_cursor(0, { i, 0 })
+			return
+		end
+	end
+end, "Next heading")
+
+map("n", "[h", function()
+	local row = vim.fn.line(".")
+	for i = row - 1, 1, -1 do
+		if vim.fn.getline(i):match("^#+%s") then
+			vim.api.nvim_win_set_cursor(0, { i, 0 })
+			return
+		end
+	end
+end, "Previous heading")
+
+---Shift the heading on the current line one level deeper (`delta` 1) or
+---shallower (`-1`), capped at `#`..`######`.
+---@param delta integer
+local function shift_heading(delta)
+	local row = vim.fn.line(".")
+	local line = vim.fn.getline(row)
+	local hashes = line:match("^(#+)%s")
+	if not hashes then
+		vim.notify("No heading on this line", vim.log.levels.WARN)
+		return
+	end
+	local level = math.max(1, math.min(6, #hashes + delta))
+	if level ~= #hashes then
+		vim.fn.setline(row, string.rep("#", level) .. line:sub(#hashes + 1))
+	end
+end
+
+map("n", "<localleader>hd", function() shift_heading(1) end, "Demote heading")
+map("n", "<localleader>hu", function() shift_heading(-1) end, "Promote heading")
+map("n", "<localleader>cp", "<cmd>NotesCapture<cr>", "Capture task into TODO.md")

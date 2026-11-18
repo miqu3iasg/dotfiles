@@ -831,14 +831,67 @@ function M.daily(offset)
 	return path
 end
 
+---Quick capture: append a Markdown task (`- [ ] title`) to the end of
+---`TODO.md` in the vault root, creating the file when missing. If the file is
+---open in a buffer, the line goes through the buffer and the file is saved;
+---otherwise it is appended on disk. Prompts for the title when none is given.
+---
+---The TODO file is a plain dump for later processing: move the task where it
+---belongs by hand, or turn it into a note with `:NotesNew`.
+---@param title? string
+function M.capture(title)
+	local dir = require_vault()
+	if not dir then
+		return
+	end
+	if not title then
+		vim.ui.input({ prompt = "Capture task: " }, function(t)
+			if t and t ~= "" then
+				M.capture(t)
+			end
+		end)
+		return
+	end
+
+	local path = dir .. "/TODO.md"
+	local bufnr = vim.fn.bufadd(path)
+	if vim.api.nvim_buf_is_loaded(bufnr) then
+		vim.api.nvim_buf_set_lines(bufnr, -1, -1, false, { "- [ ] " .. title })
+		vim.api.nvim_buf_call(bufnr, function()
+			vim.cmd("silent write")
+		end)
+	else
+		local exists = uv.fs_stat(path) ~= nil
+		local fh = io.open(path, "a")
+		if not fh then
+			notify("Could not append to " .. path, vim.log.levels.ERROR)
+			return
+		end
+		if exists then
+			fh:write("\n")
+		end
+		fh:write("- [ ] " .. title .. "\n")
+		fh:close()
+	end
+	notify("Captured: " .. title, vim.log.levels.INFO)
+end
+
 ---Run `on_choice` with the item chosen in fzf-lua, or in `vim.ui.select` when
 ---fzf-lua is missing. Cancelling calls nothing.
+---
+---fzf-lua is lazy-loaded (markdown triggers it), so the pickers of the notes
+---workflow force the load first: outside a Markdown buffer the plugin is not
+---on the runtimepath yet, and a plain require would fall back to
+---`vim.ui.select`.
 ---@param items string[]
 ---@param prompt string
 ---@param on_choice fun(item: string)
 ---@param header? string
 local function pick(items, prompt, on_choice, header)
-	local ok, fzf = pcall(require, "fzf-lua")
+	local ok, fzf = pcall(function()
+		require("lib.lazy").load("fzf-lua")
+		return require("fzf-lua")
+	end)
 	if not ok then
 		vim.ui.select(items, { prompt = prompt }, function(item)
 			if item then
@@ -1022,7 +1075,12 @@ end
 
 ---@return table? fzf
 local function require_fzf()
-	local ok, fzf = pcall(require, "fzf-lua")
+	local ok, fzf = pcall(function()
+		-- fzf-lua is lazy-loaded on Markdown buffers; force the load so the
+		-- search commands work from any buffer.
+		require("lib.lazy").load("fzf-lua")
+		return require("fzf-lua")
+	end)
 	if not ok then
 		notify("fzf-lua is required for searching", vim.log.levels.ERROR)
 		return nil
@@ -1135,6 +1193,7 @@ end
 function M.setup()
 	local cmd = vim.api.nvim_create_user_command
 	cmd("NotesDraft", M.new_draft, { desc = "Notes: quick draft" })
+	cmd("NotesCapture", M.capture, { desc = "Notes: quick task capture into TODO.md" })
 	cmd("NotesNew", M.new_note, { desc = "Notes: new note (pick type and title)" })
 	-- The command callback receives the command table, which M.daily would
 	-- take as the offset; discard it and open today's note.
