@@ -2,8 +2,9 @@
 #
 # Git aliases and interactive pickers: status/diff/commit shortcuts, fzf
 # staging (gaf), interactive branch switching (gsws), log browsing (gl),
-# dangling commits (gfc), stashes (gstl), worktrees (gwa/gwc/gwr) and WIP
-# commit helpers (gwip/gunwip).
+# dangling commits (gfc), stashes (gstl), worktrees (gwa/gwc/gwr), WIP
+# commit helpers (gwip/gunwip) and GitHub repo/PR creation
+# (ghre/ghren/ghpr).
 #
 # Interactive functions check that the shell is inside a work tree before
 # doing anything, and hand control to fzf/less with the repository colors
@@ -430,12 +431,157 @@ gunwip() {
   fi
 }
 
-# Create a private GitHub repository from the current directory,
-# push all branches, and open it in the browser
-ghc() {
+# Create a private GitHub repository from the current directory, push all
+# branches and open it in the browser.
+ghre() {
   gh repo create --private --source=. --remote=origin &&
     git push -u --all &&
     gh browse
+}
+
+# Create a GitHub repository from the current directory with the given name
+# and visibility (default: private), push all branches and open it in the
+# browser. Without arguments (or with `-h`/`--help`), show the usage.
+# Usage: ghren <repo-name> [private|public]
+# References:
+#   - https://cli.github.com/manual/gh_repo_create (--source, --remote)
+#   - repository name characters: https://docs.github.com/en/repositories/creating-and-managing-repositories/creating-a-new-repository
+ghren() {
+  if [ "$#" -eq 0 ] || [ "$1" = '-h' ] || [ "$1" = '--help' ]; then
+    printf '%s\n' \
+      'Usage: ghren <repo-name> [private|public]' \
+      '' \
+      'Create a GitHub repository from the current directory, push all' \
+      'branches and open it in the browser.' \
+      '' \
+      'Arguments:' \
+      '  <repo-name>  Repository name, `name` or `owner/name`' \
+      '  [private|public]  Repository visibility (default: private)' \
+      '' \
+      'Examples:' \
+      '  ghren my-project' \
+      '  ghren my-project public' \
+      '  ghren my-org/my-project private'
+    return 0
+  fi
+
+  [ "$#" -gt 2 ] && echo 'Too many arguments (run: ghren --help)' && return 1
+
+  local inside_worktree
+  inside_worktree=$(git rev-parse --is-inside-work-tree) || return "$?"
+  [ "$inside_worktree" = false ] && echo 'Not inside git worktree' && return 1
+
+  local repo_name="$1"
+  local visibility="${2:-private}"
+
+  # Accept `name` or `owner/name`.
+  [[ "$repo_name" =~ '^([A-Za-z0-9-]+/)?[A-Za-z0-9._-]+$' ]] ||
+    { echo "Invalid repository name: $repo_name" && return 1 }
+
+  case "$visibility" in
+    private | public) ;;
+    *)
+      echo "Invalid visibility '$visibility' (use: private or public)"
+      return 1
+      ;;
+  esac
+
+  gh repo create "$repo_name" "--$visibility" --source=. --remote=origin &&
+    git push -u --all &&
+    gh browse
+}
+
+# Create a GitHub pull request from the current branch.
+# Like `git commit -v`, nvim/vim open the PR diff in a read-only split.
+# Exit non-zero from the editor (e.g. `:cq`) aborts without creating anything.
+# References:
+#   - https://zsh.sourceforge.io/Doc/Release/Shell-Grammar.html (always block)
+#   - https://zsh.sourceforge.io/Doc/Release/Expansion.html (`z` flag, split words with quoting)
+#   - default branch on remote repo: https://davidwalsh.name/get-default-branch-name
+ghpr() {
+  local inside_worktree
+  inside_worktree=$(git rev-parse --is-inside-work-tree) || return "$?"
+  [ "$inside_worktree" = false ] && echo 'Not inside git worktree' && return 1
+
+  command -v gh >/dev/null || { echo 'gh CLI not installed' && return 1 }
+
+  local template_path="$HOME/dev/resources/templates/pr.md"
+  [[ -r "$template_path" ]] || { echo "PR template not found: $template_path" && return 1 }
+
+  # `$EDITOR` may carry arguments (e.g. `nvim --clean`), so split it first.
+  local -a editor_cmd
+  editor_cmd=(${(z)${EDITOR:-nvim}})
+  command -v "${editor_cmd[1]}" >/dev/null ||
+    { echo "Editor not found: ${editor_cmd[1]}" && return 1 }
+
+  local branch
+  branch=$(git branch --show-current) || return "$?"
+  [ -z "$branch" ] && { echo 'Detached HEAD' && return 1 }
+
+  local upstream_reference
+  upstream_reference="$(git for-each-ref --format='%(upstream:short)' --count=1 --omit-empty "$(git symbolic-ref -q HEAD)")" || return "$?"
+  [ -z "$upstream_reference" ] && { echo "Branch '$branch' not pushed (run: ggp)" && return 1 }
+
+  local remote_name="${upstream_reference%%/*}" # something like `origin`
+
+  local unpushed
+  unpushed=$(git log --oneline "$upstream_reference..HEAD") || return "$?"
+  [ -n "$unpushed" ] && { printf "Unpushed commits on '%s' (run: gp):\n%s\n" "$branch" "$unpushed" && return 1 }
+
+  # Base branch for the diff: the remote HEAD (e.g. `origin/main`), set by
+  # `git clone`; only on clones without it fall back to a `gh repo view`.
+  local base_reference
+  base_reference=$(git symbolic-ref -q --short "refs/remotes/$remote_name/HEAD") ||
+    base_reference=$(gh repo view --json defaultBranchRef --jq "\"$remote_name/\" + .defaultBranchRef.name" 2>/dev/null)
+
+  if [ -n "$base_reference" ]; then
+    [ "$branch" = "${base_reference#*/}" ] &&
+      { echo "On default branch '${base_reference#*/}': nothing to PR" && return 1 }
+
+    local ahead
+    ahead=$(git log --oneline "$base_reference..HEAD") || return "$?"
+    [ -z "$ahead" ] && { echo "No commits ahead of $base_reference" && return 1 }
+  fi
+
+  local body_file diff_file keep_body
+  body_file=$(mktemp "${TMPDIR:-/tmp}/ghpr-XXXXXX.md") ||
+    { echo 'Failed to create temporary file' && return 1 }
+
+  # The `always` block removes the temporary files even on `ctrl-c`.
+  {
+    cat "$template_path" > "$body_file" || return "$?"
+
+    editor_cmd+=("$body_file")
+
+    # Without a base reference there is nothing to diff against, so the
+    # split is skipped.
+    if [ -n "$base_reference" ] && [[ "${editor_cmd[1]##*/}" == (nvim|vim) ]]; then
+      diff_file=$(mktemp "${TMPDIR:-/tmp}/ghpr-diff-XXXXXX.patch") ||
+        { echo 'Failed to create temporary file' && return 1 }
+      git diff --patch "$base_reference...HEAD" > "$diff_file" || return "$?"
+      editor_cmd+=(
+        -c "vertical rightbelow split $diff_file"
+        -c 'setlocal readonly nomodifiable'
+        -c 'wincmd p'
+      )
+    fi
+
+    "${editor_cmd[@]}" || { echo 'Aborted: editor exited with an error' && return 1 }
+
+    if ! [ -s "$body_file" ] || cmp -s "$body_file" "$template_path"; then
+      echo 'Aborted: empty or unchanged PR body'
+      return 1
+    fi
+
+    gh pr create --fill --body-file "$body_file" || {
+      keep_body=1
+      echo "PR not created: body kept at $body_file"
+      return 1
+    }
+  } always {
+    [ -n "$diff_file" ] && rm -f "$diff_file"
+    [ -z "$keep_body" ] && rm -f "$body_file"
+  }
 }
 
 # vim:ft=sh
