@@ -323,7 +323,7 @@ local markdown = {
 
 	-- Lists and task items
 	["@markup.list.markdown"] = { fg = md.accent, bold = true },
-	["@markup.list.checked.markdown"] = { fg = md.accent, bold = true },
+	["@markup.list.checked.markdown"] = { fg = md.marker },
 	["@markup.list.unchecked.markdown"] = { fg = md.accent, bold = true },
 
 	-- Blockquote
