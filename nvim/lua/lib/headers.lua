@@ -1,20 +1,14 @@
 -- lua/lib/headers.lua
 
--- Comment and file-header machinery for the snippets: comment styles per
--- filetype, shebangs, filename and date helpers, the declarative header field
--- constructors (`H.*`) and the four header specs. Every piece of this file is
--- domain logic the consumer builds on; the file itself registers nothing
--- global and exposes no commands.
---
--- File headers are assembled declaratively: each header is a list of field
--- constructors applied in order, so every header keeps the same field order
--- and usage format (See: doc/snippets.txt).
+-- Comment and file-header machinery for the snippets, with comment styles per
+-- filetype, shebangs, filename helpers, the `H.*` field constructors and the
+-- header specs.
 --
 -- The Lua opener and closer are built by concatenation so this file does not
 -- contain a literal long-bracket delimiter.
 --
--- See: lua/snippets/common.lua
 -- See: doc/snippets.txt
+-- See: lua/snippets/common.lua
 -- See: https://spdx.dev/ids/
 
 local ls = require("luasnip")
@@ -46,7 +40,7 @@ local function get_filename()
 	return name ~= "" and name or "untitled"
 end
 
--- Path relative to the working directory.
+---Path relative to the working directory.
 ---@return string
 local function get_relpath()
 	local path = vim.fn.expand("%:.")
@@ -56,7 +50,7 @@ local function get_relpath()
 	return path
 end
 
--- File name without its extension.
+---File name without its extension.
 ---@return string
 local function get_basename()
 	local name = vim.fn.expand("%:t:r")
@@ -78,9 +72,8 @@ end
 local C_BLOCK = { kind = "block", open = "/*", close = "*/" }
 local HTML_BLOCK = { kind = "block", open = "<!--", close = "-->" }
 
--- File header comment style per filetype. Filetypes without a real block
--- comment stay on line comments, and lisp and scheme keep ";;;" because it
--- is the community convention for file metadata.
+-- File header comment style per filetype. Lisp and scheme use ";;;" by
+-- convention, and filetypes without a block comment stay on line comments.
 ---@type table<string, CommentStyle>
 local comment_styles = {
 	lua = { kind = "block", open = "-" .. "-[" .. "[", close = "]" .. "]", mid = "  ", close_indent = "" },
@@ -228,22 +221,15 @@ local function line_prefix(style)
 	end
 end
 
--- Pads a usage label so the commands line up under "Compile:" and "Run:":
--- the label sits two steps deeper than the usage title and the `$` starts
--- ten columns after the label indent.
+-- Pads a usage label so the commands line up in a column.
 ---@param text string
 ---@return string
 local function usage_label(text)
 	return "      " .. text .. string.rep(" ", 10 - #text)
 end
 
--- Compile/run instructions for the `ehead` and `shead` headers. Each entry
--- takes a comment style and returns the nodes for the lines that follow the
--- usage title: one line per label, commands prefixed by `$ ` and carrying
--- the filename nodes of the buffer.
---
--- Usage labels pad to ten columns, so the commands line up under
--- "Compile:" and "Run:"; the lines sit two steps deeper than the title.
+-- Compile/run instructions per filetype, which follow the usage title, with one
+-- line per label and commands prefixed by `$ `.
 ---@type table<string, fun(style: CommentStyle): table>
 local usage_by_ft = {
 	c = function(style)
@@ -394,14 +380,8 @@ usage_by_ft.zsh = usage_by_ft.sh
 ---@type table<string, boolean>
 local inline_usage_fts = { java = true }
 
----Adds a blank line and the usage block to a header: a `Usage:` title and,
----below it, the filetype instructions. Java keeps its own labels and gets
----no title. Falls back to a title plus an editable placeholder when the
----filetype has no entry in `usage_by_ft`.
----
----LuaSnip needs contiguous insert indices, so the caller passes the next
----free index and gets back the next one still free. An index is only
----consumed in the fallback case.
+---Add a blank line and the usage block to a header. Falls back to a title plus
+---an editable placeholder when the filetype has no instructions.
 ---@param add fun(...: table) Appends nodes to the snippet being built.
 ---@param style CommentStyle
 ---@param ft string
@@ -420,6 +400,7 @@ local function add_usage(add, style, ft, idx)
 		return idx
 	end
 	add(t({ "", wrap(style, "      ") }))
+	-- Only the fallback consumes an index, since LuaSnip needs them contiguous.
 	add(i(idx, "how to compile/run this file"))
 	return idx + 1
 end
@@ -463,11 +444,8 @@ local function append_to(list)
 	end
 end
 
--- Every field receives a header context and appends its nodes to it:
--- `add` appends nodes, `style` is the comment style of the buffer filetype,
--- `ft` is the filetype, and `idx` is the next free insert index. Fields
--- that insert nodes advance `ctx.idx`, so the indices stay contiguous by
--- construction; index 0 is the exit cursor, added by the builder itself.
+-- Every field appends its nodes to the context, and fields that insert advance
+-- `ctx.idx`, so the indices stay contiguous. Index 0 is the exit cursor.
 ---@class HeaderContext
 ---@field add fun(...: table) Appends nodes to the snippet being built.
 ---@field style CommentStyle
@@ -597,8 +575,8 @@ function H.copyright(suffix)
 	end
 end
 
--- Bare copyright line for the proprietary header, Google style: the year
--- comes from the date helper and the holder is editable on the first jump.
+-- Bare copyright line for the proprietary header, Google style. The holder is
+-- editable on the first jump.
 ---@param suffix string Text appended after the copyright holder.
 ---@return HeaderField
 function H.copyright_line(suffix)
@@ -612,8 +590,7 @@ function H.copyright_line(suffix)
 	end
 end
 
--- Header specs. The fields appear in the order the rendered header does:
--- identification, context, usage, description, license.
+-- Header specs. The field order matches the rendered header.
 local headers = {
 	-- `head`: File, Author, Created, Description, license line.
 	head = {
@@ -757,8 +734,7 @@ local function get_clipboard()
 	return (text:gsub("%s+$", ""))
 end
 
--- Exported API. The consumers destructure into locals with their original
--- names, so the moved code keeps the call sites it had in common.lua.
+-- Exported API. The consumers destructure into locals with the original names.
 M.get_date = get_date
 M.get_year = get_year
 M.get_filename = get_filename

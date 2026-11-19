@@ -1,27 +1,10 @@
 -- lua/lib/lazy.lua
 
--- Filetype-based lazy loading for vim.pack plugins. Each plugin's own file in
--- `lua/plugins/` declares itself with `setup(spec)`, so `lua/config/pack.lua`
--- stays limited to declarations of eager plugins. A plugin without a natural
--- filetype trigger, such as fzf-lua, registers with no filetypes and loads
--- through an explicit `load(name)` call; see `lua/plugins/fzf.lua`.
+-- Filetype-based lazy loading for `vim.pack` plugins. Each plugin file in
+-- `lua/plugins/` declares itself with `setup(spec)`.
 --
--- The plugin is registered at startup, but its `plugin/` scripts only run when
--- the first buffer of one of the listed filetypes appears, or when `load(name)`
--- is called manually. Loading runs `configure`, then `:packadd`, then `after`,
--- and finally runs the FileType event again for the triggering buffer. The
--- repeat is needed because the plugin was not on the runtimepath when the
--- original event ran, so its ftplugins would otherwise be skipped for that
--- buffer.
---
--- `configure` runs before `:packadd`, so it is the place for settings the plugin
--- reads while loading, such as globals. `after` is for anything that needs the
--- plugin already loaded. The plugin name is derived from `src` and must match
--- the directory that vim.pack installs.
---
--- A filetype whose detection depends on a global owned by the plugin must set
--- that global at the top level of the plugin's file, because the plugin is not
--- on the runtimepath at detection time.
+-- Loading runs `configure`, then `:packadd`, then `after`, then the FileType
+-- event again for the triggering buffer.
 --
 -- See: lua/config/pack.lua
 -- See: lua/plugins/lisp.lua
@@ -55,11 +38,9 @@ local function ensure_gate()
 	end
 	gate_installed = true
 
-	-- There is no pattern on purpose. A table lookup is as cheap as the event
-	-- matching, and every lazy plugin stays inspectable in one place with
-	-- `:autocmd LazyPack`.
-	-- Also listen to BufEnter to catch plugins that register filetypes after
-	-- the initial FileType event.
+	-- No pattern on purpose, so every lazy plugin stays inspectable in
+	-- `:autocmd LazyPack`. BufEnter catches plugins that register filetypes
+	-- after the initial FileType event.
 	vim.api.nvim_create_autocmd({ "FileType", "BufEnter" }, {
 		group = vim.api.nvim_create_augroup("LazyPack", { clear = true }),
 		callback = function(ev)
@@ -77,8 +58,7 @@ end
 ---Load one plugin, once per session. Calling it repeatedly is safe, and so is
 ---calling it before `setup` for the same name, which does nothing.
 ---@param name string
----@param buf? integer Buffer that triggered the load. Its FileType event is run
----again after the `:packadd` so the plugin's ftplugins apply to it.
+---@param buf? integer Buffer that triggered the load.
 function M.load(name, buf)
 	local spec = registered[name]
 	if not spec or loaded[name] then
@@ -109,9 +89,7 @@ function M.load(name, buf)
 		end
 	end
 
-	-- With the plugin on the runtimepath, its ftplugin runs first in the
-	-- `runtime!` order, which sets up buffer-local commands for this very buffer.
-	-- The load guard prevents the plugin from loading twice.
+	-- Now on the runtimepath, so its ftplugin runs for this buffer.
 	if buf and vim.api.nvim_buf_is_valid(buf) then
 		pcall(vim.api.nvim_exec_autocmds, "FileType", { buffer = buf })
 	end
@@ -140,8 +118,7 @@ function M.setup(spec)
 
 	ensure_gate()
 
-	-- Buffers that already have one of the filetypes, such as restored sessions
-	-- and files opened before this module was required, missed the event.
+	-- Buffers already open missed the event, such as restored sessions.
 	for _, buf in ipairs(vim.api.nvim_list_bufs()) do
 		local ft = vim.bo[buf].filetype
 		if ft and vim.list_contains(spec.filetypes or {}, ft) then

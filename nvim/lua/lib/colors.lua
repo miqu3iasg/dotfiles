@@ -1,23 +1,20 @@
 -- lua/lib/colors.lua
 
--- Color and highlight helpers shared by the colorschemes in colors/. Every
--- theme used to carry its own copy of this machinery (three variants of the
--- same `blend`, two copies of the xterm-256 conversion, duplicated
--- frontmatter sync), drifting apart in argument order and behavior; this
--- module is the single version all of them build on.
+-- Color and highlight helpers shared by the colorschemes in `colors/`, so every
+-- theme builds on the same conversions.
 --
--- The module is stateless except for the cterm conversion cache, which only
--- memoizes pure results. It registers nothing global: the colorschemes own
--- their `highlight clear`, their `colors_name` and their augroups.
+-- The only state is the cterm conversion cache. The themes own their highlight
+-- reset, their `colors_name` and their augroups.
+--
+-- See: doc/lib.txt
 
 local M = {}
 
 ---@class HighlightSpec
----Attributes of one highlight group, as passed to `nvim_set_hl`. Colors are
----hex strings ("#rrggbb"); attribute flags mirror the GUI attributes.
+---Attributes of one highlight group, as passed to `nvim_set_hl`.
 ---@field fg? string Default (foreground) color.
 ---@field bg? string Background color.
----@field sp? string Special color: the underline/undercurl color.
+---@field sp? string Special color, the underline or undercurl color.
 ---@field bold? boolean
 ---@field italic? boolean
 ---@field underline? boolean
@@ -26,15 +23,14 @@ local M = {}
 ---@field strikethrough? boolean
 ---@field nocombine? boolean
 ---@field blend? integer Blend level for floating window shadows (0..100).
----@field link? string Group to link to; when present, other fields are ignored.
+---@field link? string Group to link to, which ignores the other fields.
 ---@field cterm? table<string, boolean> Explicit cterm attributes, skipping derivation.
 
--- GUI attributes mirrored into `cterm` by `normalize`. `nocombine` is in the
--- list because enfocadomod sets it extensively; the others cover every flag
--- the themes use.
+-- GUI attributes mirrored into `cterm` by `normalize`. `nocombine` is here
+-- because enfocadomod sets it extensively.
 local ATTRS = { "bold", "italic", "underline", "undercurl", "reverse", "strikethrough", "nocombine" }
 
----Splits `#rrggbb` into its red, green and blue components.
+---Split `#rrggbb` into its red, green and blue components.
 ---@param hex string
 ---@return integer r
 ---@return integer g
@@ -43,8 +39,8 @@ function M.rgb(hex)
 	return tonumber(hex:sub(2, 3), 16), tonumber(hex:sub(4, 5), 16), tonumber(hex:sub(6, 7), 16)
 end
 
----Mixes `fg` over `bg` with the given alpha (0..1): alpha 0 returns `bg`,
----alpha 1 returns `fg`.
+---Mix `fg` over `bg` with the given alpha (0..1), where 0 returns `bg` and 1
+---returns `fg`.
 ---@param fg string
 ---@param bg string
 ---@param alpha number
@@ -58,8 +54,8 @@ function M.blend(fg, bg, alpha)
 	return string.format("#%02x%02x%02x", mix(fr, br), mix(fgr, bgr), mix(fb, bb))
 end
 
----Scales the HSL saturation of `hex` by `factor` (1 = unchanged, 0 = gray).
----Hue and lightness are preserved; grays are unaffected.
+---Scale the HSL saturation of `hex` by `factor`, where 1 keeps it and 0 makes
+---it gray. Hue and lightness are preserved.
 ---@param hex string
 ---@param factor number
 ---@return string
@@ -115,13 +111,14 @@ function M.desaturate(hex, factor)
 	)
 end
 
--- xterm-256 has a 6x6x6 color cube (levels 0,95,135,175,215,255) and a
--- 24-step gray ramp (8,18,...,238). For every hex the closest candidate in
--- each is computed and the nearest one kept (euclidean RGB distance).
--- Results are cached, so the cost is paid once per distinct color.
+-- Test the xterm-256 color cube and gray ramp, keep the closest result and
+-- cache it.
 local CUBE = { 0, 95, 135, 175, 215, 255 }
 local cterm_cache = {}
 
+---Return the xterm-256 cube level closest to the 8-bit channel value `v`.
+---@param v integer
+---@return integer
 local function nearest_cube_level(v)
 	local best_i, best_d = 1, math.huge
 	for i, c in ipairs(CUBE) do
@@ -133,11 +130,19 @@ local function nearest_cube_level(v)
 	return best_i - 1
 end
 
+---Return the squared euclidean distance between two RGB triples.
+---@param r1 integer
+---@param g1 integer
+---@param b1 integer
+---@param r2 integer
+---@param g2 integer
+---@param b2 integer
+---@return number
 local function dist2(r1, g1, b1, r2, g2, b2)
 	return (r1 - r2) ^ 2 + (g1 - g2) ^ 2 + (b1 - b2) ^ 2
 end
 
----Converts a hex color to the nearest xterm-256 color index.
+---Convert a hex color to the nearest xterm-256 color index.
 ---@param hex string
 ---@return integer
 function M.to256(hex)
@@ -147,11 +152,9 @@ function M.to256(hex)
 
 	local r, g, b = M.rgb(hex)
 
-	-- Best color-cube candidate
 	local ri, gi, bi = nearest_cube_level(r), nearest_cube_level(g), nearest_cube_level(b)
 	local cube_d = dist2(r, g, b, CUBE[ri + 1], CUBE[gi + 1], CUBE[bi + 1])
 
-	-- Best gray-ramp candidate
 	local step = math.max(0, math.min(23, math.floor(((r + g + b) / 3 - 8) / 10 + 0.5)))
 	local gv = 8 + 10 * step
 	local gray_d = dist2(r, g, b, gv, gv, gv)
@@ -161,16 +164,15 @@ function M.to256(hex)
 	return idx
 end
 
+---Check whether `v` is a `#rrggbb` string.
+---@param v any
+---@return boolean
 local function is_hex(v)
 	return type(v) == "string" and v:match("^#%x%x%x%x%x%x$") ~= nil
 end
 
----Turns a group spec into `nvim_set_hl` options. A string spec links to the
----named group (with `force`, so the link wins over stale definitions); a
----table spec with `link` is passed through untouched; otherwise `ctermfg` and
----`ctermbg` are derived from hex `fg`/`bg` and every GUI attribute is mirrored
----into `cterm` (with undercurl falling back to underline on terminals
----without support), so the theme renders the same on any terminal.
+---Turn a group spec into `nvim_set_hl` options. A string links to the named
+---group with `force`, and a table derives `cterm` from its hex colors.
 ---@param spec string|HighlightSpec
 ---@return HighlightSpec
 function M.normalize(spec)
@@ -201,8 +203,8 @@ function M.normalize(spec)
 	return opts
 end
 
----Sets every `group` → `spec` entry of `groups` in namespace `ns` (the global
----namespace when omitted), through `normalize`.
+---Set every `group` to `spec` entry of `groups` in namespace `ns`, through
+---`normalize`.
 ---@param groups table<string, string|HighlightSpec>
 ---@param ns? integer Defaults to the global namespace.
 function M.apply(groups, ns)
@@ -211,8 +213,8 @@ function M.apply(groups, ns)
 	end
 end
 
----Writes `colors` (16 entries) into `terminal_color_0` ... `terminal_color_15`,
----defining the :terminal palette.
+---Write `colors`, 16 entries, into the `terminal_color_0` to `terminal_color_15`
+---variables that define the :terminal palette.
 ---@param colors string[]
 function M.terminal_colors(colors)
 	for i, color in ipairs(colors) do
@@ -220,14 +222,8 @@ function M.terminal_colors(colors)
 	end
 end
 
----Applies `spec` in a dedicated namespace `name` and keeps it active only in
----markdown windows, so YAML frontmatter is themed without leaking into plain
----YAML buffers. The namespace, augroup and window sentinel variable share the
----`name`. Returns the augroup, so the theme can attach its own autocmds to the
----same group.
----
----Every markdown-focused theme (hollow, insanity, artifact) needs this, and
----the sync logic must agree across them; it lives here as the single copy.
+---Apply `spec` in namespace `name` and keep it active only in markdown
+---windows, so YAML frontmatter is themed without leaking into YAML buffers.
 ---@param name string Namespace and augroup name.
 ---@param spec table<string, string|HighlightSpec>
 ---@return integer augroup

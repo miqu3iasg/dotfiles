@@ -1,10 +1,9 @@
 -- lua/lib/substitute.lua
 
--- Helpers that pre-fill the command line with a `:substitute` or a project-wide
--- substitution and leave the cursor between the pattern and the replacement.
+-- Pre-fill the command line with a buffer or project-wide substitution,
+-- leaving the cursor between the pattern and the replacement.
 --
--- The project-wide substitution requires ripgrep as 'grepprg'. Reading the
--- visual selection requires Neovim 0.10 or newer.
+-- The project-wide substitution needs ripgrep as 'grepprg'.
 --
 -- See: man:rg
 
@@ -21,9 +20,8 @@ function M.escape_pattern(text, whole_word)
 	return whole_word and ("\\<" .. p .. "\\>") or p
 end
 
--- Makes `s` safe to feed as typed keys. A `<` would be parsed as key notation,
--- such as `<CR>`, so it becomes `<lt>`. Control characters, such as a literal
--- Tab that would trigger completion, are quoted with `<C-v>`.
+-- Makes `s` safe to feed as typed keys. `<` would parse as key notation, so it
+-- becomes `<lt>`, and control characters are quoted with `<C-v>`.
 local function to_keys(s)
 	s = s:gsub("<", "<lt>")
 	return (s:gsub("%c", function(c)
@@ -31,9 +29,8 @@ local function to_keys(s)
 	end))
 end
 
----Open the command line with `head .. tail` and place the cursor between the
----two slashes at the start of `tail`. `tail` must be plain ASCII without key
----notation and must start with `//`.
+---Open the command line with `head .. tail`, cursor between the leading slashes
+---of `tail`, which must be plain ASCII and start with `//`.
 ---@param head string
 ---@param tail string
 local function feed_cmdline(head, tail)
@@ -52,9 +49,8 @@ function M.prompt(scope, text, whole_word)
 	feed_cmdline(("keeppatterns %s/%s"):format(scope, M.escape_pattern(text, whole_word)), "//gc")
 end
 
----Substitute `text` across the whole project by grepping it into the quickfix
----list and running the substitution on every file in it. Multi-line text and
----text with `|` are not supported.
+---Substitute `text` across the whole project, which multi-line text and `|` do
+---not support.
 ---@param text string
 ---@param whole_word? boolean
 function M.project(text, whole_word)

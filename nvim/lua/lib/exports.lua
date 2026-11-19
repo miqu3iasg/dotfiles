@@ -3,23 +3,19 @@
 -- Single source of truth for where exported documents go, used by the pandoc
 -- setup.
 --
--- Final documents are written to `<root>/exports/<reldir>/<name>.pdf`.
--- `<reldir>` is the folder of the note relative to `<root>`, so notes with the
--- same file name in different folders never overwrite each other. `<root>` is
--- found through `M.markers`, falling back to the note's own folder. Setting
--- `vim.g.exports_root` forces one global folder instead.
+-- The root comes from `M.markers`, falling back to the note's folder, or from
+-- `vim.g.exports_root`. An unnamed buffer counts as `scratch`.
 --
--- Every function takes a `src`, which is a buffer number or a file path. An
--- unnamed buffer is treated as a file called `scratch` in the current directory.
+-- See: doc/lib.txt
+-- See: doc/pandoc.txt
 
 local M = {}
 
 ---@type string
 M.exports_dirname = "exports"
 
--- Markers are searched in order, from highest to lowest priority. Markers inside
--- the same inner table have equal priority, and the closest parent with any of
--- them wins. Nested lists require a Neovim whose `vim.fs.root` accepts them.
+-- Markers are searched from highest to lowest priority, and the closest parent
+-- that has any of them wins.
 ---@type (string|string[])[]
 M.markers = {
 	".exports-root",

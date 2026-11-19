@@ -1,9 +1,7 @@
 -- lua/lib/keys.lua
 
--- Shared keymap setters. Every module used to define its own thin wrapper
--- around `vim.keymap.set`; these are the canonical ones. They always attach a
--- description, since the `desc` field of each mapping is its documentation, and
--- they are silent by default, so `opts` is only needed for the exceptions.
+-- Shared keymap setters. Every mapping gets a `desc` and is silent by default,
+-- so `opts` is only for the exceptions.
 --
 -- See: lua/config/keymaps/
 

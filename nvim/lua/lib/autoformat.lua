@@ -1,27 +1,29 @@
 -- lua/lib/autoformat.lua
 
--- Single source of truth for the autoformat-on-save state. Anything that reads
--- or changes the state must go through this module instead of touching the
--- variables directly.
+-- Single source of truth for the autoformat-on-save state. Readers and callers
+-- go through this module, never the variables.
 --
--- The state has two scopes, global (`g:disable_autoformat`) and buffer-local
--- (`b:disable_autoformat`), and autoformat runs only when neither disables it.
--- `disable()`, `enable()` and `toggle()` act on the global scope. `enable()` also
--- clears the override of the current buffer, but not of other buffers.
+-- Formatting runs only when neither `g:disable_autoformat` nor
+-- `b:disable_autoformat` is set.
+--
+-- See: doc/lib.txt
 
 local M = {}
 
+---Check whether autoformat is enabled for `bufnr`.
 ---@param bufnr? integer Defaults to the current buffer.
----@return boolean
+---@return boolean enabled
 function M.enabled(bufnr)
 	bufnr = bufnr or 0
 	return not (vim.g.disable_autoformat or vim.b[bufnr].disable_autoformat)
 end
 
+---Disable autoformat globally.
 function M.disable()
 	vim.g.disable_autoformat = true
 end
 
+---Enable autoformat globally and clear the override of the current buffer.
 function M.enable()
 	vim.b.disable_autoformat = false
 	vim.g.disable_autoformat = false

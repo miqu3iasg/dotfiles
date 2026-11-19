@@ -1,32 +1,29 @@
 -- lua/lib/buffers.lua
 
--- Helpers for inspecting, saving and deleting buffers without breaking the
--- window layout.
+-- Buffer inspection, saving and deletion that keep the window layout intact.
+--
+-- See: doc/lib.txt
 
 local M = {}
 
+---Check whether `buf` is a terminal buffer.
 ---@param buf integer
 ---@return boolean
 function M.is_terminal(buf)
 	return vim.api.nvim_buf_is_valid(buf) and vim.bo[buf].buftype == "terminal"
 end
 
----Whether `win` is a regular window, as opposed to a floating one.
+---Check whether `win` is a regular window instead of a floating one.
 ---@param win integer
 ---@return boolean
 function M.is_normal_window(win)
 	return vim.api.nvim_win_get_config(win).relative == ""
 end
 
----Save `buf` if it has unsaved changes and a real file name. Special and
----unnamed buffers are skipped, since `:update` errors on them.
----
----Returns whether the buffer is safe to delete, which means nothing is left to
----lose. That is the case for terminals and for buffers that are unmodified or
----were saved. Modified special or unnamed buffers have nowhere to be saved, and
----buffers whose save failed are not safe either.
+---Save `buf` when it has changes and a real file name, and report whether it
+---is safe to delete. Special, unnamed and unsaved buffers are not.
 ---@param buf? integer Defaults to the current buffer.
----@return boolean
+---@return boolean safe
 function M.save_if_modified(buf)
 	buf = (buf == nil or buf == 0) and vim.api.nvim_get_current_buf() or buf
 
@@ -43,9 +40,7 @@ function M.save_if_modified(buf)
 	return not vim.bo[buf].modified
 end
 
----Delete `buf`. Terminals are deleted with `force` and everything else is not,
----so modified buffers are kept. It does not raise and returns the `pcall`
----result instead.
+---Delete `buf`, forcing terminals and keeping modified buffers.
 ---@param buf integer
 ---@return boolean ok
 ---@return string? err
@@ -53,7 +48,7 @@ function M.delete(buf)
 	return pcall(vim.api.nvim_buf_delete, buf, { force = M.is_terminal(buf) })
 end
 
----Most recently used listed buffer other than `buf`, or `nil` when there is none.
+---Return the most recently used listed buffer other than `buf`.
 ---@param buf integer
 ---@return integer?
 function M.pick_replacement(buf)
@@ -66,8 +61,7 @@ function M.pick_replacement(buf)
 	return best and best.bufnr
 end
 
----Delete `buf` but keep every window that was showing it. Those windows switch
----to the most recently used buffer, or to a new empty buffer when there is none.
+---Delete `buf` and point every window that showed it at a replacement buffer.
 ---@param buf integer
 ---@return boolean ok
 ---@return string? err
@@ -82,9 +76,8 @@ function M.delete_keep_layout(buf)
 	return M.delete(buf)
 end
 
----Save and delete every listed buffer that passes `filter`. A buffer that could
----not be saved is kept on purpose, and a single warning reports how many. Unlike
----`delete_keep_layout`, this does not preserve the window layout.
+---Save and delete every listed buffer that passes `filter` and warn about the
+---ones kept because their save failed.
 ---@param filter? fun(info: table): boolean Receives a `getbufinfo()` entry. When omitted, every listed buffer matches.
 function M.delete_where(filter)
 	local kept = 0

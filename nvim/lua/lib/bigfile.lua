@@ -1,9 +1,11 @@
 -- lua/lib/bigfile.lua
 
--- Detects big buffers, such as large files or minified output, so other parts of
--- the config can switch off features that make them sluggish, like Treesitter,
--- completion and folds. The verdict is cached per buffer in `vim.b.bigfile`.
+-- Detects big buffers, such as large files or minified output, so features can
+-- switch off before they become sluggish.
 --
+-- The verdict is cached in `vim.b.bigfile` and never recomputed.
+--
+-- See: doc/lib.txt
 -- See: lua/plugins/completions.lua
 
 local M = {}
@@ -13,14 +15,10 @@ local max_size = 5 * 1024 * 1024
 local max_line_length = 2000
 local sample_lines = 500
 
----Check whether a buffer should be treated as a big file. A buffer is big when
----its file is larger than `max_size` bytes, or when any of its first
----`sample_lines` lines is longer than `max_line_length` characters.
----
----The verdict is cached in `vim.b[bufnr].bigfile` and never recomputed, so a
----file that grows after being opened keeps its original verdict.
+---Check whether a buffer should be treated as a big file by its size or its
+---line lengths. The verdict is cached and never recomputed.
 ---@param bufnr? integer Defaults to the current buffer.
----@return boolean
+---@return boolean big
 function M.is_big(bufnr)
 	bufnr = bufnr or 0
 

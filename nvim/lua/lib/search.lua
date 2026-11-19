@@ -1,21 +1,14 @@
 -- lua/lib/search.lua
 
--- Helpers for searching the project and the current buffer using only built-in
--- Neovim features: `:grep` (quickfix), `:vimgrep` (quickfix, Vim regex),
--- `:lvimgrep` (location list) and visual selections. Call `setup()` once to
--- set the fallback grep program for when ripgrep is missing, then use the
--- other functions from keymaps or commands. The quickfix window is opened by
--- a global autocmd, not from here.
+-- Project and buffer search through `:grep`, `:vimgrep` and `:lvimgrep`.
+-- Call `setup()` once, then use the other functions from keymaps.
 --
 -- See: lua/config/keymaps/search.lua
 -- See: lua/config/autocmds.lua
 
 local M = {}
 
----Configure the fallback `grepprg` and `grepformat` for when ripgrep is not
----installed. Neovim itself sets `rg --vimgrep -uu` as the default when ripgrep
----is found, and `config/options.lua` narrows that to respect `.gitignore` and
----follow the smartcase rule; this only covers the missing-ripgrep case.
+---Configure the fallback `grepprg` and `grepformat` for when ripgrep is missing.
 function M.setup()
 	if vim.fn.executable("rg") ~= 1 then
 		vim.o.grepprg = "grep -rIn --exclude-dir=.git $* ."
@@ -31,9 +24,7 @@ function M.get_selection()
 	return table.concat(region, "\n")
 end
 
----Run a full `:grep`-style command line and report the result: the quickfix
----window opens through the `QuickFixCmdPost` autocmd, and an empty list
----closes the window again and warns. The list is emptied first, because a
+---Run a full `:grep`-style command line, emptying the list first because a
 ---failed command would keep the previous one.
 ---@param command string Command line passed to `:silent`, such as `grep! -w -- foo`.
 ---@param label string Pattern shown in the no-match notification.
@@ -81,9 +72,7 @@ function M.buffer_grep(pattern)
 	end
 end
 
----Run `:vimgrep` in the project, which uses Vim's own regex engine and works
----even without ripgrep installed. The quickfix window opens through the
----`QuickFixCmdPost` autocmd; this only warns when nothing matched.
+---Run `:vimgrep` in the project, which works even without ripgrep installed.
 ---@param pattern string
 function M.vimgrep(pattern)
 	if pattern == "" then
