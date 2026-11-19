@@ -51,9 +51,6 @@ vim.pack.add({
 	-- Note-taking workflow for Obsidian vaults.
 	{ src = "https://github.com/obsidian-nvim/obsidian.nvim" },
 
-	-- Lua utility library for async, paths and jobs. Required by obsidian.nvim.
-	{ src = "https://github.com/nvim-lua/plenary.nvim" },
-
 	-- Snippet engine written in Lua, with support for dynamic and LSP-style snippets.
 	{
 		src = "https://github.com/L3MON4D3/LuaSnip",
