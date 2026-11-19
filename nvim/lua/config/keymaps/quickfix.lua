@@ -1,8 +1,7 @@
 -- lua/config/keymaps/quickfix.lua
 
--- Keymaps for the quickfix and location lists: navigation between entries,
--- open and close commands and in-window keys for editing the list. The
--- navigation works from any buffer; the editing works inside the list window.
+-- Quickfix and location list keymaps, for navigating entries and for editing
+-- the list window.
 --
 -- See: lua/config/keymaps/search.lua
 -- See: :help quickfix
@@ -10,12 +9,12 @@
 local km = vim.keymap.set
 
 ---Delete the entry under the cursor from the list that owns the current
----window, which is the location list when the window is one. The list is
----replaced in place, so the window stays open and the cursor keeps its line.
----`getqflist` takes no window id, so the two calls cannot be unified.
+---window, which is the location list when the window is one.
 local function delete_entry()
 	local win = vim.fn.win_getid()
 	local is_loclist = vim.fn.getwininfo(win)[1].loclist == 1
+
+	-- `getqflist` takes no window id, so the two calls cannot be unified.
 
 	local items = is_loclist and vim.fn.getloclist(win) or vim.fn.getqflist()
 	local title = is_loclist and vim.fn.getloclist(win, { title = 0 }).title or vim.fn.getqflist({ title = 0 }).title
@@ -28,7 +27,6 @@ local function delete_entry()
 	end
 end
 
--- Navigation from any buffer, recentered on the new entry
 km("n", "]q", "<cmd>cnext<cr>zz", { desc = "Next quickfix item" })
 km("n", "[q", "<cmd>cprev<cr>zz", { desc = "Previous quickfix item" })
 km("n", "]Q", "<cmd>clast<cr>", { desc = "Last quickfix item" })

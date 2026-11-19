@@ -1,8 +1,9 @@
 -- lua/config/keymaps/editing.lua
 
--- Keymaps for editing code.
+-- Editing keymaps.
 --
 -- See: lua/lib/substitute.lua
+-- See: :help map.txt
 
 local km = vim.keymap.set
 local substitute = require("lib.substitute")
@@ -36,7 +37,6 @@ local function move_selection(down)
 	vim.cmd("normal! gv=gv")
 end
 
--- Move lines and selections
 km("n", "ZK", function()
 	move_line(false)
 end, { desc = "Move line up" })
@@ -50,13 +50,11 @@ km("x", "J", function()
 	move_selection(true)
 end, { desc = "Move selection down" })
 
--- Duplicate lines and selections
 km("n", "zk", ":t .-1<CR>", { desc = "Duplicate line above" })
 km("n", "zj", ":t .<CR>", { desc = "Duplicate line below" })
 km("x", "zk", ":t '<-1<CR>gv", { desc = "Duplicate selection above" })
 km("x", "zj", ":t '>+0<CR>gv", { desc = "Duplicate selection below" })
 
--- Blank lines
 km("n", "ZH", function()
 	vim.cmd("put!=repeat(nr2char(10), " .. vim.v.count1 .. ")")
 end, { desc = "Insert blank line(s) above" })
@@ -65,7 +63,6 @@ km("n", "ZN", function()
 	vim.cmd("put =repeat(nr2char(10), " .. vim.v.count1 .. ")")
 end, { desc = "Insert blank line(s) below" })
 
--- Indentation
 km("x", "<", "<gv", { desc = "Indent selection left" })
 km("x", ">", ">gv", { desc = "Indent selection right" })
 
@@ -82,7 +79,6 @@ km("x", "<leader>=", function()
 	vim.cmd("normal! gv")
 end, { desc = "Indent selection" })
 
--- Edit and replace
 km("n", "J", "mzJ`z", { desc = "Join lines, keep cursor position" })
 
 km("n", "S", '"_cc', { desc = "Replace line without yanking" })
@@ -102,7 +98,6 @@ km("x", "<leader>p", "p", { desc = "Paste over selection (yanks replaced text)" 
 
 km("n", "U", "<C-r>", { desc = "Redo" })
 
--- Substitute
 km("n", "cu", function()
 	substitute.prompt("%", vim.fn.expand("<cword>"), true)
 end, { desc = "Substitute word in buffer" })
@@ -135,24 +130,20 @@ km("x", "<leader>cp", function()
 	substitute.project(substitute.get_visual(), false)
 end, { desc = "Substitute selection in project" })
 
--- Repeatable change
 km("n", "<leader>cn", [[*``"_cgn]], {
 	desc = "Change next occurrence of word under cursor (repeat with .)",
 })
 
--- Navigation
 km({ "x", "o" }, "<Tab>", "%", {
 	remap = true,
 	desc = "Jump to matching pair",
 })
 
--- Undotree
 km("n", "<leader>U", function()
 	vim.cmd.packadd("nvim.undotree")
 	vim.cmd.Undotree()
 end, { desc = "Open undotree" })
 
--- Insert mode
 km("i", "<C-a>", "<Home>", { desc = "Beginning of line" })
 km("i", "<C-e>", "<End>", { desc = "End of line" })
 km("i", "<C-f>", "<Right>", { desc = "Forward char" })

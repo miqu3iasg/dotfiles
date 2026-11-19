@@ -1,13 +1,14 @@
 -- lua/config/keymaps/marks.lua
 
--- Explicit, well-described alternatives to the native mark motions.
+-- Explicit, described alternatives to the native mark motions.
+--
+-- See: :help mark-motions
 
 local km = vim.keymap.set
 
 -- Explicitly expose the native mapping for discoverability and consistency
 km("n", "m", "m", { desc = "Set mark" })
 
--- Navigate
 km({ "n", "v", "o" }, "gm", "`", { desc = "Jump to mark (exact position)" })
 km({ "n", "v", "o" }, "gM", "'", { desc = "Jump to mark (start of line)" })
 

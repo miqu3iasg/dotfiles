@@ -1,17 +1,16 @@
 -- lua/config/keymaps/terminal.lua
 
--- Keymaps to manage builin terminals.
+-- Built-in terminal keymaps.
 --
 -- See: lua/config/keymaps/windows.lua
+-- See: :help map.txt
 
 local km = vim.keymap.set
 
--- Open
 km("n", "<leader>tv", "<cmd>rightbelow vsplit | terminal<CR>", { desc = "Open terminal in vertical split (right)" })
 km("n", "<leader>th", "<cmd>botright 15split | terminal<CR>", { desc = "Open terminal in horizontal split (bottom)" })
 km("n", "<leader>tt", "<cmd>tabnew | terminal<CR>", { desc = "Open terminal in a new tab" })
 
--- Terminal mode
 km("t", "<C-c>", [[<C-\><C-n>]], { desc = "Exit terminal mode" })
 
 -- Closes the window without stopping its running job.

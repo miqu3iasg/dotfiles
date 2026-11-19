@@ -2,7 +2,7 @@
 
 -- `vim.pack` updater and prune helpers.
 --
--- See: :h vim.pack
+-- See: :help vim.pack
 -- See: https://github.com/mason-org/mason.nvim
 
 local km = vim.keymap.set

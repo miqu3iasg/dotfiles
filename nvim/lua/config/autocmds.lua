@@ -1,7 +1,11 @@
 -- lua/config/autocmds.lua
 
 -- Global autocmds for window layout, editing conveniences, searches, big
--- files, startup and session handling, and utility buffers.
+-- files, startup, sessions and utility buffers.
+--
+-- See: doc/kickstart.txt
+-- See: lua/modules/sessions.lua
+-- See: :help autocmd
 
 vim.api.nvim_create_autocmd("VimResized", {
 	group = vim.api.nvim_create_augroup("cg/vim_resized", { clear = true }),
@@ -30,10 +34,8 @@ vim.api.nvim_create_autocmd("CmdlineEnter", {
 	end,
 })
 
--- The quickfix window opens itself after any command filled the list, so
--- callers only run the command and report an empty list to the user. A
--- command that may fail while the list still holds entries, such as a manual
--- `:grep`, should empty the list first; `lib/search.lua` and `:Grep` do.
+-- The quickfix window opens itself after any command filled the list. A
+-- command that may fail while the list still holds entries must empty it first.
 -- See: lua/lib/search.lua
 -- See: lua/config/commands.lua
 vim.api.nvim_create_autocmd("QuickFixCmdPost", {
@@ -74,9 +76,8 @@ vim.api.nvim_create_autocmd("FileType", {
 	end,
 })
 
--- Runs when Neovim starts with no arguments or with a single directory. It is
--- `nested` so the restored session fires its own autocmds, such as filetype,
--- and scheduled so it runs after startup has finished.
+-- `nested` so the restored session fires its own autocmds, and scheduled so
+-- it runs after startup has finished.
 -- See: lua/modules/sessions.lua
 -- See: lua/plugins/oil.lua
 vim.api.nvim_create_augroup("StartupBehavior", { clear = true })

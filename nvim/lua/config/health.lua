@@ -1,18 +1,11 @@
 -- lua/config/health.lua
 
 -- Health check for the external executables the features rely on, runnable as
--- `:checkhealth config` and discovered by a bare `:checkhealth`. The language
--- servers, which are installed through Mason, are not checked here.
+-- `:checkhealth config` and found by a bare `:checkhealth`.
 --
--- A tool whose absence breaks a core feature, such as ripgrep, is reported as
--- an error. Per-language tools, such as formatters, are warnings: the features
--- that use them degrade gracefully when the tool is missing.
+-- A missing core tool is an error, a missing per-language tool is a warning.
 --
--- The requirements and their per-file documentation live in README.md and in
--- the header of each consumer.
---
--- See: lua/config/options.lua (grepprg)
--- See: lua/lib/search.lua
+-- See: README.md
 -- See: lua/plugins/fzf.lua
 -- See: :help checkhealth
 
@@ -67,7 +60,6 @@ local function check_formatters()
 	check_tool("prettierd", "web filetypes", true)
 	check_tool("prettier", "web filetypes, fallback of prettierd", true)
 
-	-- Linters (nvim-lint)
 	check_tool("shellcheck", "shell linting", true)
 	check_tool("hadolint", "Dockerfile linting", true)
 	check_tool("markdownlint", "Markdown linting", true)

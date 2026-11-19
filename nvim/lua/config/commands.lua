@@ -1,7 +1,7 @@
 -- lua/config/commands.lua
 
 -- User commands. The plugin commands mirror the built-in `vim.pack` API with
--- friendlier names, and the plugin list itself lives in `lua/config/pack.lua`.
+-- friendlier names; the eager plugin list lives in lua/config/pack.lua.
 --
 -- See: lua/config/pack.lua
 -- See: lua/config/keymaps/pack.lua
@@ -12,11 +12,8 @@ vim.api.nvim_create_user_command("Setwd", function()
 	vim.cmd.cd(vim.fn.expand("%:p:h"))
 end, { desc = "Change the working directory to the current file's directory" })
 
--- Runs the grep program directly with the given arguments, so flags such as
--- `-w` or `-i` can be typed on the command line, where history and `q:`
--- editing are available. The result handling is shared with the search
--- keymaps: the quickfix window opens through the autocmd, and a no-match
--- closes it again and warns.
+-- Runs the grep program directly, so flags such as `-w` and `-i` can be typed,
+-- and shares the result handling with the search keymaps.
 -- See: lua/lib/search.lua
 -- See: lua/config/autocmds.lua
 vim.api.nvim_create_user_command("Grep", function(opts)

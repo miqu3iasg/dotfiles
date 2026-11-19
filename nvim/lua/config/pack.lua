@@ -1,19 +1,9 @@
 -- lua/config/pack.lua
 
--- Declares and installs the eager plugins through Neovim's built-in package
--- manager (`vim.pack`). Lazy plugins are not declared here, since each one
--- registers itself from its own file in `lua/plugins/` through `lib.lazy`.
+-- Declares and installs the eager plugins through `vim.pack`. Lazy plugins
+-- register themselves from `lua/plugins/` through `lib.lazy`.
 --
--- The `PackChanged` autocmd must be created before `vim.pack.add`, because it
--- runs the post-install steps that some plugins need: `:TSUpdate` for
--- nvim-treesitter and `make install_jsregexp` for LuaSnip, which requires
--- `make` and a C compiler and only warns on failure. A plugin that needs a
--- build step must be handled there.
---
--- Plugins are only installed and loaded here. Their configuration lives in
--- `lua/plugins/`, which must run after this file. To update every plugin, run:
---
--- :lua vim.pack.update()
+-- `PackChanged` must exist before `vim.pack.add` to run the post-install steps.
 --
 -- See: lua/lib/lazy.lua
 -- See: lua/config/keymaps/pack.lua
@@ -43,105 +33,82 @@ vim.api.nvim_create_autocmd("PackChanged", {
 })
 
 vim.pack.add({
-	-- canola.nvim
 	-- File explorer that edits the filesystem as a buffer. Fork of oil.nvim.
 	{ src = "https://forge.barrettruth.com/barrettruth/canola.nvim" },
 
-	-- nvim-treesitter
 	-- Parser management, syntax highlighting and indentation based on Tree-sitter.
 	{
 		src = "https://github.com/nvim-treesitter/nvim-treesitter",
 		version = "main",
 	},
 
-	-- nvim-treesitter-textobjects
 	-- Syntax-aware text objects and motions, such as functions, classes and parameters.
 	{
 		src = "https://github.com/nvim-treesitter/nvim-treesitter-textobjects",
 		version = "main",
 	},
 
-	-- obsidian.nvim
 	-- Note-taking workflow for Obsidian vaults.
 	{ src = "https://github.com/obsidian-nvim/obsidian.nvim" },
 
-	-- plenary.nvim
 	-- Lua utility library for async, paths and jobs. Required by obsidian.nvim.
 	{ src = "https://github.com/nvim-lua/plenary.nvim" },
 
-	-- LuaSnip
 	-- Snippet engine written in Lua, with support for dynamic and LSP-style snippets.
 	{
 		src = "https://github.com/L3MON4D3/LuaSnip",
 		version = vim.version.range("2.*"),
 	},
 
-	-- conform.nvim
 	-- Formatter runner for external formatters such as stylua and prettier.
 	{ src = "https://github.com/stevearc/conform.nvim" },
 
-	-- nvim-lint
 	-- Asynchronous linter runner for external linters such as ruff.
 	{ src = "https://github.com/mfussenegger/nvim-lint" },
 
-	-- vim-fugitive
 	-- Git wrapper for staging, committing, diffing and blaming.
 	{ src = "https://github.com/tpope/vim-fugitive" },
 
-	-- vim-rhubarb
 	-- Opens the current file, selection or line on GitHub in the browser.
 	{ src = "https://github.com/tpope/vim-rhubarb" },
 
-	-- gitsigns.nvim
 	-- Git change markers in the buffer, with hunk staging, preview and blame.
 	{ src = "https://github.com/lewis6991/gitsigns.nvim" },
 
-	-- mason.nvim
 	-- Package manager for language servers, formatters, linters and debuggers.
 	{ src = "https://github.com/mason-org/mason.nvim" },
 
-	-- mason-lspconfig.nvim
 	-- Bridges mason.nvim and nvim-lspconfig and installs language servers.
 	{ src = "https://github.com/mason-org/mason-lspconfig.nvim" },
 
-	-- lazydev.nvim
 	-- Gives lua_ls the types and annotations of the Neovim API and plugins.
 	{ src = "https://github.com/folke/lazydev.nvim" },
 
-	-- nvim-lspconfig
 	-- Default configurations for Neovim's built-in LSP client, used for the frontend servers.
 	{ src = "https://github.com/neovim/nvim-lspconfig" },
 
-	-- mini.nvim
-	-- Library of small independent modules: align and treesitter
-	-- textobjects for mini.ai.
+	-- Small independent modules, such as align and treesitter textobjects for
+	-- mini.ai.
 	{ src = "https://github.com/nvim-mini/mini.nvim" },
 
-	-- vim-tmux-navigator
 	-- Navigation between Neovim splits and tmux panes with the same keybindings.
 	{ src = "https://github.com/christoomey/vim-tmux-navigator" },
 
-	-- nvim-colorizer.lua
 	-- Highlights color codes such as hex and rgb with their actual color.
 	{ src = "https://github.com/catgoose/nvim-colorizer.lua" },
 
-	-- nvim-jdtls
 	-- Java client for the Eclipse JDT language server.
 	{ src = "https://github.com/mfussenegger/nvim-jdtls" },
 
-	-- vim-sleuth
 	-- Detects tabs or spaces and the indentation width of each file.
 	{ src = "https://github.com/tpope/vim-sleuth" },
 
-	-- img-clip.nvim
 	-- Pastes images from the clipboard into files and inserts the link.
 	{ src = "https://github.com/HakonHarnes/img-clip.nvim" },
 
-	-- flash.nvim
 	-- Label-based navigation that jumps to any visible match, with Tree-sitter selection.
 	{ src = "https://github.com/folke/flash.nvim" },
 
-	-- markdown-preview.nvim
 	-- Render markdown notes in the browser, needed to read documentations with mermaid diagrams.
 	{ src = "https://github.com/iamcco/markdown-preview.nvim" },
 })

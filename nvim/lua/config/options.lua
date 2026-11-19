@@ -1,16 +1,15 @@
 -- lua/config/options.lua
 
--- Global editor options, set at startup. An option's help is available with
--- `:help 'name'`.
+-- Global editor options, set once at startup.
 --
--- See: lua/modules/statusline.lua
+-- `grepprg` relies on ripgrep, and the session options must match what
+-- lua/modules/sessions.lua saves and restores.
+--
+-- See: lua/modules/sessions.lua
+-- See: :help option-summary
 
--- ripgrep is used as 'grepprg' when it is installed, which the project-wide
--- features rely on. `--smart-case` matches the case rule of the `/` search
--- below; `lib/substitute.lua` passes `--case-sensitive` explicitly, so a
--- project substitution stays exact.
--- See: lua/lib/search.lua
--- See: lua/lib/substitute.lua
+-- `--smart-case` mirrors the search case rule below; `lib/substitute.lua`
+-- passes `--case-sensitive` explicitly.
 if vim.fn.executable("rg") == 1 then
 	vim.opt.grepprg = "rg --vimgrep --smart-case"
 end
@@ -32,8 +31,6 @@ vim.opt.diffopt:append({ "algorithm:histogram", "indent-heuristic", "linematch:6
 
 vim.opt.ignorecase = true
 vim.opt.smartcase = true -- Case-sensitive only when the pattern has uppercase.
--- Substitutions, `:g` and `:vimgrep` preview their matches as typed, without
--- opening a split.
 vim.opt.inccommand = "nosplit"
 vim.opt.wildignorecase = true
 vim.opt.wildignore:append({ "*/.git/*", "*/node_modules/*", "*/target/*", "*/dist/*" })
@@ -63,7 +60,6 @@ vim.opt.expandtab = true
 
 vim.opt.splitright = true
 vim.opt.splitbelow = true
--- See: lua/modules/statusline.lua
 vim.opt.laststatus = 2
 vim.opt.winborder = "single"
 
@@ -80,8 +76,6 @@ vim.opt.background = "dark"
 vim.opt.display:append("lastline")
 vim.opt.more = true
 
--- Abbreviates messages and hides the intro, the written message, the change
--- count and the file name.
 vim.opt.shortmess:append("aIWsF")
 vim.opt.shortmess:remove("S")
 
@@ -95,7 +89,6 @@ vim.opt.backup = false
 vim.opt.undofile = true
 vim.opt.undolevels = 10000
 -- Must match what the sessions feature saves and restores.
--- See: lua/modules/sessions.lua
 vim.o.sessionoptions = "buffers,curdir,tabpages,winsize,help,globals,skiprtp,folds,terminal"
 
 vim.opt.guicursor = "a:block"

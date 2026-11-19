@@ -1,15 +1,16 @@
 -- lua/config/keymaps/files.lua
 
--- Keymaps for managing files and directories.
+-- File and directory keymaps.
 --
 -- See: lua/lib/system.lua
 -- See: lua/config/commands.lua
+-- See: :help map.txt
 
 local keys = require("lib.keys")
 local map = keys.map
 
--- TODO: atualmente os keymaps estão sujos por conta de código. É necessário refatorar isso,
--- primeiro criando funções para as keymaps, e depois só chamando elas dentor de cada keymap.set
+-- TODO: the keymaps are cluttered with code. Extract the functions first, then
+-- call only them inside each keymap.set.
 
 -- Prompt text, colored by the active colorscheme. Because of `default`, a
 -- colorscheme or user config can still override this group.
@@ -42,16 +43,14 @@ end
 ---@param lhs string
 ---@param modifier string Filename modifier expression, such as `%:p:~`.
 ---@param desc string
----@see :help filename-modifiers
+--- See: :help filename-modifiers
 local function yank_map(lhs, modifier, desc)
 	map("n", lhs, function()
 		yank(vim.fn.expand(modifier))
 	end, desc)
 end
 
----Prompt for a path with file completion. The default is shown abbreviated
----with `~`, and the result is expanded back to an absolute path. The key
----hints are appended to the prompt.
+---Prompt for a path with file completion, shown with `~` and returned absolute.
 ---@param prompt string Prompt text, without a trailing colon.
 ---@param default string
 ---@return string? path Absolute path, `""` when empty, or `nil` when cancelled.
@@ -103,14 +102,12 @@ local function confirm_action(prompt)
 	end
 end
 
--- Working directory
 map("n", "<leader>nw", "<cmd>Setwd<CR>", "Set working directory to current file")
 
 map("n", "<leader>.", function()
 	vim.notify("Current directory: " .. vim.fn.getcwd(), vim.log.levels.INFO)
 end, "Show current working directory", { silent = true })
 
--- File operations
 map("n", "<leader>nf", function()
 	local current_dir = vim.fn.expand("%:p:h")
 	if current_dir == "" or current_dir == "." then
@@ -218,7 +215,6 @@ map("n", "<leader>ne", function()
 	end
 end, "Reveal current file in file explorer")
 
--- Yank paths
 yank_map("<leader>yp", "%:p", "Yank absolute file path")
 yank_map("<leader>yr", "%:.", "Yank relative file path")
 yank_map("<leader>yn", "%:t", "Yank file name")

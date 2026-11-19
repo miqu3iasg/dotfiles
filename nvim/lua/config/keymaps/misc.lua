@@ -1,11 +1,7 @@
 -- lua/config/keymaps/misc.lua
 
--- Miscellaneous normal-mode keymaps that do not belong to a specific plugin or
--- feature area, such as view toggles, shortcuts to config files and
--- directories, saving, quitting, reloading and running commands.
---
--- The directory shortcuts open directories through the file explorer, so it
--- must be installed.
+-- Miscellaneous normal-mode keymaps, such as view toggles, config shortcuts,
+-- the file explorer, saving, quitting, reloading and running commands.
 --
 -- See: lua/plugins/oil.lua
 -- See: :help :restart
@@ -49,7 +45,6 @@ local function run_command_in_file_dir()
 	end)
 end
 
--- View toggles
 toggle_wo("<leader>vw", "wrap", "Toggle line wrap")
 toggle_wo("<leader>vl", "list", "Toggle whitespace characters")
 toggle_wo("<leader>vs", "spell", "Toggle spell check")
@@ -85,7 +80,6 @@ map("n", "<leader>vm", function()
 	vim.wo.colorcolumn = vim.bo.textwidth > 0 and "+1" or "80"
 end, "Toggle color column")
 
--- Line numbers
 map("n", "<leader>vn", function()
 	vim.wo.number = not vim.wo.number
 	vim.wo.relativenumber = vim.wo.number
@@ -96,14 +90,12 @@ map("n", "<leader>vr", function()
 	vim.wo.relativenumber = not vim.wo.relativenumber
 end, "Toggle relative numbers")
 
--- Config files
 edit_file("<leader>zg", "~/dotfiles/git/.gitconfig", "Edit .gitconfig")
 edit_file("<leader>zi", "~/dotfiles/i3/config", "Edit i3 config")
 edit_file("<leader>zz", "~/dotfiles/zsh/.zshrc", "Edit .zshrc")
 edit_file("<leader>zt", "~/dotfiles/tmux/tmux.conf", "Edit tmux.conf")
 edit_file("<leader>zk", "~/dotfiles/kitty/kitty.conf", "Edit kitty.conf")
 
--- Directories
 open_dir("<leader>zn", "~/dotfiles/nvim", "Open nvim config dir")
 open_dir("<leader>zr", "~/dev/repos", "Open repos dir (workspace)")
 open_dir("<leader>zd", "~/dotfiles", "Open dotfiles directory")

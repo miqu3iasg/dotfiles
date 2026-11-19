@@ -1,21 +1,20 @@
 -- lua/config/keymaps/buffers.lua
 
--- Keymaps to manage buffers.
+-- Buffer management keymaps.
 --
 -- See: lua/lib/buffers.lua
 -- See: lua/modules/scratch.lua
+-- See: :help map.txt
 
 local buffers = require("lib.buffers")
 
 local keys = require("lib.keys")
 local map = keys.map
 
--- Create and save
 map("n", "<leader>bn", "<cmd>enew<CR>", "New buffer")
 map("n", "<leader>bw", "<cmd>write ++p<CR>", "Save buffer")
 map("n", "<leader>bs", "<cmd>noautocmd write<CR>", "Save buffer without auto-formatting")
 
--- Close
 map("n", "<leader>bd", function()
 	local buf = vim.api.nvim_get_current_buf()
 
@@ -41,7 +40,6 @@ map("n", "<leader>bo", function()
 	end)
 end, "Close other windows and buffers")
 
--- Navigate
 map("n", "]b", "<cmd>bnext<CR>", "Next buffer")
 map("n", "[b", "<cmd>bprevious<CR>", "Previous buffer")
 map("n", "<leader><Space>", "<C-^>", "Toggle between last two buffers")

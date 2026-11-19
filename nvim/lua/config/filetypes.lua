@@ -1,13 +1,12 @@
 -- lua/config/filetypes.lua
 
--- Filetype detection that Neovim's runtime misses. Only add entries here
--- when `:setfiletype` did not pick the right type; most common configs
--- (zsh, systemd, ignore files, *.conf, *.rc json) are already covered
--- upstream.
+-- Filetype detection that Neovim's runtime misses. Most config formats are
+-- already covered upstream, so add an entry only when `:setfiletype` is wrong.
+--
+-- See: :help vim.filetype.add
 
 vim.filetype.add({
 	filename = {
-		-- dotenv files
 		[".env"] = "dosini",
 	},
 	pattern = {
