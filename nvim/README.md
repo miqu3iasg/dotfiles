@@ -14,7 +14,7 @@ A layer may only require the layers below it: `init.lua`, then `config`, `plugin
 
 ## Conventions
 
-Every module begins with a comment containing its own path (`-- lua/<path>.lua`). Keymaps that only make sense for one plugin live in that plugin's file under `plugins/`, and all others live in `config/keymaps/`; comments describe behavior and never name keymaps, which change too often — the `desc` field of each mapping is its documentation. Module state belongs to its module and is reached only through its API, never written from another file, as in `modules/window_zoom.lua` and `lib/autoformat.lua`. Deprecated modules that stay around for possible future use live in `archived/`, outside `lua/` and off the runtimepath.
+Every module begins with a comment containing its own path (`-- lua/<path>.lua`). That header stays a short index of the file, with its dependencies and `See:` references, and every function, exported table and class carries a LuaLS annotation block, which is the API documentation. Keymaps that only make sense for one plugin live in that plugin's file under `plugins/`, and all others live in `config/keymaps/`; comments describe behavior and never name keymaps, which change too often — the `desc` field of each mapping is its documentation. Module state belongs to its module and is reached only through its API, never written from another file, as in `modules/window_zoom.lua` and `lib/autoformat.lua`. Deprecated modules that stay around for possible future use live in `archived/`, outside `lua/` and off the runtimepath.
 
 ## Adding things
 

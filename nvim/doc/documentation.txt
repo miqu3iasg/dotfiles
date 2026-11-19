@@ -12,17 +12,18 @@ DESCRIPTION
 
     Three principles govern it:
 
-        1.  The code is the primary documentation. Comments explain why, not what; the what is the code itself.
+        1.  The code is the primary documentation. Comments explain why, not what; the what is the code itself. A
+        header is a short index of the file, never a narration of it.
         2.  Every file is self-contained. A reader of a file should not need to open others to know what it does;
         instead of narrating elsewhere, cross-reference with `See:`.
-        3.  Documentation lives next to the thing it documents. There is no parallel manual to keep in sync; the headers
-        of the files are the manual, and the pages in doc/ are only overviews of it.
+        3.  Detail lives where it is maintained. The code comments index, the doc/ pages give the overview, and the
+        official documentation of Neovim and of each plugin carries the reference detail. No layer repeats another.
 
 THE LAYERS
     Documentation exists in three layers, from nearest to farthest:
 
-        Header comments    every file under lua/ and after/ftplugin/ opens with a comment block describing itself. This
-        is the primary and most detailed layer.
+        Header comments    every file under lua/ and after/ftplugin/ opens with a short header: what it is, the
+        exception that the code cannot show, its dependencies and its references. It indexes, it does not narrate.
 
         doc/ pages         overviews for a reader new to the config: what exists, where it lives, how the pieces relate.
         Never a substitute for the headers. Written as plain text in the style of a man page (see THE FORMAT OF THE
@@ -32,20 +33,19 @@ THE LAYERS
         paragraph per topic, no fluff.
 
 FILE HEADERS
-    Every file starts with a path comment and a header block:
+    Every file starts with a path comment and a short header block:
 
         -- lua/modules/compile.lua
 
         -- Native, Emacs-like `:Compile` that runs a build command
         -- asynchronously and streams its output into a `*compilation*`
-        -- buffer in a bottom split. When the command fails, the output
-        -- is parsed into the quickfix list.
+        -- buffer. Failing output goes to the quickfix list.
         --
-        -- [behavior details, state model, decisions]
+        -- State is kept per working directory and owned by this module.
         --
-        -- The `go` CLI comes from the distribution:
+        -- The compilers come from the distribution.
         --
-        -- $ sudo pacman -S go
+        -- $ sudo pacman -S gcc clang jdk21-openjdk python
         --
         -- See: lua/config/autocmds.lua
         -- See: :help quickfix
@@ -53,17 +53,33 @@ FILE HEADERS
     The rules of the header:
 
         - Line 1 is the file's own path: `-- lua/<path>.lua`, or `-- after/ftplugin/python.lua` for ftplugins.
-        - One blank line, then the header block.
-        - The first paragraph answers "what is this and why does it exist". Behavior details follow as more paragraphs,
-        one concern per paragraph.
-        - Decisions are stated with their reasons: "on purpose", "because", "so that". A reader should be able to
-        distinguish a choice from an accident.
-        - Facts that live in another file are not restated; they are referenced (see CROSS-REFERENCES below).
-        - External tool requirements are documented in the header of the file that uses them, as shell lines (`$ sudo
-        pacman -S ...`) or Mason commands (`:MasonInstall ...`). Requirements are never collected in a distant
-        requirements file only; the header is where they are found.
-        - If a module exposes setup() and owns its state, the header says so, and any init-order constraint (like "must
-        be called before pack.lua") is stated explicitly.
+        - One blank line, then one or two lines saying what the file is and why it exists.
+        - One or two lines of exception follow, only when the code cannot show them: load order, state that another file
+        reads, a caveat that would otherwise be lost.
+        - External dependencies take one short sentence for the whole block, a blank line, then the commands, one per
+        line, consecutive, with no indentation and no label such as `Requires:`.
+        - References come last, one `See:` per line, in the order doc/, lua/, :help, man:, URL, with no blank lines
+        between them. At most five, and only what a reader would not find alone.
+        - The header does not list API, explain settings, carry dates or versions, or keep a changelog. doc/lib.txt,
+        doc/modules.txt and the official documentation already do that.
+        - The header is at most twelve lines without dependencies, twelve plus the number of commands with them, and
+        never more than eighteen. Keymaps and the config files keep a lower ceiling.
+
+LUA ANNOTATIONS
+    Every function, exported table, class and constant that LuaLS cannot infer carries an annotation block directly
+    above its definition, with no blank line between them. The annotations are the API documentation, and they are the
+    one part of the comments that is never trimmed.
+
+        - The summary is one line, at most two, in the imperative for functions, with no final period.
+        - `---@param name type` for each meaningful parameter, `?` for optional and `|nil` for nullable. Underscore
+        parameters are not annotated.
+        - `---@return type name` for each returned value. A function without a return takes no `---@return`.
+        - `---@class` and `---@field` describe module tables, options and contracts. Fields use a noun phrase.
+        - `---@type` covers constants and variables whose type is not inferable.
+        - `---@see` points only at a Lua symbol. A file, a help tag or a URL is written as ordinary text,
+        `--- See: ...`.
+        - A type outside the workspace is declared as a minimal `---@class` in the file, or written as `table` or
+        `any`. Never a type that LuaLS reports as undefined, and never a suppression without a one-line reason.
 
 CROSS-REFERENCES
     Any pointer to related material is a `See:` line, grouped at the bottom of the header (or after the relevant
@@ -78,6 +94,7 @@ CROSS-REFERENCES
 
         - File paths are relative to the repo root and are written in full (lua/lib/buffers.lua), never as bare
         file names.
+        - The line keeps its colon, `See:`, in the header and in the body. It is the only colon allowed in prose.
         - References are symmetric when it makes sense: if A's header says "See: B", B's header usually says "See: A".
         The goal is that a reader can traverse the whole feature from any of its files.
         - Inline `See:` comments in the body mark the spot where a dependency matters, e.g. above a sessionoptions line
@@ -85,7 +102,12 @@ CROSS-REFERENCES
         - Trivial, adjacent references are omitted. Not everything is linked; only what a reader would otherwise miss.
 
 FORMATTING AND STYLE
-    - Language: English, present tense, third person. "The module saves the session", not "we save".
+    - Language: English only, present tense, direct and clear. Functions use the imperative.
+    - Prose, not lists. No bullets, numbering, tables, section headings, banners or dividers such as `------` and
+    `=======`. Groups inside a file are separated by a blank line.
+    - No colon in prose. The `See:` marker and command syntax (`:help`, `:MasonInstall`) are the only exceptions.
+    - No em dash. Use a comma, a period or a semicolon.
+    - No marketing adjective and no filler such as "simply", "basically" or "note that".
     - Code identifiers (`option`, `function`, `Command`) are quoted in backticks.
     - Wrapping: comments wrap around column 78, aligned with the file body.
     - The buffer-local `opt_local`, global `vim.opt` and window `vim.wo` scopes are named when the distinction matters.
@@ -125,7 +147,8 @@ KEYMAPS
         - They are never listed in doc/ or in the README.
         - The same rule holds in code comments: a comment describes behavior, not the keys that trigger it, because keys change too often for comments to carry them. The `desc` field and the keymap files are where the keys live.
         - The keymap files under lua/config/keymaps/ have minimal headers (a sentence about the group's scope) and rely
-        on `vim.keymap.set` desc fields, which surface in the shortlist and `:map`, as the documentation.
+        on `vim.keymap.set` desc fields, which surface in the shortlist and `:map`, as the documentation. Groups are
+        separated by a blank line, with no marker comment above them.
         - A keymap that only makes sense inside one plugin lives in that plugin's file; all others live in the matching
         theme file under lua/config/keymaps/.
         - When a feature page (e.g. COMPILATION in kickstart.txt) needs a trigger documented, the user command is
@@ -142,11 +165,13 @@ KEEPING DOCS CURRENT
 
     Review checklist for a doc-affecting patch:
 
-        1.  Does the file header still describe what the file does?
-        2.  Do new decisions carry their reasons?
+        1.  Does the file header still index what the file does?
+        2.  Are the exceptions that the code cannot show still stated?
         3.  Are new external tools documented with their install command in the header?
-        4.  Are `See:` references added, and none left dangling?
-        5.  Do the doc/ pages contradict the code anywhere?
+        4.  Are new functions, tables and classes annotated for LuaLS?
+        5.  Are `See:` references added, and none left dangling?
+        6.  Does the header stay under its ceiling, with no list, colon, divider or group marker?
+        7.  Do the doc/ pages contradict the code anywhere?
 
 FILES
     doc/reading.txt                  how to read the pages
