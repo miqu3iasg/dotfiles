@@ -8,7 +8,6 @@
 -- $ sudo pacman -S obsidian
 -- :MasonInstall marksman
 -- :packadd markdown-preview.nvim
--- :call mkdp#util#install()
 --
 -- See: lua/modules/notes.lua
 -- See: after/ftplugin/markdown.lua
@@ -71,11 +70,13 @@ vim.g.mkdp_filetypes = { "markdown" }
 vim.g.mkdp_echo_preview_url = 1
 vim.g.mkdp_page_title = "${name}"
 
+-- Run this manually after installing or updating the plugin, otherwise the
+-- preview stays empty; `vim.pack` cannot run it.
+-- :call mkdp#util#install()
 vim.api.nvim_create_autocmd("FileType", {
 	group = vim.api.nvim_create_augroup("markdown_preview_keymap", { clear = true }),
 	pattern = "markdown",
 	callback = function()
-		-- Requires a manual `:call mkdp#util#install()` after install/update (see header).
 		km("n", "<leader>op", "<cmd>MarkdownPreviewToggle<cr>", {
 			buffer = true,
 			silent = true,

@@ -1,7 +1,7 @@
 -- lua/plugins/unnecessary-shit.lua
 
 -- Plugins installed instead of actually coding, a dumping ground for small
--- conveniences nobody needs but the author refuses to live without.
+-- conveniences nobody needs but I refuse to live without.
 --
 -- Everything here must already be installed, so `lua/config/pack.lua` must run
 -- first, and the tmux navigation needs the matching tmux plugin.
