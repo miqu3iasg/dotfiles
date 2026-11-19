@@ -1,0 +1,646 @@
+#!/usr/bin/env bash
+#
+# ghx - GitHub workflow in the terminal, built on top of the gh CLI.
+#
+# Thin layer over gh: it only adds what gh does not do by itself (PR body
+# editing in a real `gitcommit` buffer, fzf pickers). Everything else is
+# passed straight to gh, so `ghx <anything>` works like `gh <anything>`.
+#
+# Requires: bash >= 4.4, gh, git, fzf (pickers), less.
+# Install:  cp ghx ~/.local/bin/ghx && chmod +x ~/.local/bin/ghx
+#
+# See: ghx --help
+
+set -euo pipefail
+
+PAGER_CMD='less -c -i --incsearch --search-options=W -g -R'
+DEFAULT_TEMPLATE="${GHX_PR_TEMPLATE:-$HOME/dev/resources/templates/pr.md}"
+SCISSORS='# ------------------------ >8 ------------------------'
+
+WORKDIR=''
+KEEP=''
+BUF=''
+FINAL=''
+CHANGED=0
+
+help_text() {
+  cat <<'EOF'
+GHX(1)                            User Commands                           GHX(1)
+
+NAME
+       ghx - GitHub workflow in the terminal, built on top of gh
+
+SYNOPSIS
+       ghx pr new [<title>] [<gh pr create options>]
+       ghx pr edit [<title>] [<gh pr edit options>]
+       ghx pr ls [<gh pr list options>]
+       ghx issue ls [<gh issue list options>]
+       ghx run ls [<gh run list options>]
+       ghx repo new [<name>] [private|public] [<gh repo create options>]
+       ghx repo clone [<repo>]
+       ghx open [<gh browse options>]
+       ghx <command> [<args>...]
+
+DESCRIPTION
+       ghx is a thin layer over the GitHub CLI, gh(1). It only adds what gh does
+       not do by itself: editing pull request descriptions in a real gitcommit
+       buffer, and fzf pickers for pull requests, issues, workflow runs and
+       repositories.
+
+       Any command not listed here is passed unchanged to gh, so `ghx <args>`
+       behaves like `gh <args>`. For example, `ghx pr merge --squash` runs
+       `gh pr merge --squash`.
+
+COMMANDS
+   Pull requests
+       pr new [<title>] [options]
+              Create a pull request for the current branch.
+
+              Opens $EDITOR on the description (see PR DESCRIPTION EDITOR). When
+              the editor is closed, pushes the branch if it has no upstream or
+              has unpushed commits, then runs `gh pr create`.
+
+              Without <title>, uses the commit subject if the branch has a
+              single commit ahead of the base, otherwise the branch name. The
+              base is the one given with --base/-B, or the repository default
+              branch. Fails if the branch already has an open pull request.
+
+              Options are passed to `gh pr create` (--draft, --reviewer, ...).
+
+       pr edit [<title>] [options]
+              Edit the open pull request of the current branch.
+
+              Opens $EDITOR on the current description; <title> replaces the
+              current title. Fails if there is no open pull request. Options are
+              passed to `gh pr edit` (--add-reviewer, --add-label, ...).
+
+       pr ls [options]
+              Pick a pull request with fzf (see KEY BINDINGS). Options are
+              passed to `gh pr list` (--author @me, --state all, --search ...).
+
+       pr co <number>
+              Alias for `gh pr checkout`.
+
+       pr <subcommand> [args]
+              Anything else is passed to `gh pr` (view, diff, checks, review,
+              merge, ready, close, reopen, comment, status, ...).
+
+   Issues
+       issue ls [options]
+              Pick an issue with fzf (see KEY BINDINGS). Options are passed to
+              `gh issue list`.
+
+       issue <subcommand> [args]
+              Anything else is passed to `gh issue` (create, view, close,
+              develop, ...).
+
+   Workflow runs
+       run ls [options]
+              Pick a workflow run with fzf (see KEY BINDINGS). Options are
+              passed to `gh run list` (--branch main, --workflow ci.yml, ...).
+
+       run <subcommand> [args]
+              Anything else is passed to `gh run` (view, watch, rerun, ...).
+
+   Repositories
+       repo new [<name>] [private|public] [options]
+              Create a GitHub repository from the current directory, push all
+              branches and open it in the browser.
+
+              <name> is `name` or `owner/name`; defaults to the directory name.
+              Private by default. The visibility can also be given as --private,
+              --public or --internal. Other options are passed to
+              `gh repo create` (--description, ...).
+
+       repo clone [<repo>] [options]
+              Clone <repo>. Without arguments, pick one of your repositories
+              with fzf.
+
+       repo <subcommand> [args]
+              Anything else is passed to `gh repo` (view, fork, ...).
+
+   Other
+       open [options]
+              Alias for `gh browse`.
+
+       help, -h, --help
+              Show this page.
+
+KEY BINDINGS
+       Bindings available inside each picker, besides the fzf defaults:
+
+       pr ls
+              enter    View with comments
+              ctrl-o   Check out the pull request
+              ctrl-d   Show the diff
+              ctrl-k   Show the checks
+              ctrl-v   Review (`gh pr review`)
+              ctrl-w   Open in the browser
+
+       issue ls
+              enter    View with comments
+              ctrl-o   Create and check out a linked branch
+              ctrl-w   Open in the browser
+
+       run ls
+              enter    Show the full log
+              ctrl-t   Watch the run
+              ctrl-r   Rerun the failed jobs
+              ctrl-w   Open in the browser
+
+       repo clone
+              enter    Clone the repository
+
+PR DESCRIPTION EDITOR
+       `pr new` and `pr edit` open $EDITOR on a file named COMMIT_EDITMSG, so
+       vim, nvim, VS Code and emacs detect the gitcommit filetype. The buffer
+       works like `git commit --verbose`:
+
+              - the description comes first (the template for `pr new`, the
+                current description for `pr edit`);
+              - below the scissors line (# ------ >8 ------) come the title,
+                the commits and the full diff against the base branch.
+                Everything below that line is discarded.
+
+       Save and quit to submit. Exit with a non-zero status (:cq in vim) to
+       abort. The command also aborts when the description is empty or, for
+       `pr new`, unchanged from the template. If gh fails, the draft is kept and
+       its path is printed.
+
+       For nvim and vim, the filetype is forced to gitcommit and hard wrapping
+       is disabled.
+
+ENVIRONMENT
+       EDITOR
+              Editor for pull request descriptions. May include arguments.
+              Default: nvim.
+
+       GHX_PR_TEMPLATE
+              Fallback template for `pr new` when the repository has none.
+              Default: ~/dev/resources/templates/pr.md.
+
+       NO_COLOR
+              When set, the headings of this page are not highlighted.
+
+FILES
+       Template lookup for `pr new` (first match wins, case insensitive):
+
+              1. <repo>/.github/pull_request_template.md
+              2. <repo>/pull_request_template.md
+              3. <repo>/docs/pull_request_template.md
+              4. $GHX_PR_TEMPLATE
+              5. an empty description
+
+EXAMPLES
+       Create a pull request, then edit it:
+
+              $ ghx pr new "Fix login redirect"
+              $ ghx pr new "Add retry to uploads" --draft --reviewer octocat
+              $ ghx pr edit
+              $ ghx pr edit "Better title" --add-label bug
+
+       Review the pull requests that ask for your review:
+
+              $ ghx pr ls --search "review-requested:@me"    # then ctrl-v
+
+       Everything else:
+
+              $ ghx pr merge --squash --delete-branch
+              $ ghx issue create -t "Bug on login"
+              $ ghx run ls --branch main
+              $ ghx repo new
+              $ ghx repo new my-project public
+              $ ghx repo new my-org/my-project private --description "..."
+
+EXIT STATUS
+       0      Success.
+       1      Error or aborted by the user.
+       130    Interrupted (ctrl-c).
+
+       Commands passed through to gh return the exit status of gh.
+
+DEPENDENCIES
+       bash (>= 4.4), git, gh, fzf (pickers), less.
+
+SEE ALSO
+       gh(1), gh-pr(1), gh-issue(1), gh-run(1), gh-repo(1), fzf(1), git(1)
+EOF
+}
+
+# Print the help page: headings in bold on a terminal, paged if it does not fit.
+usage() {
+  local text
+  text=$(help_text)
+
+  if [[ -t 1 ]]; then
+    if [[ -z ${NO_COLOR:-} ]]; then
+      local b=$'\e[1m' r=$'\e[0m'
+      text=$(sed -E "s/^([A-Z][A-Z ]+)\$/${b}\\1${r}/; s/^( {3}[A-Z][A-Za-z ]+)\$/${b}\\1${r}/" <<<"$text")
+    fi
+    printf '%s\n' "$text" | less -FRX || true
+  else
+    printf '%s\n' "$text"
+  fi
+}
+
+# --- helpers ----------------------------------------------------------------
+
+die() {
+  printf 'ghx: %s\n' "$*" >&2
+  exit 1
+}
+
+need() {
+  command -v "$1" >/dev/null 2>&1 || die "$1 not installed"
+}
+
+in_repo() {
+  git rev-parse --is-inside-work-tree >/dev/null 2>&1 || die 'not inside a git work tree'
+}
+
+cleanup() {
+  if [[ -n $WORKDIR && -z $KEEP ]]; then
+    rm -rf "$WORKDIR"
+  fi
+  return 0
+}
+
+init_work() {
+  WORKDIR=$(mktemp -d "${TMPDIR:-/tmp}/ghx-XXXXXX") || die 'failed to create temporary directory'
+}
+
+# Remote used by a branch (its upstream remote, `origin` otherwise).
+remote_of() {
+  git config "branch.$1.remote" 2>/dev/null || echo origin
+}
+
+# First pull_request_template.md found where GitHub looks for it (any case).
+find_template() {
+  find "$1/.github" "$1" "$1/docs" -maxdepth 1 -iname pull_request_template.md -print -quit 2>/dev/null || true
+}
+
+# Open $EDITOR on a `gitcommit` buffer (like `git commit -v`): the body on top,
+# below the scissors line the commits and the diff, which are discarded.
+#   edit_body <initial-body-file> <base-ref or ''> <header lines>
+# Sets: BUF (editor buffer), FINAL (final body file), CHANGED (0|1).
+edit_body() {
+  local initial=$1 base=$2 header=$3
+
+  # The file name makes vim/nvim (and VS Code, emacs...) detect `gitcommit`.
+  BUF="$WORKDIR/COMMIT_EDITMSG"
+  FINAL="$WORKDIR/body.md"
+
+  {
+    cat "$initial"
+    printf '\n\n%s\n# Do not modify or remove the line above.\n# Everything below it is ignored.\n#\n%s\n' \
+      "$SCISSORS" "$header"
+    if [[ -n $base ]]; then
+      printf '#\n# Commits (%s..HEAD):\n\n' "$base"
+      git log --no-color --reverse --format='%h %s' "$base..HEAD"
+      printf '\n'
+      git diff --no-color --stat --patch "$base...HEAD"
+    fi
+  } >"$BUF"
+
+  # $EDITOR may carry arguments (e.g. `nvim --clean`).
+  local -a ed
+  read -ra ed <<<"${EDITOR:-nvim}"
+  command -v "${ed[0]}" >/dev/null 2>&1 || die "editor not found: ${ed[0]}"
+  ed+=("$BUF")
+  case "${ed[0]##*/}" in
+    nvim | vim)
+      # gitcommit sets textwidth=72, which would hard-wrap the PR body.
+      ed+=(-c 'setlocal filetype=gitcommit' -c 'setlocal textwidth=0 wrap linebreak')
+      ;;
+  esac
+  "${ed[@]}" || die 'aborted: editor exited with an error'
+
+  local body
+  body=$(sed '/^# -* >8 -*$/,$d' "$BUF")
+  [[ -n ${body//[[:space:]]/} ]] || die 'aborted: empty PR body'
+  printf '%s\n' "$body" >"$FINAL"
+
+  CHANGED=1
+  if [[ $body == "$(<"$initial")" ]]; then
+    CHANGED=0
+  fi
+}
+
+# Header for the pickers: "key=label" pairs, three per line, so it is not cut
+# off by the preview pane.
+#   keys enter=view ctrl-o=checkout ...
+keys() {
+  local item line='' i=0
+  for item in "$@"; do
+    line+=$(printf '%-7s %-13s' "${item%%=*}" "${item#*=}")
+    if ((++i % 3 == 0)); then
+      printf '%s\n' "$line"
+      line=''
+    fi
+  done
+  [[ -z $line ]] || printf '%s\n' "$line"
+}
+
+# Generic fzf wrapper: reads tab-separated lines from stdin, {1} is the id.
+#   pick <header> <preview-cmd> [extra fzf options...]
+pick() {
+  local header=$1 preview=$2
+  shift 2
+  need fzf
+  fzf --exit-0 --cycle --layout=reverse --delimiter=$'\t' \
+    --header="$header" \
+    --preview="$preview" --preview-window=right,60%,wrap \
+    "$@"
+}
+
+# --- pull requests ----------------------------------------------------------
+
+pr_new() {
+  in_repo
+
+  # Title: optional first argument (anything not starting with `-`).
+  local title=''
+  if [[ $# -gt 0 && $1 != -* ]]; then
+    title=$1
+    shift
+  fi
+
+  local branch
+  branch=$(git branch --show-current)
+  [[ -n $branch ]] || die 'detached HEAD'
+
+  local open
+  open=$(gh pr list --head "$branch" --state open --json number --jq '.[0].number // empty') ||
+    die 'failed to query GitHub (check: gh auth status)'
+  [[ -z $open ]] || die "PR #$open is already open for '$branch' (use: ghx pr edit)"
+
+  # Base branch: --base/-B if given, otherwise the repo default branch.
+  local base='' prev='' a
+  for a in "$@"; do
+    case $prev in -B | --base) base=$a ;; esac
+    case $a in --base=*) base=${a#--base=} ;; esac
+    prev=$a
+  done
+  [[ -n $base ]] || base=$(gh repo view --json defaultBranchRef --jq .defaultBranchRef.name)
+  [[ $branch != "$base" ]] || die "on base branch '$base': nothing to PR"
+
+  local remote
+  remote=$(remote_of "$branch")
+  git rev-parse --verify -q "$remote/$base" >/dev/null ||
+    die "ref $remote/$base not found (run: git fetch $remote)"
+
+  local commits
+  commits=$(git log --reverse --format=%s "$remote/$base..HEAD")
+  [[ -n $commits ]] || die "no commits ahead of $remote/$base"
+
+  # Default title, like `gh pr create --fill`.
+  if [[ -z $title ]]; then
+    if [[ $(wc -l <<<"$commits") -eq 1 ]]; then
+      title=$commits
+    else
+      title=${branch//[-_\/]/ }
+    fi
+  fi
+
+  init_work
+  local template
+  template=$(find_template "$(git rev-parse --show-toplevel)")
+  [[ -n $template ]] || template=$DEFAULT_TEMPLATE
+  if [[ ! -r $template ]]; then
+    template="$WORKDIR/empty.md"
+    : >"$template"
+  fi
+
+  edit_body "$template" "$remote/$base" "# Title:    $title
+# Template: $template"
+  ((CHANGED)) || die 'aborted: unchanged PR body'
+
+  # The PR needs the branch on the remote.
+  if ! git rev-parse --verify -q '@{u}' >/dev/null || [[ -n $(git log --oneline '@{u}..HEAD') ]]; then
+    echo "Pushing '$branch' to $remote..."
+    git push -u "$remote" HEAD || {
+      KEEP=1
+      die "push failed: draft kept at $BUF"
+    }
+  fi
+
+  gh pr create --title "$title" --body-file "$FINAL" "$@" ||
+    {
+      KEEP=1
+      die "PR not created: draft kept at $BUF"
+    }
+}
+
+pr_edit() {
+  in_repo
+
+  local title=''
+  if [[ $# -gt 0 && $1 != -* ]]; then
+    title=$1
+    shift
+  fi
+
+  local info num state base url ptitle
+  info=$(gh pr view --json number,state,baseRefName,url,title \
+    --jq '[.number, .state, .baseRefName, .url, .title] | @tsv') ||
+    die 'no PR found for the current branch (create one with: ghx pr new)'
+  IFS=$'\t' read -r num state base url ptitle <<<"$info"
+  [[ $state == OPEN ]] || die "PR #$num is $state"
+  [[ -n $title ]] || title=$ptitle
+
+  init_work
+  # Bodies edited on the GitHub web UI come with CRLF line endings.
+  gh pr view "$num" --json body --jq .body | tr -d '\r' >"$WORKDIR/current.md"
+
+  local remote ref=''
+  remote=$(remote_of "$(git branch --show-current)")
+  if git rev-parse --verify -q "$remote/$base" >/dev/null; then
+    ref="$remote/$base"
+  fi
+
+  edit_body "$WORKDIR/current.md" "$ref" "# Updating PR #$num: $url
+# Title: $title"
+
+  if ((! CHANGED)) && [[ $title == "$ptitle" && $# -eq 0 ]]; then
+    die 'aborted: nothing to update'
+  fi
+
+  local -a body_args=()
+  if ((CHANGED)); then
+    body_args=(--body-file "$FINAL")
+  fi
+  gh pr edit "$num" --title "$title" "${body_args[@]}" "$@" ||
+    {
+      KEEP=1
+      die "PR not updated: draft kept at $BUF"
+    }
+  echo "PR #$num updated: $url"
+}
+
+pr_pick() {
+  gh pr list --limit 100 "$@" \
+    --json number,title,headRefName,author,isDraft \
+    --jq '.[] | [.number, (if .isDraft then "[draft] " else "" end) + .title, .headRefName, "@" + .author.login] | @tsv' |
+    pick "$(keys enter=view ctrl-o=checkout ctrl-d=diff ctrl-k=checks ctrl-v=review ctrl-w=web)" \
+      'GH_FORCE_TTY=1 gh pr view {1}' \
+      --bind "enter:execute(GH_FORCE_TTY=1 gh pr view {1} --comments | $PAGER_CMD)" \
+      --bind 'ctrl-o:become(gh pr checkout {1})' \
+      --bind "ctrl-d:execute(gh pr diff {1} --color=always | $PAGER_CMD)" \
+      --bind "ctrl-k:execute(GH_FORCE_TTY=1 gh pr checks {1} | $PAGER_CMD)" \
+      --bind 'ctrl-v:execute(gh pr review {1})' \
+      --bind 'ctrl-w:execute-silent(gh pr view {1} --web)'
+}
+
+pr_cmd() {
+  case "${1:-ls}" in
+    new | create)
+      shift
+      pr_new "$@"
+      ;;
+    edit)
+      shift
+      pr_edit "$@"
+      ;;
+    ls)
+      shift 2>/dev/null || true
+      pr_pick "$@"
+      ;;
+    co)
+      shift
+      exec gh pr checkout "$@"
+      ;;
+    *) exec gh pr "$@" ;;
+  esac
+}
+
+# --- issues / runs ----------------------------------------------------------
+
+issue_cmd() {
+  case "${1:-ls}" in
+    ls)
+      shift 2>/dev/null || true
+      gh issue list --limit 100 "$@" \
+        --json number,title,labels,author \
+        --jq '.[] | [.number, .title, ([.labels[].name] | join(",")), "@" + .author.login] | @tsv' |
+        pick "$(keys enter=view ctrl-o=branch ctrl-w=web)" \
+          'GH_FORCE_TTY=1 gh issue view {1}' \
+          --bind "enter:execute(GH_FORCE_TTY=1 gh issue view {1} --comments | $PAGER_CMD)" \
+          --bind 'ctrl-o:become(gh issue develop {1} --checkout)' \
+          --bind 'ctrl-w:execute-silent(gh issue view {1} --web)'
+      ;;
+    *) exec gh issue "$@" ;;
+  esac
+}
+
+run_cmd() {
+  case "${1:-ls}" in
+    ls)
+      shift 2>/dev/null || true
+      gh run list --limit 50 "$@" \
+        --json databaseId,displayTitle,workflowName,headBranch,status,conclusion \
+        --jq '.[] | [.databaseId, (if .conclusion == "" then .status else .conclusion end), .workflowName, .headBranch, .displayTitle] | @tsv' |
+        pick "$(keys enter=log ctrl-t=watch ctrl-r='rerun failed' ctrl-w=web)" \
+          'GH_FORCE_TTY=1 gh run view {1}' \
+          --bind "enter:execute(GH_FORCE_TTY=1 gh run view {1} --log | $PAGER_CMD)" \
+          --bind 'ctrl-t:execute(gh run watch {1})' \
+          --bind 'ctrl-r:execute-silent(gh run rerun {1} --failed)' \
+          --bind 'ctrl-w:execute-silent(gh run view {1} --web)'
+      ;;
+    *) exec gh run "$@" ;;
+  esac
+}
+
+# --- repositories -----------------------------------------------------------
+
+repo_new() {
+  in_repo
+
+  local visibility=--private a
+  local -a args=()
+  for a in "$@"; do
+    case $a in
+      --public | --private | --internal) visibility=$a ;;
+      *) args+=("$a") ;;
+    esac
+  done
+
+  # Positional visibility after the name: `ghx repo new <name> [private|public]`.
+  if ((${#args[@]} >= 2)); then
+    case ${args[1]} in
+      private | public | internal)
+        visibility=--${args[1]}
+        args=("${args[0]}" "${args[@]:2}")
+        ;;
+    esac
+  fi
+
+  gh repo create "${args[@]}" "$visibility" --source=. --remote=origin
+  git push -u origin --all
+  gh browse
+}
+
+repo_clone() {
+  if [[ $# -gt 0 ]]; then
+    exec gh repo clone "$@"
+  fi
+  gh repo list --limit 100 --json nameWithOwner,description \
+    --jq '.[] | [.nameWithOwner, (.description // "")] | @tsv' |
+    pick "$(keys enter=clone)" 'GH_FORCE_TTY=1 gh repo view {1}' \
+      --bind 'enter:become(gh repo clone {1})'
+}
+
+repo_cmd() {
+  case "${1:-}" in
+    new | create)
+      shift
+      repo_new "$@"
+      ;;
+    clone)
+      shift
+      repo_clone "$@"
+      ;;
+    *) exec gh repo "$@" ;;
+  esac
+}
+
+# --- main -------------------------------------------------------------------
+
+main() {
+  trap cleanup EXIT
+  trap 'exit 130' INT TERM
+
+  case "${1:-help}" in
+    help | -h | --help) usage ;;
+    pr)
+      need gh
+      shift
+      pr_cmd "$@"
+      ;;
+    issue)
+      need gh
+      shift
+      issue_cmd "$@"
+      ;;
+    run)
+      need gh
+      shift
+      run_cmd "$@"
+      ;;
+    repo)
+      need gh
+      shift
+      repo_cmd "$@"
+      ;;
+    open)
+      need gh
+      shift
+      exec gh browse "$@"
+      ;;
+    *)
+      need gh
+      exec gh "$@"
+      ;;
+  esac
+}
+
+main "$@"
