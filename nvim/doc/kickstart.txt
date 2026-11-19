@@ -154,7 +154,9 @@ PLUGIN MANAGEMENT
     `jsregexp` with `make install_jsregexp`, which needs a C toolchain and only warns on failure. A plugin that needs a
     build step must be handled there.
 
-    Lazy loading is the only indirection in the config, and it is a single helper, lua/lib/lazy.lua. A lazy plugin declares itself at the bottom of its own adapter file, in the module shape of lua/plugins/lisp.lua (filetype trigger) and lua/plugins/fzf.lua (on-demand trigger):
+    Lazy loading is the only indirection in the config, and it is a single helper, lua/lib/lazy.lua. A lazy plugin declares
+    itself at the bottom of its own adapter file, in the module shape of lua/plugins/lisp.lua (filetype trigger) and
+    lua/plugins/fzf.lua (on-demand trigger):
 
         require("lib.lazy").setup({
             src = "https://github.com/...",   -- vim.pack source
@@ -163,9 +165,11 @@ PLUGIN MANAGEMENT
             after = M.after,                  -- module function, runs after :packadd
         })
 
-    The plugin is installed at startup but its plugin/ scripts only run when the first buffer of one of the filetypes appears, or when the adapter loads it explicitly with `require("lib.lazy").load(name)` from its own keymap stubs, which is how a plugin without a natural filetype trigger loads on first use. Loading runs configure, then :packadd, then after, and then fires the FileType event again for the
-    triggering buffer, because the plugin was not on the runtimepath when the original event ran. All lazy plugins are
-    inspectable in one place with `:autocmd LazyPack`.
+    The plugin is installed at startup but its plugin/ scripts only run when the first buffer of one of the filetypes appears,
+    or when the adapter loads it explicitly with `require("lib.lazy").load(name)` from its own keymap stubs, which is how a
+    plugin without a natural filetype trigger loads on first use. Loading runs configure, then :packadd, then after, and then
+    fires the FileType event again for the triggering buffer, because the plugin was not on the runtimepath when the original event ran.
+    All lazy plugins are inspectable in one place with `:autocmd LazyPack`.
 
     To update every plugin: `:PackUpdate` or `:lua vim.pack.update()`.
 
