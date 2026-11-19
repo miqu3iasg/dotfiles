@@ -1,10 +1,7 @@
 -- lua/snippets/markdown.lua
 
 -- Markdown snippets for tables, code blocks, comments, formatting, links,
--- callouts, front matter, and mathematical notation. Dynamic snippets generate
--- tables from trigger dimensions and timestamps from the current time, while
--- helpers provide reusable heading and language-specific code block templates.
--- Callouts follow the Obsidian syntax.
+-- callouts, front matter and math, with Obsidian callout syntax.
 --
 -- See: https://www.markdownguide.org/
 -- See: https://help.obsidian.md/Editing+and+formatting/Callouts
@@ -18,23 +15,28 @@ local f = ls.function_node
 local d = ls.dynamic_node
 local c = ls.choice_node
 
--- Current date in ISO format, used in front matter and date snippets.
+---Current date in ISO format, used in front matter and date snippets.
+---@return string|osdate
 local function today()
 	return os.date("%Y-%m-%d")
 end
 
--- Current date and time, used in front matter timestamps.
+---Current date and time, used in front matter timestamps.
+---@return string|osdate
 local function now()
 	return os.date("%Y-%m-%d %H:%M")
 end
 
--- Current file name, including its extension.
+---Current file name, including its extension.
+---@return string
 local function get_filename()
 	local name = vim.fn.expand("%:t")
 	return name ~= "" and name or "Untitled"
 end
 
--- Creates a heading snippet for the given level.
+---Create a heading snippet for the given level.
+---@param level integer
+---@return table
 local function heading(level)
 	return s("h" .. level, {
 		t(string.rep("#", level) .. " "),
@@ -43,7 +45,10 @@ local function heading(level)
 	})
 end
 
--- Creates a fenced code block with a fixed language identifier.
+---Create a fenced code block with a fixed language identifier.
+---@param trig string
+---@param lang string
+---@return table
 local function codeblock(trig, lang)
 	return s(trig, {
 		t("```" .. lang),
@@ -54,14 +59,17 @@ local function codeblock(trig, lang)
 	})
 end
 
--- Creates a table from dimensions captured by the tbl<cols>x<rows> trigger.
--- Insert nodes are numbered sequentially so Tab moves through every cell.
+---Create a table from the dimensions captured by the `tbl<cols>x<rows>`
+---trigger, numbering the cells so Tab moves through every one.
+---@param snip table
+---@return table
 local function dynamic_table(_, snip)
 	local cols = tonumber(snip.captures[1])
 	local rows = tonumber(snip.captures[2])
 	local nodes = {}
 	local idx = 1
 
+	---@param placeholder string
 	local function add_row(placeholder)
 		nodes[#nodes + 1] = t("| ")
 		for col = 1, cols do

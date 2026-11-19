@@ -1,20 +1,21 @@
 -- pandoc/filters/metadata-block.lua
 
--- Inserts a definition-list block containing the note's reference metadata
--- (authors, source, links, etc.) immediately below the document title.
--- Only fields that are present and contain at least one non-empty item are
--- rendered.
+-- Insert a definition list with the note's reference metadata below the title.
+-- Only fields with at least one non-empty item are rendered.
 --
--- Labels are selected from the primary language subtag in `lang` (for
--- example, `pt-BR` uses the `pt` labels). If that language is not defined,
--- the filter falls back to `default_lang`.
+-- Labels follow the primary language subtag of `lang` and fall back to
+-- `default_lang`; a note opts out with `show-metadata: false` in its YAML.
 --
--- Disable the block for an individual note with:
---
--- # show-metadata: false
---
+-- See: doc/pandoc.txt
 -- See: https://pandoc.org/lua-filters.html
--- See: doc/pandoc.txt                the export feature page
+
+---@class pandoc.Inline
+
+---@class pandoc.Block
+
+---@class pandoc.Pandoc
+---@field meta table<string, any>
+---@field blocks table
 
 ---@alias MetadataMode "inline"|"list"
 ---@alias MetadataItem pandoc.Inline[]

@@ -1,14 +1,10 @@
 -- lua/snippets/lua.lua
 
--- Lua snippets for LuaLS documentation annotations, the typed comment style
--- used throughout this configuration: function documentation with typed
--- parameters and returns, class definitions, custom type declarations, and
--- single param, return and field lines. LuaLS has no @usage annotation;
--- references go in @see. Indentation assumes tabs.
+-- Lua snippets for LuaLS annotations, function docs, classes and field lines.
+-- LuaLS has no `@usage` tag, so references go in `@see`.
 --
 -- See: doc/snippets.txt
 -- See: https://luals.github.io/wiki/annotations/
--- See: https://github.com/LuaLS/lua-language-server/wiki/Annotations
 
 local ls = require("luasnip")
 local s = ls.snippet

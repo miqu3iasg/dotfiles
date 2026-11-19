@@ -1,23 +1,11 @@
 -- lua/snippets/java.lua
 
--- Java snippets for program scaffolding, types, members, output, comments, and
--- Javadoc. Dynamic helpers derive class names and package names from the current
--- buffer, while mirrored insert nodes keep related declarations synchronized.
--- Indentation uses four spaces and modifiers can be removed by clearing their
--- insert nodes.
---
--- Javadoc snippets follow the Oracle and Google Java Style conventions: the
--- first sentence is a summary fragment ending with a period, extra paragraphs
--- start with <p> glued to the first word, and tags appear in the order
--- @param, @return, @throws, @author, @see, @since. Every Javadoc block ends with
--- a line break so the declaration it documents goes right below it. Delete the
--- tag lines that do not apply.
+-- Java snippets for scaffolding, types, members, output, comments and Javadoc.
+-- Mirrored nodes keep related declarations in sync; indentation is four spaces.
 --
 -- See: doc/snippets.txt
 -- See: https://docs.oracle.com/javase/8/docs/technotes/tools/windows/javadoc.html
--- See: https://www.oracle.com/technical-resources/articles/java/javadoc-tool.html
 -- See: https://google.github.io/styleguide/javaguide.html#s7-javadoc
--- See: https://www.baeldung.com/javadoc
 
 local ls = require("luasnip")
 local s = ls.snippet
@@ -27,15 +15,16 @@ local i = ls.insert_node
 local f = ls.function_node
 local d = ls.dynamic_node
 
--- Current file name without its extension, used as the default class name.
+---Current file name without its extension, used as the default class name.
+---@return string
 local function get_classname()
 	local name = vim.fn.expand("%:t:r")
 	return name ~= "" and name or "Untitled"
 end
 
--- Package name inferred from the directory of the current buffer, for example
--- `src/main/java/com/example/app/Main.java` gives `com.example.app`. Falls back
--- to `com.example` when the path does not follow the Maven/Gradle layout.
+---Package name inferred from the buffer directory, falling back to
+---`com.example` outside the Maven/Gradle layout.
+---@return string
 local function get_package()
 	local dir = vim.fn.expand("%:p:h"):gsub("\\", "/")
 	local rel = dir:match("/src/[^/]+/java/(.+)$") or dir:match("/src/(.+)$")
@@ -45,41 +34,51 @@ local function get_package()
 	return (rel:gsub("/", "."))
 end
 
--- Capitalizes the first letter of an insert node for getter and setter names.
+---Capitalize the first letter of an insert node, for getter and setter names.
+---@param args table
+---@return string
 local function capitalize(args)
 	local str = args[1][1] or ""
 	return str:sub(1, 1):upper() .. str:sub(2)
 end
 
--- Mirrors the text of another insert node.
+---Mirror the text of another insert node.
+---@param idx integer
+---@return table
 local function mirror(idx)
 	return f(function(args)
 		return args[1][1]
 	end, { idx })
 end
 
--- Creates an insert node whose default value is computed when the snippet
--- expands.
+---Insert a node whose default value is computed when the snippet expands.
+---@param pos integer
+---@param fn fun(): string
+---@return table
 local function dynamic_default(pos, fn)
 	return d(pos, function()
 		return sn(nil, { i(1, fn()) })
 	end, {})
 end
 
--- Editable access modifier. Clear the node for package-private visibility.
--- Always follow it with with_space(pos).
+---Editable access modifier, for package-private visibility when cleared.
+---@param pos integer
+---@param default? string
+---@return table
 local function access(pos, default)
 	return i(pos, default or "public")
 end
 
--- Editable static modifier. Clear the node to omit it.
--- Always follow it with with_space(pos).
+---Editable static modifier, omitted when cleared.
+---@param pos integer
+---@return table
 local function static_choice(pos)
 	return i(pos, "static")
 end
 
--- Outputs a space only when the referenced node is not empty, preventing
--- stray whitespace when an optional modifier is removed.
+---Output a space only when the referenced node is not empty.
+---@param idx integer
+---@return table
 local function with_space(idx)
 	return f(function(args)
 		local v = args[1][1] or ""
@@ -87,7 +86,10 @@ local function with_space(idx)
 	end, { idx })
 end
 
--- Creates a method snippet with a fixed modifier.
+---Create a method snippet with a fixed modifier.
+---@param trig string
+---@param modifier string
+---@return table
 local function method(trig, modifier)
 	return s(trig, {
 		t(modifier .. " "),

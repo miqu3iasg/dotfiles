@@ -1,12 +1,7 @@
 -- lua/snippets/sql.lua
 
--- SQL snippets for queries, joins, clauses, data manipulation, schema
--- definitions, common table expressions, and comments. Helper functions
--- generate consistent index names and reusable JOIN clauses, while mirrored
--- nodes keep table aliases and repeated identifiers synchronized. Keywords
--- are upper-case, matching the sql-formatter configuration; indentation
--- assumes four spaces. The docm snippet documents migrations and schema
--- changes with their purpose, notes and a reference.
+-- SQL snippets for queries, joins, clauses, schema changes and comments, with
+-- upper-case keywords and four-space indentation.
 --
 -- See: doc/snippets.txt
 -- See: https://github.com/sql-formatter-org/sql-formatter
@@ -19,18 +14,25 @@ local f = ls.function_node
 local c = ls.choice_node
 local rep = require("luasnip.extras").rep
 
--- Extracts the final identifier component from a name or qualified identifier.
+---Extract the final identifier component of a name or qualified identifier.
+---@param name string
+---@return string
 local function bare(name)
 	return name:match("([%w_]+)$") or ""
 end
 
--- Generates an index name from the table and indexed column names.
+---Generate an index name from the table and indexed column names.
+---@param args table
+---@return string
 local function index_name(args)
 	local cols = args[2][1]:gsub("[%s,]+", "_")
 	return "idx_" .. bare(args[1][1]) .. "_" .. cols
 end
 
--- Creates a JOIN clause with synchronized table aliases.
+---Create a JOIN clause with synchronized table aliases.
+---@param trig string
+---@param kind string
+---@return table
 local function join_snip(trig, kind)
 	return s(trig, {
 		t(kind .. " JOIN "),

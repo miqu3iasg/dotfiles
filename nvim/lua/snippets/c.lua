@@ -1,12 +1,7 @@
 -- lua/snippets/c.lua
 
--- C snippets for small programs, practice problems, and Linux kernel-style
--- documentation comments. Indentation follows the conventions of each snippet:
--- four spaces for the basic program template and tabs for the solution scaffold.
--- Documentation comments follow kernel-doc, whose tooling only extracts
--- comments opened with /**: structs document their members as @member: lines,
--- functions carry @arg: lines and close with Context: and Return:, and a DOC:
--- section holds the file overview. Delete the lines that do not apply.
+-- C snippets for small programs, practice problems and kernel-doc comments.
+-- Tabs and four spaces follow the convention of each template.
 --
 -- See: doc/snippets.txt
 -- See: https://docs.kernel.org/doc-guide/kernel-doc.html

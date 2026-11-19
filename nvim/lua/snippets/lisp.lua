@@ -1,9 +1,7 @@
 -- lua/snippets/lisp.lua
 
--- Scheme snippets. Comment headers at the three R7RS comment levels (;;;
--- section, ;; block, #|...|# multi-line), datum comments (#;) with
--- visual-selection wrapping, and the `; => result` evaluation convention used
--- when studying a REPL. Indentation assumes two spaces.
+-- Scheme snippets for comments at the R7RS levels, datum comments with
+-- visual-selection wrapping and the `; => result` REPL convention.
 --
 -- See: https://docs.scheme.org/guide/r7rs-portable/
 

@@ -1,16 +1,21 @@
 -- pandoc/filters/wikilinks.lua
 
--- Handles Obsidian-style [[wikilinks]] during Pandoc conversion.
+-- Replace Obsidian `[[wikilinks]]` with their visible text during Pandoc
+-- conversion, since their targets do not exist in the exported PDF.
 --
--- [[Note]] and [[Note|alias]] are converted to their visible text instead of
--- remaining links. A link to an Obsidian note would otherwise point to a
--- destination that generally does not exist in the exported PDF.
+-- Image embeds are rewritten earlier in lua/modules/pandoc.lua, because Pandoc
+-- does not parse them reliably.
 --
--- Image embeds such as ![[image.png]] are handled earlier by
--- lua/modules/pandoc.lua, which rewrites them as ordinary Markdown images
--- because Pandoc does not parse Obsidian image embeds reliably.
---
--- See: doc/pandoc.txt               the export feature page
+-- See: doc/pandoc.txt
+-- See: https://pandoc.org/lua-filters.html
+
+---@class pandoc.Inline
+
+---@class pandoc.Link
+---@field title string
+---@field classes any
+---@field target string
+---@field content pandoc.Inline[]
 
 ---Determine whether a Pandoc link represents an Obsidian wikilink.
 ---Both the `wikilink` title and class are accepted for compatibility with

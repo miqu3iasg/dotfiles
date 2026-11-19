@@ -1,16 +1,13 @@
 -- lua/snippets/common.lua
 
--- Common snippets shared across filetypes: file headers, shebangs, SPDX
--- notices, references, paths, and personal contact information. Dynamic
--- snippets adapt their output to the current buffer's filetype and use
--- language-specific comment styles for line, block, and docstring comments.
+-- Common snippets for headers, shebangs, SPDX notices, references, paths and
+-- contact details, all adapted to the current filetype.
 --
--- The comment styles, filename helpers and header field constructors these
--- snippets build on live in lib/headers.lua; this file only defines the
--- snippets.
+-- Comment styles and header builders come from lib/headers.lua, which owns the
+-- filename and field logic this file only wires into snippets.
 --
--- See: lua/lib/headers.lua
 -- See: doc/snippets.txt
+-- See: lua/lib/headers.lua
 -- See: https://spdx.dev/ids/
 
 local ls = require("luasnip")
@@ -21,9 +18,6 @@ local f = ls.function_node
 local d = ls.dynamic_node
 local sn = ls.snippet_node
 
--- Aliases to the shared header machinery (lib/headers.lua), so the snippet
--- builders below keep the local names they had when the machinery lived in
--- this file.
 local h = require("lib.headers")
 local build_header = h.build_header
 local get_relpath = h.get_relpath
@@ -38,7 +32,8 @@ local wrap = h.wrap
 local line_prefix = h.line_prefix
 local headers = h.headers
 
--- `spdx`: standalone SPDX line, without a full header.
+---Build a standalone SPDX license line
+---@return table snippet
 local function build_spdx(_, _)
 	local pre, post = oneline_delims(vim.bo.filetype)
 	return sn(nil, {
@@ -49,9 +44,9 @@ local function build_spdx(_, _)
 	})
 end
 
--- `shebang`: interpreter line for the current filetype, `sh` by default.
--- Python headers are docstrings only, so the interpreter line is typed
--- with this snippet; a choice offers the coding tag Python reads.
+---Build the interpreter line for the current filetype
+---A Python header is a docstring only, so the coding tag is offered here
+---@return table snippet
 local function build_shebang(_, _)
 	local ft = vim.bo.filetype
 	local line = shebang_by_ft[ft] or "#!/usr/bin/env sh"
@@ -65,7 +60,8 @@ local function build_shebang(_, _)
 	return sn(nil, { t(line), i(0) })
 end
 
--- `see`: one-line reference, cursor ready to paste the link.
+---Build a one-line reference comment
+---@return table snippet
 local function build_see(_, _)
 	local sym = line_comment_sym(vim.bo.filetype)
 	return sn(nil, {
@@ -74,14 +70,12 @@ local function build_see(_, _)
 	})
 end
 
----Reads the system clipboard (falls back to the unnamed register) and
----returns its first line, trimmed. Multi-line clipboards are cut at the
----first line so the comment stays on a single line.
----See: lua/lib/headers.lua
+---Read the clipboard and return its first line, trimmed
+---@type fun(): string
 local get_clipboard = h.get_clipboard
 
--- `seec`: like `see`, but pastes the clipboard (usually a link or a path)
--- right after "See: ".
+---Build a reference comment that pastes the clipboard
+---@return table snippet
 local function build_see_clip(_, _)
 	local sym = line_comment_sym(vim.bo.filetype)
 	return sn(nil, {
@@ -90,8 +84,8 @@ local function build_see_clip(_, _)
 	})
 end
 
--- `path`: one-line comment with the file path relative to the cwd,
--- e.g. `-- lua/options.lua`.
+---Build a comment with the buffer path relative to the cwd
+---@return table snippet
 local function build_filepath(_, _)
 	local pre, post = oneline_delims(vim.bo.filetype)
 	local nodes = { t(pre), f(get_relpath, {}) }
@@ -102,17 +96,20 @@ local function build_filepath(_, _)
 	return sn(nil, nodes)
 end
 
--- `mail`: e-mail address.
+---Build the personal e-mail snippet
+---@return table snippet
 local function build_mail(_, _)
 	return sn(nil, { i(1, "contatomiqueiasalvesdev@gmail.com") })
 end
 
--- `gh`: GitHub profile URL.
+---Build the GitHub profile snippet
+---@return table snippet
 local function build_gh(_, _)
 	return sn(nil, { i(1, "https://github.com/miqu3iasg") })
 end
 
--- `refs`: list of references, one bullet per source.
+---Build the `refs` snippet, one bullet per source.
+---@return table snippet
 local function build_refs(_, _)
 	local style = inline_style(vim.bo.filetype)
 	local nodes = {}
@@ -128,8 +125,8 @@ local function build_refs(_, _)
 	return sn(nil, nodes)
 end
 
--- `drefs`: description plus references, for borrowed code where the reason
--- it was kept matters.
+---Build the `drefs` snippet, a description plus references.
+---@return table snippet
 local function build_snip(_, _)
 	local style = inline_style(vim.bo.filetype)
 	local nodes = {}
