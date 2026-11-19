@@ -1,48 +1,19 @@
 -- lua/plugins/lisp.lua
 
--- Interactive REPL-driven evaluation for Lisp-family languages through Conjure,
--- configured here for Scheme with MIT Scheme as the REPL. Racket and Common Lisp
--- buffers also load Conjure.
+-- Conjure for REPL-driven evaluation in the Lisp family, with MIT Scheme as
+-- the Scheme REPL.
 --
--- Conjure is loaded lazily. The plugin is declared at the bottom of this file
--- and its scripts are only loaded on the first Scheme, Lisp, Racket or Clojure
--- buffer, right after `configure()` sets the globals that Conjure reads when it
--- starts.
---
--- Conjure must be declared in `pack.lua` and installed through the plugin
--- manager. The Tree-sitter parsers for scheme, commonlisp and racket are
--- installed by the list in `lua/plugins/treesitter.lua`.
---
--- Racket, rlwrap and the Tree-sitter CLI must be installed on the system.
--- `unbuffer`, which keeps the REPL output from being buffered, comes with
--- `expect`. On Arch Linux:
+-- Conjure lazy-loads on the first Lisp buffer, after `configure()` sets the
+-- globals it reads.
 --
 -- $ sudo pacman -S tree-sitter-cli racket rlwrap expect
---
--- MIT Scheme is available through the AUR:
---
 -- $ yay -S mit-scheme
---
--- Building MIT Scheme 12.1 from the AUR may fail on Arch Linux. The glibc
--- defines `_POSIX_C_SOURCE` with a newer value than the source expects, so the
--- source tries to redefine the macro, and the build fails because warnings are
--- treated as errors (`-Werror`). Debian already provides an official patch.
---
--- One workaround is to edit the `PKGBUILD` in `~/.cache/yay/mit-scheme` and
--- update its `prepare()` function to adjust the macro with `sed`. Then remove
--- the cached build directories and rebuild:
---
--- $ rm -rf ~/.cache/yay/mit-scheme/src ~/.cache/yay/mit-scheme/pkg
--- $ cd ~/.cache/yay/mit-scheme
--- $ makepkg -si
 --
 -- See: lua/lib/lazy.lua
 -- See: lua/plugins/treesitter.lua
 -- See: https://github.com/Olical/conjure
--- See: https://web.mit.edu/scheme/current/doc/mit-scheme-user/Introduction.html
--- See: https://www.shido.info/lisp/scheme1_e.html
--- See: https://www.mail-archive.com/debian-bugs-closed@lists.debian.org/msg850823.html
 -- See: https://aur.archlinux.org/packages/mit-scheme
+-- See: https://web.mit.edu/scheme/current/doc/mit-scheme-user/Introduction.html
 
 local M = {}
 

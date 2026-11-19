@@ -1,12 +1,10 @@
 -- lua/plugins/unnecessary-shit.lua
 
--- Plugins I install instead of actually coding, the newbie version. A dumping
--- ground for small plugins and modules that nobody needs but I refuse to live
--- without. None of it is essential, all of it makes editing less miserable.
+-- Plugins installed instead of actually coding, a dumping ground for small
+-- conveniences nobody needs but the author refuses to live without.
 --
 -- Everything here must already be installed, so `lua/config/pack.lua` must run
--- before this file. The tmux navigation only works if the tmux side has the
--- matching plugin installed as well.
+-- first, and the tmux navigation needs the matching tmux plugin.
 --
 -- See: lua/config/pack.lua
 
@@ -40,7 +38,6 @@ local ai_opts = {
 }
 ai.setup(ai_opts)
 
--- Without the matching tmux plugin these just sit there doing nothing.
 vim.keymap.set("n", "<c-h>", "<cmd>TmuxNavigateLeft<cr>")
 vim.keymap.set("n", "<c-j>", "<cmd>TmuxNavigateDown<cr>")
 vim.keymap.set("n", "<c-k>", "<cmd>TmuxNavigateUp<cr>")

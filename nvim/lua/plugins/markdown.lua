@@ -1,53 +1,19 @@
 -- lua/plugins/markdown.lua
 
--- Markdown note-taking workflow built on obsidian.nvim and img-clip.nvim.
--- obsidian.nvim provides wikilink navigation, completion and the other
--- Obsidian features. Everything that creates, names, renames or searches notes
--- lives in `lua/modules/notes.lua`, and the keymaps below only delegate to it.
--- Creation stays inside the vault, while template insertion works on any
--- Markdown file on disk.
+-- Markdown note-taking through obsidian.nvim and img-clip.nvim. Note creation,
+-- naming and search live in `lua/modules/notes.lua`.
 --
--- The vault is `$ARCANUM_DIR`, or `~/dev/arcanum` when unset. It must already
--- exist. Notes live directly in its root, templates in `_templates/` and
--- pasted images in `attachments/`. The vault is just a folder: only this path
--- refers to it, and the workspace name below follows the folder name.
+-- The vault is `$ARCANUM_DIR`, or `~/dev/arcanum` when unset, and must exist.
 --
--- Notes are searched through fzf-lua, so `fzf.lua` must be loaded before this
--- file. obsidian.nvim, img-clip.nvim and plenary.nvim must be installed through
--- the plugin manager.
---
--- Markdown preview in the browser comes from markdown-preview.nvim. It is configured
--- through `vim.g.mkdp_*` globals, which must be set before the plugin loads, and it
--- is toggled with the defined keymap. The plugin needs Node.js and a one-time install
--- step that `vim.pack` does not run on its own. After the first install, and after
--- any update of the plugin, run this manually and restart Neovim, otherwise the
--- preview does nothing:
---
+-- $ sudo pacman -S obsidian
+-- :MasonInstall marksman
 -- :packadd markdown-preview.nvim
 -- :call mkdp#util#install()
 --
--- Pasted images are saved in `<vault>/attachments`. Inside the vault they use
--- the wikilink template, and anywhere else they use the standard Markdown
--- link.
---
--- Markdown language-server features require Marksman to be both installed and
--- enabled in `lua/language/`. The Obsidian app is only needed to open
--- notes in it. On Arch Linux:
---
--- $ sudo pacman -S obsidian
---
--- Install Marksman through Mason:
---
--- :MasonInstall marksman
---
 -- See: lua/modules/notes.lua
 -- See: after/ftplugin/markdown.lua
--- See: lua/language/servers/marksman.lua
 -- See: ~/.local/bin/nt
--- See: https://github.com/HakonHarnes/img-clip.nvim
 -- See: https://github.com/obsidian-nvim/obsidian.nvim
--- See: https://github.com/nvim-lua/plenary.nvim
--- See: https://github.com/ibhagwan/fzf-lua
 -- See: https://github.com/iamcco/markdown-preview.nvim
 
 local notes = require("modules.notes")

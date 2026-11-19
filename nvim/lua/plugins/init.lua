@@ -1,14 +1,10 @@
 -- lua/plugins/init.lua
 
--- Loads all plugin configuration modules. Plugin installation is managed by
--- Neovim's built-in package manager (`vim.pack`), configured in
--- lua/config/pack.lua. Add new plugin modules to the list below; the load
--- order matters because some modules depend on others (for example,
--- lua/plugins/fzf.lua must load before lua/plugins/markdown.lua). Module names
--- are full paths, so modules living outside `lua/plugins/` can slot into the
--- same order; the LSP stack does that, with `lua/language/init.lua` loading between
--- completions and fzf. A module that fails to load notifies an error instead
--- of aborting the rest.
+-- Loads every plugin configuration module. The order matters, since some
+-- modules depend on others.
+--
+-- See: lua/config/pack.lua
+-- See: lua/plugins/fzf.lua
 
 for _, mod in ipairs({
 	"plugins.treesitter",

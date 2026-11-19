@@ -1,23 +1,15 @@
 -- lua/plugins/fzf.lua
 
 -- Fuzzy finder for files, buffers, text, diagnostics and help, built on
--- fzf-lua. It gives a single interface for navigating a project.
+-- fzf-lua.
 --
--- The plugin loads on demand. `lib.lazy` installs it without sourcing it, and
--- the first picker keymap loads it, runs the setup and opens the picker. The
--- keymaps below are stubs, so every picker is reachable before the plugin is
--- loaded.
---
--- The external tools must be installed on the system, since fzf-lua only wraps
--- them. On Arch Linux:
+-- The plugin lazy-loads on the first picker, and the keymaps are stubs that
+-- load it on demand.
 --
 -- $ sudo pacman -S fzf grep ripgrep fd
 --
 -- See: lua/lib/lazy.lua
 -- See: https://github.com/ibhagwan/fzf-lua
--- See: https://github.com/bruhtus/dotfiles/blob/master/.vim/after/autoload/enable/fzf.vim
--- See: https://github.com/bruhtus/dotfiles/blob/master/.vim/plugin/fzf.vim
--- See: https://github.com/james-orcales/james-orcales/blob/main/home/.config/nvim/init.lua
 
 local M = {}
 
@@ -64,12 +56,6 @@ local function make_opts()
 					vim.api.nvim_win_set_config(e.winid, { title = "" })
 				end
 			end,
-
-			-- height = 0.95,
-			-- width = 0.90,
-			-- row = 0.35,
-			-- col = 0.50,
-			-- border = "single",
 
 			height = 0.30,
 			width = 1.0,

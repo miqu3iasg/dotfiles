@@ -1,42 +1,15 @@
 -- lua/plugins/treesitter.lua
 
--- This is an essential module. Tree-sitter provides syntax-aware code parsing
--- and highlighting for the languages supported by this configuration. It
--- enables more accurate syntax highlighting than traditional regex-based rules
--- and provides the parsing infrastructure used by other Neovim features and
--- plugins. Several language-specific features depend on the corresponding
--- parser being installed.
+-- Tree-sitter highlighting and parser installation for the languages the
+-- config uses. Several features depend on the parser being installed.
 --
--- nvim-treesitter uses the Tree-sitter CLI to compile language parsers,
--- so the CLI must be installed and available on PATH. On Arch Linux:
+-- The CLI compiles the parsers, and `ts.install()` requests them at startup.
 --
 -- $ sudo pacman -S tree-sitter-cli
 --
--- The parsers listed in `ts.install()` are requested for automatic
--- installation. The installation process may take some time because
--- parsers need to be downloaded and compiled. The `max_jobs` option
--- limits the number of concurrent installation jobs to reduce resource
--- usage. To install parsers manually from Neovim, use `:TSInstall`
--- followed by the desired parser names, for example:
---
--- :TSInstall lua python javascript
---
--- This configuration starts Tree-sitter highlighting automatically when
--- a buffer's `FileType` event fires, provided the corresponding parser
--- is available. The filetype is mapped to a Tree-sitter language where
--- possible, and `vim.treesitter.start()` is called inside `pcall()` so
--- a missing or unsupported parser does not interrupt the rest of the
--- configuration. Parser installation and highlighting activation are
--- separate operations: requesting installation does not mean a parser
--- is already available when a buffer is opened.
---
--- The indentation configuration is intentionally left inactive because
--- Tree-sitter indentation is not enabled globally. If indentation is
--- enabled later, it should be restricted to languages where its results
--- have been verified to work correctly.
---
+-- See: lua/plugins/completions.lua
 -- See: https://github.com/nvim-treesitter/nvim-treesitter
--- See: :h vim-treesitter
+-- See: :help vim.treesitter
 
 vim.env.PYTHONIOENCODING = "utf-8"
 

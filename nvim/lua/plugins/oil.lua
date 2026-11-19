@@ -1,27 +1,24 @@
 -- lua/plugins/oil.lua
 
--- File explorer that edits the filesystem as a normal buffer, replacing netrw as
--- the default explorer. Deletions go to the trash, and simple edits such as
--- delete, move and rename are applied without confirmation.
+-- File explorer that edits the filesystem as a buffer, replacing netrw.
+-- Deletions go to the trash, and simple edits apply without confirmation.
 --
--- Entries are opened with an extension-specific viewer, falling back to
--- `xdg-open` for anything else. The viewers must be installed for their
--- extensions to work: zathura for documents and ebooks, imv for images and mpv
--- for audio and video. On Arch Linux:
+-- The `gx` viewer must be installed for the extension to open.
 --
 -- $ sudo pacman -S zathura zathura-pdf-mupdf zathura-djvu zathura-cb imv mpv xdg-utils
 --
--- The `g-` map opens oil in a temporary horizontal split used as a file picker:
--- selecting a file closes the split and opens the file in the window the split
--- came from.
---
+-- See: lua/modules/sessions.lua
 -- See: https://github.com/stevearc/oil.nvim
 
 local oil = require("oil")
 
--- Viewer apps grouped by their supported extensions. The keymap `gx` opens the
--- entry under the cursor with the matching app, and anything else falls back
--- to the OS default through `open_external`.
+---Entry of the oil buffer under the cursor.
+---@class oil.Entry
+---@field name string
+---@field type string
+
+-- Viewer apps by extension. `gx` opens the entry with the matching app, or
+-- with the system default.
 local app_map = {}
 for app, exts in pairs({
 	zathura = { "pdf", "djvu", "epub", "cbz", "cbr", "xps" },
@@ -53,15 +50,8 @@ local function open_with_viewer()
 	end
 end
 
----Select the entry under the cursor.
----
----When oil was opened, the window holds the handle of the window it came from in `vim.w.oil_origin_win`.
----In that case, selecting a file closes the split and opens the file in the origin window. Directories,
----and any buffer without a valid origin window, fall back to the default `actions.select` behavior
----(navigating inside the current window).
----
----Used by the `<CR>` and `L` oil keymaps.
----@return nil
+---Select the entry under the cursor, opening the file in the origin window
+---when oil was opened as a picker split.
 local function select_entry()
 	local origin = vim.w.oil_origin_win ---@type integer?
 	local entry = oil.get_cursor_entry() ---@type oil.Entry?
@@ -83,11 +73,8 @@ local function select_entry()
 	vim.cmd.edit(vim.fn.fnameescape(path))
 end
 
----Open oil in a temporary horizontal split that acts as a file picker.
----
----The current window is stored in `vim.w.oil_origin_win` of the new split, so
----`select_entry` can open the chosen file back in it.
----@return nil
+---Open oil in a temporary horizontal split that acts as a file picker. The
+---current window goes in `vim.w.oil_origin_win` of the new split.
 local function open_picker_split()
 	local origin = vim.api.nvim_get_current_win()
 	vim.cmd("belowright split")

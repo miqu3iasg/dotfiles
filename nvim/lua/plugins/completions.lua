@@ -1,47 +1,20 @@
 -- lua/plugins/completions.lua
 
--- Completion without a completion plugin, using native LSP completion and
--- LuaSnip for snippets. The menu has the LSP as its only source, so snippets
--- sent by language servers show up there, but LuaSnip's own snippets do not.
--- Those are expanded by trigger, autosnippet or through the snippet keymaps
--- below.
+-- Native LSP completion with LuaSnip for snippets, without a completion plugin,
+-- plus a wrapper that drops dead clients on a buffer reload.
 --
--- The menu opens automatically only on the filetypes listed in
--- `TRIGGER_FILETYPES`. On every other filetype completion is manual, and the
--- LSP omnifunc is also available.
---
--- LuaSnip must be declared in `pack.lua` and installed through the plugin
--- manager. Snippet definitions live under `lua/snippets/` and are loaded lazily
--- by filetype.
---
--- Completion depends on the language servers configured in
--- `lua/language/`. Language servers and formatters are installed through
--- Mason, according to the languages in use, with `:Mason` or `:MasonInstall`
--- followed by package names.
---
--- On Arch Linux, install the Tree-sitter CLI and the system dependencies with:
+-- Tree-sitter CLI and system dependencies come from pacman, parsers from Neovim.
 --
 -- $ sudo pacman -S tree-sitter-cli nodejs npm jdk-openjdk
---
--- Then install the Tree-sitter parsers from Neovim:
---
 -- :TSInstall c java python lua scheme racket sql markdown javascript typescript
 -- :TSInstall html css json jsonc yaml toml bash
 --
--- `vim.lsp.completion.enable` is wrapped here so that a server detached from a
--- reloaded buffer does not trip the runtime's "invalid client ID" assert; see
--- the guard below the snippet tables.
---
 -- See: lua/language/init.lua
--- See: lua/plugins/formatting.lua
+-- See: :help vim.lsp.completion
 -- See: https://github.com/L3MON4D3/LuaSnip
 -- See: https://github.com/nvim-treesitter/nvim-treesitter
--- See: https://github.com/mason-org/mason.nvim
--- See: :help vim.lsp.completion
 
--- Keys are filetypes and values are modules under `lua/snippets/`, required the
--- first time a buffer of that filetype is opened. `common` is loaded by the
--- filetypes that inherit it.
+-- Filetypes are keys and snippet modules are values, required on first use.
 ---@type table<string, string>
 local snippet_modules = {
 	c = "snippets.c",
@@ -97,14 +70,8 @@ local TRIGGER_FILETYPES = {
 	toml = true,
 }
 
--- A server that detaches from a buffer leaves behind the runtime's internal
--- buffer-reload callback, which re-calls `vim.lsp.completion.enable` with the
--- client id captured at attach time. If the buffer is reloaded after the
--- detach, the stale id fails the assert inside the runtime and the buffer's
--- completion handle is left empty. The wrapper drops dead clients instead, so
--- the reload becomes a no-op and clients that are still alive are unaffected.
---
--- See: https://github.com/neovim/neovim/blob/master/runtime/lua/vim/lsp/completion.lua
+-- A detached server re-calls this with a stale client id on the next reload,
+-- so drop dead clients here.
 local enable = vim.lsp.completion.enable
 vim.lsp.completion.enable = function(on, client_id, bufnr, opts)
 	if on and not vim.lsp.get_client_by_id(client_id) then
@@ -117,10 +84,8 @@ end
 ---@type table<integer, boolean>
 local completion_bufs = {}
 
----Enable native LSP completion on `buf` when the client supports it and the
----buffer is not guarded against it. Enabling it is what sets the buffer's
----`omnifunc`, so it happens for every filetype, and only the automatic popup is
----restricted to `TRIGGER_FILETYPES`. Huge files never get completion.
+---Enable native LSP completion on `buf`, restricting only the automatic popup
+---to `TRIGGER_FILETYPES` and skipping huge files.
 ---@param client vim.lsp.Client
 ---@param buf integer
 local function maybe_enable(client, buf)
@@ -151,11 +116,8 @@ vim.api.nvim_create_autocmd("LspAttach", {
 	end,
 })
 
--- Neovim recycles buffer numbers, so a wiped buffer must leave the table, or
--- the buffer that later reuses its number never gets completion. A client
--- restart or reload also detaches the buffer, and the runtime clears the
--- buffer's completion handle, so the flag must go as well, or the next
--- `LspAttach` skips re-enabling and the buffer loses completion for good.
+-- A wiped buffer or a detached client must clear the flag, or a recycled buffer
+-- number, or the same buffer after a reload, never gets completion.
 vim.api.nvim_create_autocmd({ "BufWipeout", "LspDetach" }, {
 	group = vim.api.nvim_create_augroup("NativeLspCompletion", { clear = false }),
 	callback = function(ev)
@@ -171,9 +133,8 @@ for _, client in ipairs(vim.lsp.get_clients({ bufnr = -1 })) do
 	end
 end
 
--- Markdown is prose, so it is deliberately not in `TRIGGER_FILETYPES`.
--- Obsidian's completion triggers through its LSP separately, so note-link
--- completion works when typing `[[`.
+-- Markdown stays out of `TRIGGER_FILETYPES`, so note-link completion comes
+-- from Obsidian's LSP only.
 
 local luasnip = require("luasnip")
 
@@ -197,9 +158,8 @@ end
 ---@type table<string, boolean>
 local loaded = {}
 
----Require one snippet module and register its snippets. Failures are reported
----with `vim.notify` instead of raised, so a broken snippet file never blocks
----completion.
+---Require one snippet module and register its snippets, reporting failures
+---instead of raising.
 ---@param name string Key of `snippet_modules`, after alias resolution.
 local function load(name)
 	local module = snippet_modules[name]
@@ -217,8 +177,7 @@ local function load(name)
 	end
 end
 
----Load the snippets of a filetype, resolving aliases first and adding the
----`common` snippets when the filetype inherits them.
+---Load the snippets of a filetype, resolving aliases and adding `common`.
 ---@param ft string
 local function load_snippets(ft)
 	load(aliases[ft] or ft)
@@ -243,14 +202,8 @@ end
 
 local map = vim.keymap.set
 
--- Opens the completion menu on demand: LSP when a client supports it, buffer
--- words otherwise. The check runs on every press, so a buffer whose LSP has
--- not attached yet falls back to keyword completion, and the same key switches
--- to LSP completion once the client attaches. `vim.lsp.completion.get()` goes
--- straight to the enabled clients, so it neither enters the `^X` submode (the
--- omnifunc returns -2, which keeps completion mode waiting on the async
--- response) nor depends on the buffer's `omnifunc`. With the menu open the key
--- accepts the selected item instead, rather than closing it with a fresh `^X`.
+-- The check runs on every press, so a buffer without an attached client falls
+-- back to keyword completion. With the menu open the key accepts the item.
 map("i", "<C-y>", function()
 	if vim.fn.pumvisible() == 1 then
 		return "<C-y>" -- Returned keys are not remapped, so this is the builtin.
@@ -266,9 +219,10 @@ map("i", "<CR>", function()
 	return vim.fn.pumvisible() == 1 and "<C-y>" or "<CR>"
 end, { expr = true, desc = "Accept completion or newline" })
 
--- The choice change is scheduled to avoid a re-entrant jump out of the expr
--- mapping. Without a visible popup the keys move the cursor by line, and never
--- start native keyword completion.
+---Build a keymap callback that moves the selection or the snippet choice,
+---scheduling the choice change to avoid a re-entrant jump out of the mapping.
+---@param dir integer 1 for the next item, -1 for the previous one.
+---@return fun(): string
 local function select_item(dir)
 	return function()
 		if luasnip.choice_active() then

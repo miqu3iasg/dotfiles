@@ -1,26 +1,16 @@
 -- lua/plugins/git.lua
 
--- Git workflow inside Neovim, built on vim-fugitive for repository operations
--- and gitsigns.nvim for hunk-level changes.
+-- Git inside Neovim, through vim-fugitive for repository operations and
+-- gitsigns.nvim for hunk-level changes.
 --
--- Git must be installed and the current directory must belong to a repository.
--- vim-rhubarb is required for `:GBrowse` to build GitHub URLs. Destructive
--- remote operations, such as force push and rebase, are intentionally left to
--- the terminal.
---
--- On Arch Linux, install Git with:
+-- Destructive remote operations are left to the terminal, and `:GBrowse`
+-- needs vim-rhubarb.
 --
 -- $ sudo pacman -S git
---
--- The global configuration, such as user name and email, lives in
--- `~/.gitconfig` and can be inspected with:
---
--- $ git config --global --list
 --
 -- See: lua/modules/close_view.lua
 -- See: https://git-scm.com/doc
 -- See: https://github.com/tpope/vim-fugitive
--- See: https://github.com/tpope/vim-rhubarb
 -- See: https://github.com/lewis6991/gitsigns.nvim
 
 local keys = require("lib.keys")
@@ -29,8 +19,8 @@ local map = keys.map
 local log_format = "--color=never --date=short --pretty=format:'%h %cd  %s (%an)%d'"
 
 ---Open the history of the current file, the repository or the function under
----the cursor. Ported from bruhtus <https://github.com/bruhtus>' `enable#fugitive_log`.
----See: https://github.com/bruhtus/dotfiles/blob/master/.vim/after/autoload/enable/fugitive_log.vim
+---the cursor.
+--- See: https://github.com/bruhtus/dotfiles/blob/master/.vim/after/autoload/enable/fugitive_log.vim
 local function git_log_normal()
 	local choice = vim.fn.confirm(
 		"Current file or All or Specific function git commit(s)?",

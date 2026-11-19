@@ -1,52 +1,15 @@
 -- lua/plugins/formatting.lua
 
--- Formatting through conform.nvim, which runs external formatters on demand and
--- on save, with a chain of formatters per filetype.
+-- Formatting through conform.nvim, which runs external formatters on demand
+-- and on save.
 --
--- Conform runs external formatter executables, so they must be on PATH. Mason
--- can install many of them, such as stylua, ruff, rustfmt, google-java-format,
--- fourmolu, yamlfmt, ktlint, swiftformat, zigfmt and asmfmt, but the ones below
--- may need to be installed manually.
---
--- On Arch Linux, most system-level formatters come from pacman: Node.js for the
--- web formatters, clang-format for C and C++, shfmt for shell, taplo for TOML,
--- astyle for Java, nixfmt, perltidy, scalafmt and buf for Protobuf:
+-- Every formatter is an external executable and must be on PATH.
 --
 -- $ sudo pacman -S nodejs npm clang shfmt taplo-cli astyle nixfmt perltidy scalafmt buf
---
--- JavaScript, TypeScript, HTML, CSS, JSON, Markdown, GraphQL and Vue use
--- Prettier. Prettierd is preferred when available, and Conform falls back to
--- Prettier through `stop_after_first = true`. Both can also come from Mason. SQL
--- and Elm formatting are Node-based too:
---
 -- $ npm install -g prettier prettierd sql-formatter elm-format
---
--- Markdown uses `prettier` instead of `prettierd` so that `--tab-width 4` can be
--- passed. The `*` and `+` bullets are preserved by extra steps, which are
--- explained next to `md_stash_bullets`.
---
--- Astro formatting needs the Astro CLI, which should come from the project's own
--- dependencies rather than a global install:
---
--- $ npm install astro
---
--- The remaining formatters come from other package managers:
---
 -- $ pip install xmlformatter
---
 -- $ gem install rubocop
---
 -- $ R -e 'install.packages("styler")'
---
--- Some formatters need no separate install because they ship with their language
--- tooling, such as `mix format` with Elixir and `terraform fmt` with Terraform.
--- The binaries for Julia (runic), Clojure (cljfmt) and Dockerfile (dockerfmt)
--- must be installed by hand or through Mason.
---
--- Assembly follows asmfmt, which lays out assembler files the way gofmt lays
--- out Go: tabs for indentation, labels at column zero and comments aligned
--- within each block. It only understands assembler files, so it is bound to the
--- `asm` filetype. See: after/ftplugin/asm.lua
 --
 -- See: lua/lib/autoformat.lua
 -- See: lua/modules/markdown_lists.lua
@@ -106,10 +69,8 @@ require("conform").setup({
 			prepend_args = { "--style=file" },
 		},
 
-		-- Prettier with 4 columns of indentation and prose-wrap preserve to keep
-		-- original list markers (* and +) instead of rewriting them to -.
-		-- Uses `prettier` instead of `prettierd` because prettierd does not accept
-		-- command-line flags.
+		-- Prettier with 4 columns of indentation and prose-wrap preserve, using
+		-- the CLI because prettierd accepts no flags.
 		prettier_md = require("conform.util").merge_formatter_configs(require("conform.formatters.prettier"), {
 			prepend_args = { "--tab-width", "4", "--prose-wrap", "preserve" },
 		}),
