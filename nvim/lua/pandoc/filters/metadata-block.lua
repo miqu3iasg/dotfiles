@@ -171,7 +171,7 @@ end
 ---document has `file_name` but no `title`, the file name (without extension)
 ---is also used as the document title.
 ---@param doc pandoc.Pandoc Document being processed by Pandoc.
----@return pandoc.Pandoc Transformed document.
+---@return pandoc.Pandoc? Transformed document, or nil to leave it unchanged.
 function Pandoc(doc)
 	if doc.meta["show-metadata"] == false then
 		return nil

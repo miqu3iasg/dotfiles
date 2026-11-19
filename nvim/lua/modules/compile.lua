@@ -156,7 +156,8 @@ function M.command(cmd, cwd)
 	local buf = open_window()
 	append(buf, { cwd .. " > " .. cmd, "" })
 
-	local obj = vim.system({ "sh", "-c", cmd }, {
+	local obj
+	obj = vim.system({ "sh", "-c", cmd }, {
 		cwd = cwd,
 		text = true,
 		stdout = function(_, data)

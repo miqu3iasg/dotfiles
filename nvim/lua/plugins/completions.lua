@@ -127,8 +127,8 @@ vim.api.nvim_create_autocmd({ "BufWipeout", "LspDetach" }, {
 
 -- Buffers attached before this file ran, such as restored sessions, missed
 -- their LspAttach event.
-for _, client in ipairs(vim.lsp.get_clients({ bufnr = -1 })) do
-	for _, buf in ipairs(client.attached_buffers) do
+for _, client in ipairs(vim.lsp.get_clients()) do
+	for buf in pairs(client.attached_buffers) do
 		maybe_enable(client, buf)
 	end
 end

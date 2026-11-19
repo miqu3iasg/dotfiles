@@ -51,7 +51,7 @@ end
 local function note_dir(buf)
 	local name = vim.api.nvim_buf_get_name(buf)
 	if name == "" then
-		return vim.uv.cwd()
+		return vim.uv.cwd() or "."
 	end
 	return vim.fs.dirname(name)
 end
