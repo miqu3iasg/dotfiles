@@ -1,18 +1,10 @@
 -- lua/language/servers/vtsls.lua
 
--- TypeScript and JavaScript through vtsls, which wraps tsserver requests into
--- native LSP. vtsls replaces ts_ls. Never enable both, or every diagnostic and
--- completion shows up twice.
+-- TypeScript and JavaScript through vtsls, which wraps tsserver in native LSP.
+-- It replaces ts_ls, so never enable both or every result shows up twice.
 --
--- The settings are shared between the `typescript` and the `javascript`
--- sections through a single table, so the two languages behave exactly the
--- same way, with `maxTsServerMemory` applied on top of the TypeScript side.
--- Completion imports missing symbols by itself, the workspace tsserver wins
--- over the global one when a project brings its own, code actions can move
--- declarations to a new file, and the server takes part in completion
--- filtering through fuzzy matching. Imports are reorganized automatically on
--- save, and the manual command stays available through its own keymap (see
--- lua/language/init.lua).
+-- Imports are organized on save, it takes part in completion filtering, and
+-- formatting stays with conform. vtsls comes from Mason.
 --
 -- :MasonInstall vtsls
 --
@@ -44,8 +36,7 @@ local ts_shared = {
 return {
 	config = {
 		commands = {
-			-- Organizing imports runs through its own keymap (see lua/language/init.lua),
-			-- so the default command is stubbed out to keep it silent.
+			-- Organizing imports runs through its own keymap, so the stub keeps it silent.
 			["_typescript.didOrganizeImports"] = function() end,
 		},
 		settings = {
@@ -65,12 +56,7 @@ return {
 		},
 	},
 
-	---Registers `source.organizeImports` on `BufWritePre`, so imports stay
-	---sorted and free of unused entries without manual runs. It respects the
-	---autoformat toggle, like the eslint fix-all on save does, and uses one
-	---group per buffer, so re-attaching replaces the autocmd instead of
-	---stacking it.
-	---@param _ vim.lsp.Client Unused, the hook only needs the buffer.
+	---Organize imports on `BufWritePre`, following the autoformat toggle.
 	---@param bufnr integer
 	on_attach = function(_, bufnr)
 		vim.api.nvim_create_autocmd("BufWritePre", {

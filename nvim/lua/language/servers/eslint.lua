@@ -1,17 +1,14 @@
 -- lua/language/servers/eslint.lua
 
--- ESLint for JavaScript and TypeScript validation. Formatting stays with
--- conform and prettier, so the server's formatter is off, and linting runs on
--- save through the server's own `run` setting. ESLint resolves its
--- configuration from the closest `eslint.config.*` or `.eslintrc.*` in
--- monorepos through the `workingDirectory` mode.
+-- ESLint for JavaScript and TypeScript, running on save with its formatter off
+-- and its configuration taken from the nearest config file.
 --
--- `LspEslintFixAll` runs before conform formats. The hook is registered below,
--- and it respects the autoformat toggle from `lua/lib/autoformat.lua`.
+-- The fix-all runs before conform formats and follows the autoformat toggle.
+--
+-- eslint-lsp comes from Mason.
 --
 -- :MasonInstall eslint-lsp
 --
--- See: lua/plugins/formatting.lua
 -- See: lua/lib/autoformat.lua
 -- See: https://github.com/microsoft/vscode-eslint
 
@@ -25,11 +22,7 @@ return {
 		},
 	},
 
-	---Registers `LspEslintFixAll` on `BufWritePre`. The autocmd is created on
-	---attach so that it is registered before conform's, and it respects the
-	---autoformat toggle. One group per buffer, so re-attaching replaces the
-	---autocmd instead of stacking it.
-	---@param _ vim.lsp.Client Unused, the hook only needs the buffer.
+	---Register `LspEslintFixAll` on `BufWritePre`, before conform formats.
 	---@param bufnr integer
 	on_attach = function(_, bufnr)
 		vim.api.nvim_create_autocmd("BufWritePre", {

@@ -1,10 +1,9 @@
 -- lua/language/servers/pyright.lua
 
--- Python through pyright. The server provides types, navigation, hover,
--- completion with auto-import and inlay hints for variable and function return
--- types. Type checking runs on `standard`, with diagnostics limited to open
--- files, which keeps memory usage low on large projects. Formatting stays with
--- conform, which runs ruff.
+-- Python through pyright, on `standard` type checking limited to open files,
+-- with auto-import completion and inlay hints; formatting stays with conform.
+--
+-- pyright comes from Mason.
 --
 -- :MasonInstall pyright
 --

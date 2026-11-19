@@ -1,9 +1,9 @@
 -- lua/language/servers/tailwindcss.lua
 
--- Tailwind CSS class completion, hover and color hints, attached to HTML, CSS,
--- SCSS and React buffers, to templ templates, which map to HTML through
--- `includeLanguages`, and to plain JavaScript and TypeScript, where helper
--- calls build the class string.
+-- Tailwind CSS completion, hover and color hints, with templ mapped to HTML
+-- and the class helpers found inside calls such as `cn("...")`.
+--
+-- tailwindcss-language-server comes from Mason.
 --
 -- :MasonInstall tailwindcss-language-server
 --
@@ -16,7 +16,6 @@ return {
 		settings = {
 			tailwindCSS = {
 				includeLanguages = { templ = "html" },
-				-- Detects classes inside helper calls such as `cn("...")`.
 				classFunctions = { "cn", "clsx", "cx", "cva", "tv", "twMerge" },
 			},
 		},

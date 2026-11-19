@@ -1,51 +1,21 @@
 -- lua/language/init.lua
 
--- Language servers for frontend development (HTML, CSS, Tailwind CSS, Emmet and
--- TypeScript/JavaScript), Markdown and Lua, plus Python through
--- pyright and C and C++ through clangd. Each server is configured in its own
--- module under `lua/language/servers/`, while this file holds
--- the shared setup: the Mason installation, the global capabilities, the
--- buffer-local keymaps and the enable/toggle state. Formatting stays with
--- conform for every language (see lua/plugins/formatting.lua). Python is also
--- linted with ruff through nvim-lint, which runs outside this stack and has
--- its own toggle (see lua/language/lint.lua). Java's `jdtls` is installed through
--- Mason but started separately by its own module (see
--- lua/language/servers/jdtls.lua).
+-- Shared LSP setup for the server modules in `servers/`, which register
+-- themselves here, plus the toggle for the whole stack.
 --
--- nvim-lspconfig, mason.nvim and mason-lspconfig.nvim must be installed through
--- the plugin manager; the lazydev.nvim setup lives in the lua_ls module, where
--- it takes effect. Mason manages the language servers, but some of them rely on
--- external runtimes and command-line tools. On Arch Linux, install Node.js and
--- npm for the JavaScript-based servers and a JDK for Java:
+-- Servers come from Mason; the JavaScript ones need Node.js and Java needs a JDK.
 --
 -- $ sudo pacman -S nodejs npm jdk-openjdk
---
--- The configuration requests the installation of the language servers at
--- startup. They can also be installed manually from Neovim:
---
 -- :MasonInstall clangd css-lsp emmet-language-server eslint-lsp html-lsp lua-language-server marksman pyright tailwindcss-language-server vtsls jdtls
 --
--- Mason only installs the servers, so each one is still
--- configured individually in `lua/language/servers/`, and only the servers declared
--- below are enabled.
---
+-- See: doc/kickstart.txt
 -- See: lua/language/lint.lua
--- See: lua/language/servers/lua_ls.lua
--- See: lua/language/types.lua
--- See: lua/lib/exports.lua
--- See: https://github.com/mason-org/mason.nvim
--- See: https://github.com/mason-org/mason-lspconfig.nvim
--- See: https://github.com/neovim/nvim-lspconfig
 -- See: :help lsp
 
--- The shape check is what turns a malformed module into a load error with the
--- server name, instead of a broken attach.
+-- A malformed module fails with the server name instead of a broken attach.
 local types = require("language.types")
 
--- Language server modules under `lua/language/servers/`, loaded and registered
--- below. `jdtls` is not listed because it is never started through this stack.
--- The order is alphabetical and meaningless, since each module registers on its
--- own.
+-- `jdtls` is missing because nvim-jdtls starts it per buffer.
 ---@type string[]
 local modules = {
 	"clangd",
@@ -64,9 +34,7 @@ local modules = {
 ---@type string[]
 local install_only = { "jdtls" }
 
----Modules indexed by server name, so the attach autocmd reaches the hook of
----the client that fired the event. The `UserLspServerModule` class that these
----modules follow lives in `lua/language/types.lua`.
+---Server modules by name, so the attach autocmd finds its hook.
 ---@type table<string, UserLspServerModule>
 local servers = {}
 
@@ -80,12 +48,10 @@ vim.schedule(function()
 	})
 end)
 
--- Disabling dynamic file watching avoids servers registering thousands of
--- watchers in large projects.
+-- Dynamic file watching would register thousands of watchers in large projects.
 vim.lsp.config("*", {
 	capabilities = vim.lsp.protocol.make_client_capabilities(),
 	workspace = { didChangeWatchedFiles = { dynamicRegistration = false } },
-	-- Modern LSP features (Neovim 0.10+)
 	inlay_hints = { enabled = true },
 	semantic_tokens = { enabled = true },
 })
@@ -97,10 +63,7 @@ for _, name in ipairs(modules) do
 	servers[name] = mod
 end
 
--- Buffer-local mappings set once a server attaches. The native LSP and
--- diagnostic mappings, such as hover, rename and the navigation motions, are
--- intentionally not redefined; the mappings below are the ones without a
--- native default or with custom behavior.
+-- Only mappings without a native default are set.
 -- See: :help lsp-defaults
 vim.api.nvim_create_autocmd("LspAttach", {
 	group = vim.api.nvim_create_augroup("UserLspConfig", { clear = true }),
@@ -145,7 +108,6 @@ vim.api.nvim_create_autocmd("LspAttach", {
 			vim.diagnostic.jump({ count = 1, float = true })
 		end, "Go to next diagnostic")
 
-		-- Server-specific hooks declared in the server modules.
 		local client = vim.lsp.get_client_by_id(ev.data.client_id)
 		local mod = client and servers[client.name] or nil
 		if mod and mod.on_attach then
@@ -161,11 +123,7 @@ vim.diagnostic.config({
 	float = { border = vim.o.winborder },
 })
 
--- The diagnostics display starts off, so buffers highlight nothing on their
--- own: underlines, signs and floats only appear after the display is toggled
--- on (see lua/config/keymaps/misc.lua for the keymap), and server results still
--- follow the servers, since stopping them clears the clients and whatever they
--- put on screen (see the server toggle below).
+-- The diagnostics display starts off and follows the keymaps and server toggles.
 -- See: lua/config/keymaps/misc.lua
 vim.diagnostic.enable(false)
 
@@ -173,13 +131,8 @@ vim.lsp.enable(modules)
 
 local lsp_enabled = true
 
----Enable or disable every language server in `modules` at once. `jdtls` is
----started elsewhere and is deliberately left alone.
----
----Disabling prevents new clients from starting and also stops the ones still
----alive, so their diagnostics are cleared. Enabling starts the servers again and
----re-attaches them to the buffers that are already open.
----@param enable? boolean Forces a state. When omitted, the current state is toggled.
+---Enable or disable every language server in `modules` at once.
+---@param enable? boolean Force a state; omit to toggle.
 ---@return boolean enabled The new state.
 local function toggle_lsp(enable)
 	if enable == nil then
@@ -209,7 +162,6 @@ vim.keymap.set("n", "<leader>ul", function()
 	toggle_lsp()
 end, { desc = "Toggle LSP" })
 
--- The external linters load with the rest of the stack, so their toggle and
--- their autocmds exist from the start.
+-- Linters load with the stack, so their toggle exists from the start.
 -- See: lua/language/lint.lua
 require("language.lint")

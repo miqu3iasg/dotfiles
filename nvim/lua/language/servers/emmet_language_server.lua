@@ -1,13 +1,15 @@
 -- lua/language/servers/emmet_language_server.lua
 
--- Emmet expansion for HTML, CSS and markup-based templates, taken over from the
--- nvim-lspconfig defaults so that templ and PHP buffers get the abbreviations
--- too. Formatting belongs to prettier through conform.
+-- Emmet expansion for HTML, CSS and markup templates, with templ and PHP
+-- added to the filetypes the server gets.
 --
--- The server is installed through Mason:
+-- Formatting stays with prettier through conform.
+--
+-- emmet-language-server comes from Mason.
 --
 -- :MasonInstall emmet-language-server
 --
+-- See: lua/plugins/formatting.lua
 -- See: https://github.com/olegtsaplin/emmet_language_server
 
 ---@type UserLspServerModule

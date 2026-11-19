@@ -1,59 +1,18 @@
 -- lua/language/servers/jdtls.lua
 
--- Java through the Eclipse JDT language server, used for code navigation and
--- completion. Diagnostics and formatting are disabled to keep startup fast and
--- memory usage low; formatting stays with conform.
+-- Java through Eclipse JDT, for navigation and completion. Diagnostics and
+-- formatting stay off, and formatting stays with conform.
 --
--- This module does not follow the `UserLspServerModule` contract of the other
--- files in `servers/`: jdtls is started per buffer by nvim-jdtls through
--- `start_or_attach`, not by `vim.lsp.enable`, because the server command
--- depends on the workspace of each project root. Mason still installs it
--- through the `install_only` list of `lua/language/init.lua`, and the editor
--- options and buffer-local keymaps live in `after/ftplugin/java.lua`.
---
--- nvim-jdtls must be declared in `pack.lua` and installed through the plugin
--- manager. The jdtls server itself is installed through Mason, which must
--- already be set up:
+-- nvim-jdtls starts it per buffer, unlike the other modules in `servers/`.
+-- The editor options and keymaps live in `after/ftplugin/java.lua`.
 --
 -- :MasonInstall jdtls
---
--- The package also ships `lombok.jar`, which is loaded as a Java agent when
--- present so that generated members such as getters and builders resolve. The
--- launcher is a Python script, so Python 3 must be available on PATH.
---
--- The server requires JDK 21 or newer. On Arch Linux:
---
--- $ sudo pacman -S jdk21-openjdk
---
--- Every JDK found in `/usr/lib/jvm` named `java-<version>-openjdk` is
--- registered as a runtime, so projects can compile against other versions,
--- for example with `jdk17-openjdk`. The system default JDK does not need to
--- match the server JDK, because jdtls is pointed to the highest installed
--- JDK 21+ through `JAVA_HOME`. Installed JDKs can be checked with:
---
--- $ archlinux-java status
---
--- Maven projects are imported through the m2e integration bundled with the
--- server. The `mvn` command is only needed by the project tasks when a
--- project has no `mvnw` wrapper:
---
--- $ sudo pacman -S maven
---
--- Gradle projects are supported as well, but Maven takes precedence when a
--- project root contains both.
---
--- File watching is disabled to save resources, so jdtls does not notice
--- changes to build files on its own. Saving `pom.xml` or `build.gradle`
--- reloads the project configuration automatically.
---
--- Each project gets an isolated workspace under
--- `~/.cache/nvim/jdtls-workspace/`. It only holds the index and can be deleted
--- safely when jdtls fails to start, for example because of corruption.
+-- $ sudo pacman -S jdk21-openjdk maven
 --
 -- See: after/ftplugin/java.lua
 -- See: https://github.com/mfussenegger/nvim-jdtls
 -- See: https://github.com/eclipse-jdtls/eclipse.jdt.ls
--- See: :help lsp
+-- See: https://github.com/mason-org/mason.nvim
 
 local M = {}
 
@@ -66,9 +25,8 @@ local M = {}
 local mason = vim.fn.stdpath("data") .. "/mason"
 local pkg = mason .. "/packages"
 
----Resolve the project root of a Java buffer: the nearest directory with build
----files or `.git`, reusing the running server for decompiled `jdt://` buffers,
----which have no path, and falling back to the working directory.
+---Resolve the project root of a Java buffer, reusing the running server for
+---decompiled `jdt://` buffers, which have no path.
 ---@param bufnr? integer Defaults to the current buffer.
 ---@return string
 function M.root(bufnr)
@@ -154,8 +112,7 @@ function M.wipe_workspace()
 end
 
 ---Start jdtls for the buffer, or reuse the client of its project root.
----Notifies instead of raising when the server or a JDK 21+ is missing, so the
----editor options and keymaps of the ftplugin keep working without them.
+---Notifies instead of raising when the server or a JDK 21+ is missing.
 ---@param bufnr? integer Defaults to the current buffer.
 function M.start(bufnr)
 	if vim.fn.isdirectory(pkg .. "/jdtls") == 0 then

@@ -1,43 +1,28 @@
 -- lua/language/lint.lua
 
--- External linters through nvim-lint, kept apart from `lua/language/servers/`
--- because linters do not start a server: each one is a command-line tool run on
--- demand, and its findings are attached to the buffer as plain diagnostics.
--- Python is the only linted language right now, with ruff.
+-- External linters through nvim-lint. Python is the only linted language
+-- right now, with ruff, the same tool conform uses for formatting.
 --
--- Ruff replaces flake8 (pyflakes and pycodestyle) and is orders of magnitude
--- faster. It is the same tool conform uses for formatting, so no extra
--- dependency enters the config. Mason can install it:
+-- Ruff reads its rules from the project, so none live here.
+--
+-- Ruff comes from Mason or the system.
 --
 -- :MasonInstall ruff
---
 -- $ sudo pacman -S ruff
 --
--- Ruff reads its options from the project's `pyproject.toml`, `ruff.toml` or
--- `.ruff.toml`, so per-project rules need no configuration here. `ruff format`
--- is deliberately not run as a linter rule, since formatting stays with
--- conform.
---
--- The toggle below follows the same shape as the server toggle of
--- `lua/language/init.lua`, and lint jobs are skipped while linting is off. Lint
--- findings are plain diagnostics, so they only show up when the global
--- diagnostics display is on as well.
---
 -- See: lua/language/init.lua
--- See: lua/config/keymaps/misc.lua
 -- See: https://github.com/mfussenegger/nvim-lint
--- See: https://docs.astral.sh/ruff
 
 local lint = require("lint")
 
+---@class LanguageLint
 local M = {}
 
 lint.linters_by_ft = {
 	python = { "ruff" },
 }
 
--- Namespace of the ruff diagnostics, so linting can be switched off without
--- touching the diagnostics that come from the language servers.
+-- Separate namespace, so linting toggles without touching server diagnostics.
 local ruff_namespace = lint.get_namespace("ruff")
 
 local lint_enabled = true
@@ -49,10 +34,8 @@ local function try_lint()
 	end
 end
 
----Enable or disable linting at once. Disabling hides the ruff diagnostics
----through the namespace and stops new lint runs, while enabling shows the
----diagnostics again and lints the current buffer right away.
----@param enable? boolean Forces a state. When omitted, the current state is toggled.
+---Enable or disable linting at once.
+---@param enable? boolean Force a state; omit to toggle.
 ---@return boolean enabled The new state.
 local function toggle_lint(enable)
 	if enable == nil then
@@ -73,9 +56,8 @@ local function toggle_lint(enable)
 	return lint_enabled
 end
 
----Reapply the lint state after the global diagnostics display is toggled on,
----so a disabled lint does not come back with it.
----See: lua/config/keymaps/misc.lua
+---Reapply the lint state after the diagnostics display is toggled on.
+--- See: lua/config/keymaps/misc.lua
 function M.resync()
 	if not lint_enabled then
 		vim.diagnostic.enable(false, { ns_id = ruff_namespace })

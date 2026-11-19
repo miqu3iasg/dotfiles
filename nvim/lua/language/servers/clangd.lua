@@ -1,17 +1,15 @@
 -- lua/language/servers/clangd.lua
 
--- C, C++ and Objective-C through clangd. The flags below keep the background
--- index, which persists parsing results between sessions, insert missing
--- headers by include-what-you-use ordering, filter the completion lists on the
--- server side, and complete function calls with placeholder arguments. Project
--- roots come from `compile_commands.json` or `compile_flags.txt` when they
--- exist. Formatting stays with conform, which runs clang-format with the style
--- from `~/.clang-format`.
+-- C, C++ and Objective-C through clangd, with the background index on so
+-- parsing results persist between sessions.
+--
+-- Formatting stays with conform, which reads the style from `~/.clang-format`.
+--
+-- clangd comes from Mason.
 --
 -- :MasonInstall clangd
 --
 -- See: lua/plugins/formatting.lua
--- See: ~/dotfiles/clang/  (the clang-format style, linked from ~/.clang-format)
 -- See: https://clangd.llvm.org
 
 ---@type UserLspServerModule

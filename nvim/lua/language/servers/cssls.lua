@@ -1,11 +1,9 @@
 -- lua/language/servers/cssls.lua
 
--- CSS, SCSS and LESS through the VS Code CSS language service. Validation only
--- produces diagnostics, so it is disabled. Formatting stays with prettier
--- through conform, and the `provideFormatter` init option tells the server not
--- to offer its own.
+-- CSS, SCSS and LESS through the VS Code CSS language service, with its
+-- validation off and its formatter delegated to conform.
 --
--- The server is installed through Mason:
+-- css-lsp comes from Mason.
 --
 -- :MasonInstall css-lsp
 --
@@ -15,8 +13,7 @@
 ---@type UserLspServerModule
 return {
 	config = {
-		-- The server-side formatter stays off, so the formatter from conform is
-		-- the only one used.
+		-- Keeps conform as the only formatter.
 		init_options = { provideFormatter = false },
 		settings = {
 			css = { validate = false },

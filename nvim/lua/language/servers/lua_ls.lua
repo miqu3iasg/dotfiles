@@ -1,10 +1,9 @@
 -- lua/language/servers/lua_ls.lua
 
--- Lua through lua-language-server. Its main purpose is to support the Neovim
--- configuration itself, so lazydev.nvim is set up in this file: the library
--- paths and word triggers only matter to Lua buffers. The server keeps the
--- formatter off, because stylua runs through conform, and completes whole
--- function calls, so arguments land ready for editing.
+-- Lua through lua-language-server, kept mainly to type the config itself, with
+-- lazydev adding the Neovim runtime types; formatting stays with conform.
+--
+-- lua-language-server comes from Mason.
 --
 -- :MasonInstall lua-language-server
 --
@@ -12,7 +11,6 @@
 -- See: https://github.com/LuaLS/lua-language-server
 -- See: https://github.com/folke/lazydev.nvim
 
--- Provides the Neovim runtime types and API annotations to Lua files.
 require("lazydev").setup({
 	library = {
 		{ path = "${3rd}/luv/library", words = { "vim%.uv" } },
@@ -28,8 +26,7 @@ return {
 				runtime = { version = "LuaJIT" },
 				diagnostics = {
 					globals = { "vim" },
-					-- Mixing require and dofile to load the same module is normal
-					-- in small scripts, so the warning stays off.
+					-- Mixing require and dofile is normal in small scripts.
 					disable = { "different-requires" },
 				},
 				completion = {

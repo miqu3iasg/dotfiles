@@ -1,8 +1,10 @@
 -- lua/language/servers/marksman.lua
 
--- Markdown through marksman, used for note-taking together with obsidian.nvim.
--- Any folder with a README is a workspace, falling back to the file's
--- directory.
+-- Markdown through marksman, for note navigation together with obsidian.nvim.
+--
+-- Any folder with a README is a workspace, falling back to the file directory.
+--
+-- marksman comes from Mason.
 --
 -- :MasonInstall marksman
 --
