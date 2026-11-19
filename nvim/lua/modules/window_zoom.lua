@@ -1,13 +1,12 @@
 -- lua/modules/window_zoom.lua
 
--- Zooms the focused window by showing it as the only window of a new tab, while
--- the original layout stays intact in its own tab. Toggling again closes the
--- zoom tab and brings the layout back.
+-- Zoom the focused window by showing it in a new tab, with the layout intact in
+-- its own tab. Toggling again closes the zoom tab.
 --
--- The state lives in the tabpage-local variable `t:zoomed`, which the
--- statusline reads. Since the zoom is a tab, closing it by other means, such as
--- `:tabclose` or `:tabonly`, also ends it.
+-- The state lives in the tabpage-local `t:zoomed`, which the statusline reads.
+-- Closing the zoom tab by other means also ends the zoom.
 --
+-- See: doc/modules.txt
 -- See: lua/modules/statusline.lua
 
 local M = {}

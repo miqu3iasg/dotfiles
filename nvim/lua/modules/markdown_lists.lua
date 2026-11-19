@@ -1,25 +1,14 @@
 -- lua/modules/markdown_lists.lua
 
 -- Native list editing for Markdown buffers, plus the formatter helpers that
--- keep list markers and indentation the way they were written.
+-- keep markers and indentation as written.
 --
--- Operations work on the current line in normal mode, accepting a count, and on
--- the selected lines in visual mode. In visual mode the selection stays active,
--- so an operation can be repeated, for example to cycle through list types.
+-- The markers and the cycle order come from `vim.g.markdown_list_*`, with
+-- buffer-local `vim.b` overrides.
 --
--- The marker of new bullets can be set with `vim.g.markdown_list_bullet` to
--- `-`, `*` or `+`, and the delimiter of new numbered items with
--- `vim.g.markdown_list_delimiter` to `.` or `)`. Both have a buffer-local
--- version in `vim.b` that takes precedence. The bullet cycle and the type
--- cycle order can be changed with `vim.g.markdown_list_bullets` and
--- `vim.g.markdown_list_cycle`.
---
--- The helpers `bullet_markers`, `restore_bullets` and `tabify` are meant to be
--- called from formatters, which is why the parsing code relies only on string
--- operations.
---
+-- See: doc/modules.txt
 -- See: lua/plugins/formatting.lua
--- See: lua/after/ftplugin/markdown.lua
+-- See: after/ftplugin/markdown.lua
 
 local M = {}
 
@@ -191,9 +180,8 @@ local function set_line(n, text)
 	vim.api.nvim_buf_set_lines(0, n - 1, n, false, { text })
 end
 
----Lines of a range that an operation can change. Blank lines and thematic
----breaks are skipped, except that a single blank line counts as empty text so
----an operation can start a list on it.
+---Lines of a range that an operation can change, skipping blank lines and
+---thematic breaks.
 ---@param l1 integer
 ---@param l2 integer
 ---@return MarkdownLists.Entry[]
@@ -226,9 +214,7 @@ local function write(entries, fn)
 end
 
 ---Line numbers of the sibling items of the item at line `n`, `n` included, in
----order. Siblings share indentation, kind and marker, and are contiguous.
----Nested items, continuation lines and blank lines inside the list are skipped
----over.
+---order.
 ---@param lines string[]
 ---@param n integer
 ---@return integer[]
@@ -395,13 +381,12 @@ function M.clear(l1, l2)
 	end)
 end
 
----Cycle the marker. Bullets go through `bullets()` and numbered items
----swap `.` and `)`.
----
----In normal mode without a count the whole list changes, because changing the
----marker of a single item would split the list in two. In visual mode, or with a
----count, only the selected lines change.
+---Cycle the marker, with the whole list in normal mode without a count,
+---because a single changed item would split the list.
 ---@type MarkdownLists.Operation
+---@param l1 integer
+---@param l2 integer
+---@param mode "n"|"x"
 function M.cycle_marker(l1, l2, mode)
 	local lines = buffer_lines()
 	local targets, first = {}, nil
@@ -451,14 +436,14 @@ end
 ---Renumber the numbered lists touched by the range, starting at the number of
 ---the first item.
 ---@type MarkdownLists.Operation
+---@param l1 integer
+---@param l2 integer
 function M.renumber(l1, l2)
 	renumber(l1, l2)
 end
 
 ---Wrap an operation as a keymap callback. In normal mode the range is the
----current line plus `count - 1` lines below it, and the cursor keeps its place
----in the text when the list prefix changes size. In visual mode the range is the
----selection, which stays active afterwards.
+---current line plus the count, and the cursor keeps its place in the text.
 ---@param fn MarkdownLists.Operation
 ---@param arg? any Forwarded to `fn` as its last argument.
 ---@return fun()
@@ -513,13 +498,8 @@ end
 
 ---Whether `line` closes the code block opened by `fence`.
 ---
----A closing fence with trailing text (` ``` foo `) also closes the block.
----CommonMark would treat such a line as content and keep the block open to
----the end of the buffer, which silently disables the list operations below
----it, so this deliberately deviates and closes it early.
----
----The other CommonMark rules hold: same character, at least the same length,
----so a four-backtick block is not closed by a three-backtick line.
+---A closing fence with trailing text also closes the block, unlike CommonMark,
+---whose block would stay open to the end of the buffer.
 ---@param line string
 ---@param fence string
 ---@return boolean
@@ -563,9 +543,8 @@ function M.bullet_markers(lines)
 	return out
 end
 
----Put the markers saved by `bullet_markers` back. When the number of bullets
----changed during formatting nothing is restored, since the items can no longer
----be matched one to one.
+---Put the markers saved by `bullet_markers` back. Nothing is restored when the
+---number of bullets changed during formatting.
 ---@param lines string[] Formatted lines, modified in place.
 ---@param markers? string[]
 ---@return string[]
@@ -593,8 +572,7 @@ function M.restore_bullets(lines, markers)
 end
 
 ---Replace each group of `ts` leading spaces in list lines with a tab, leaving
----the remainder as spaces. The YAML front matter, where tabs are invalid, and
----fenced code blocks are left alone.
+---the YAML front matter and fenced code alone.
 ---@param lines string[] Modified in place.
 ---@param ts? integer Columns per tab, 4 by default.
 ---@return string[]

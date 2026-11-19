@@ -1,25 +1,13 @@
 -- lua/modules/statusline.lua
 
--- Native statusline built on the 'statusline' option, with no plugin required.
--- The active window shows editor state, position, search and selection info,
--- git branch, diagnostics and macro recording. Inactive windows get a reduced
--- version.
+-- Native statusline built on the 'statusline' option, with no plugin. The
+-- active window shows mode, position, search, selection, git branch,
+-- diagnostics and macro recording.
 --
--- Costly or asynchronous pieces are not computed on every redraw. The mode, git
--- branch and file size are stored in `vim.g.sl_mode`, `vim.b.git_branch` and
--- `vim.b.sl_file_size` and refreshed by autocmds. The branch is looked up
--- asynchronously and cached per directory for a short time, so a change made
--- outside Neovim can take a few seconds to show up. The file size is read from
--- disk, so it is stale until the file is saved, and it is only shown for files
--- of at least `FILE_SIZE_MIN` bytes.
+-- Segment functions are exposed as the global `StlLine`, because the
+-- statusline string calls them through `v:lua`. `setup()` must run once.
 --
--- The segment functions are exposed through the global `StlLine` because the
--- statusline string calls them through `v:lua`. The zoom indicator reads
--- `vim.t.zoomed`, which is set by the window zoom feature.
---
--- Git must be installed for the branch segment, which stays empty without it.
--- `setup()` must be called once.
---
+-- See: doc/modules.txt
 -- See: lua/modules/window_zoom.lua
 -- See: :help 'statusline'
 
@@ -38,8 +26,8 @@ local BRANCH_TTL = 30
 ---@type number
 local FILE_SIZE_MIN = 1024 * 1024
 
--- Beyond this many matches the search total is shown as `>999`, which keeps the
--- redraw cheap in huge files.
+-- Beyond this many matches the search total is shown as `>999`, so huge files
+-- stay cheap to redraw.
 ---@type integer
 local SEARCH_MAXCOUNT = 999
 
@@ -106,12 +94,8 @@ local function git(args, dir, cb)
 	return pcall(vim.system, cmd, { cwd = dir, text = true }, cb)
 end
 
----Refresh `b:git_branch` for `buf` without blocking the editor.
----
----The repository is looked up from the folder of the file. Special and unnamed
----buffers use the cwd. On a detached HEAD the short commit hash is shown
----instead, as `@abc1234`. The label is empty outside a repository or when git
----is missing.
+---Refresh `b:git_branch` for `buf` without blocking. A detached HEAD shows the
+---short commit hash, and the label is empty outside a repository.
 ---@param buf? integer Defaults to the current buffer.
 local function update_branch(buf)
 	buf = (buf and buf > 0) and buf or vim.api.nvim_get_current_buf()
@@ -168,10 +152,8 @@ local function set_file_size(buf, size_str)
 	end
 end
 
----Refresh `b:sl_file_size` with the size of the file on disk, padded with
----spaces and using the largest unit below 1024, such as `" 1.5M "`. It stays
----empty for small files, unnamed and special buffers, empty files and files that
----do not exist yet.
+---Refresh `b:sl_file_size` with the size on disk, padded and using the largest
+---unit below 1024. Small files and special buffers stay empty.
 ---@param buf? integer Defaults to the current buffer.
 local function update_file_size(buf)
 	buf = (buf and buf > 0) and buf or vim.api.nvim_get_current_buf()
@@ -201,19 +183,14 @@ local function update_file_size(buf)
 	set_file_size(buf, string.format(" %.1f%s ", size, units[i]))
 end
 
----Store the label of the current mode in `g:sl_mode`. The mode is looked up by
----its full code, then by its first two characters and then by the first one, so
----`niI` resolves to NORMAL. An unknown mode is shown as its raw code.
+---Store the label of the current mode in `g:sl_mode`. An unknown mode is shown
+---as its raw code.
 local function update_mode()
 	local m = vim.api.nvim_get_mode().mode
 	vim.g.sl_mode = MODES[m] or MODES[m:sub(1, 2)] or MODES[m:sub(1, 1)] or m
 end
 
----Leading indicator made of an encoding character, an end-of-line character, a
----status marker and a dash. The encoding is `U` for UTF, `1` for latin and `-`
----otherwise. The end-of-line is `:` for unix, `\` for dos and `/` for mac. The
----status is `%%` when read-only or not modifiable, `**` when modified and `--`
----otherwise.
+---Leading indicator of encoding, end-of-line and buffer status.
 ---@return string
 function M.lead()
 	local enc = vim.bo.fileencoding ~= "" and vim.bo.fileencoding or vim.o.encoding
@@ -268,9 +245,7 @@ function M.selection()
 	return string.format(" %dL %dC", lines, chars)
 end
 
----Search match counter such as `" [3/12]"`. It is only shown while 'hlsearch'
----highlighting is active, so it disappears after `:nohlsearch`. Counts are
----capped at `SEARCH_MAXCOUNT`, and the total is `?` when the count timed out.
+---Search match counter, shown only while 'hlsearch' is active.
 ---@return string
 function M.search()
 	local winid = vim.g.statusline_winid
@@ -297,12 +272,8 @@ function M.search()
 	return string.format(" [%s/%s]", cur, total)
 end
 
----Install the statusline and the autocmds that keep it up to date.
----
----The module is exposed as the global `StlLine`, which the statusline string
----needs to reach the segment functions through `v:lua`. The mode is already in
----the line, so `showmode` is turned off, and `S` is added to 'shortmess' to hide
----the native search count in favor of the one in the line.
+---Install the statusline and the autocmds that keep it up to date. Also turns
+---off `showmode` and the native search count.
 function M.setup()
 	_G.StlLine = M
 

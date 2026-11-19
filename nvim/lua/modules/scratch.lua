@@ -1,23 +1,13 @@
 -- lua/modules/scratch.lua
 
--- A persistent scratch buffer for throwaway notes and pastes. `M.toggle()`
--- replaces the buffer of the current window with the scratch, and leaving it
--- restores the previous buffer, so the window layout never changes. The
--- content survives every leave and toggle: the buffer is hidden, not wiped,
--- and lasts until the session ends or `:Scratch!` deletes it.
+-- A persistent scratch buffer for throwaway notes and pastes. Toggling swaps
+-- the buffer of the current window and leaving restores it, so the layout
+-- never changes.
 --
--- The current buffer is only replaced when it is a regular file buffer.
--- Special buffers, such as Oil, terminals and Fugitive views, keep their
--- window and the scratch opens in a vertical split instead.
+-- The content survives because the buffer is hidden, not wiped. Special
+-- buffers get a vertical split instead of being replaced.
 --
--- The buffer is unnamed in the buffer list (`buflisted` off), has no filetype
--- and no swapfile, and is displayed with the virtual name `scratch://_*scratch*_`.
--- Inside the scratch, `q` and `<Esc>` leave it.
---
--- `setup()` registers the commands and the keymaps, which live here because
--- they only make sense for the scratch, following the shape of
--- `modules/compile.lua`.
---
+-- See: doc/modules.txt
 -- See: lua/config/keymaps/buffers.lua
 
 local M = {}
@@ -88,10 +78,8 @@ local function scratch_win()
 	end
 end
 
----Leave the scratch buffer without losing the content. A window opened by
----`M.split()` closes, restoring the layout; a window whose buffer the scratch
----replaced goes back to its previous buffer, or to a new empty buffer.
----Does nothing when the cursor is not inside the scratch.
+---Leave the scratch without losing the content. A window opened by `M.split()`
+---closes, and a replaced buffer goes back to its previous one.
 function M.leave()
 	if not alive() or vim.api.nvim_get_current_buf() ~= bufnr then
 		return
@@ -125,9 +113,8 @@ function M.split()
 	vim.api.nvim_win_set_buf(0, buffer())
 end
 
----Replace the buffer of the current window with the scratch. The buffer is
----only replaced when it is a regular file buffer; special buffers keep their
----window, and the scratch opens in a vertical split instead.
+---Replace the buffer of the current window with the scratch, or open it in a
+---vertical split when the current buffer is special.
 function M.open()
 	if vim.bo[0].buftype ~= "" then
 		return M.split()

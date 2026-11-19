@@ -1,33 +1,12 @@
 -- lua/modules/notes.lua
 
--- Notes workflow: a flat vault of Markdown notes managed from Neovim. It
--- creates quick drafts and typed notes from user-maintained templates,
--- inserts a template into an existing note, searches by name and by content,
--- and reopens the last note. The vault is just a folder: the system works
--- with any of them, and only the path below points at one. Creation is bound
--- to the vault, but a template can be inserted into any Markdown file on
--- disk, inside or outside it.
+-- Flat Markdown note vault for drafts, typed notes from templates, daily
+-- notes, task capture, search and history.
 --
--- Note types, the file name `TYPE-YYYYMMDD-HHmmss[-SLUG].md`, and the slug and
--- collision rules follow the vault's `README.md`. A draft gets `id`,
--- `description`, `aliases` and `date` (creation time), and the template
--- placeholders are `{{title}}`, `{{date}}`, `{{id}}` and `{{adr_number}}`.
--- A note whose frontmatter has no `title` feeds the file name instead.
--- Renaming a note is left to obsidian.nvim (`:Obsidian rename`), which also
--- fixes the backlinks.
+-- The vault is `$ARCANUM_DIR`, or `~/dev/arcanum` when unset.
 --
--- The vault is `$ARCANUM_DIR`, or `~/dev/arcanum` when unset. Notes live
--- directly in its root. `_templates/` holds the templates and `attachments/`
--- the pasted images. Valid type names drive the pickers: creating a note and
--- inserting into a vault note only offer templates named after a valid type,
--- while inserting into a note outside the vault lists every `.md` there. The
--- pickers use `fzf-lua` when it is installed and fall back to `vim.ui.select`.
---
--- `setup()` must be called once to register the commands and autocmds. The
--- keymaps are defined in `lua/plugins/markdown.lua`.
---
+-- See: doc/modules.txt
 -- See: lua/plugins/markdown.lua
--- See: lua/plugins/fzf.lua
 -- See: ~/dev/arcanum/README.md
 -- See: https://github.com/ibhagwan/fzf-lua
 
@@ -81,7 +60,7 @@ local SLUG_MAX = 80
 ---@type integer
 local MAX_COLLISIONS = 99
 
----Accent folding for slugs: single characters map one to one (`tr`), the
+---Accent folding for slugs. Single characters map one to one, and the
 ---ligatures are handled apart.
 ---@type table<string, string>
 local ACCENTS = {
@@ -128,17 +107,13 @@ local history = { current = nil, previous = nil }
 ---@type boolean
 local history_loaded = false
 
--- Messages
-
 ---@param msg string
 ---@param level? integer
 local function notify(msg, level)
 	vim.notify(msg, level or vim.log.levels.INFO, { title = "Notes" })
 end
 
--- Vault and paths
-
----Resolve the vault directory. It does not check that the directory exists.
+---Resolve the vault directory, without checking that it exists.
 ---@return string
 local function vault_dir()
 	local dir = vim.env.ARCANUM_DIR
@@ -181,8 +156,6 @@ function M.is_note_path(path)
 	return dir ~= nil and dir == vault_dir()
 end
 
--- Time and names
-
 ---@return string ts `YYYYMMDD-HHmmss`
 ---@return string iso `YYYY-MM-DDTHH:MM:SS`, local time
 local function now()
@@ -199,9 +172,7 @@ local function clean_title(title)
 	return vim.trim(title)
 end
 
----Normalize a title into a slug: lowercase ASCII, spaces become hyphens, all
----other punctuation is dropped, hyphens are collapsed and trimmed, and the
----result is capped at 80 characters. It may be empty.
+---Normalize a title into a lowercase ASCII slug.
 ---@param title string
 ---@return string
 function M.slugify(title)
@@ -256,9 +227,7 @@ function M.parse_name(name)
 	return { type = type_, ts = date .. "-" .. time, slug = slug }
 end
 
----File name for the n-th attempt. On collision the counter goes to the end of
----the slug (`slug-2`) or becomes the slug when there is none. The timestamp
----never changes.
+---File name for the n-th attempt, with the collision counter in the slug.
 ---@param type_ string
 ---@param ts string
 ---@param slug string
@@ -270,8 +239,6 @@ function M.build_name(type_, ts, slug, n)
 	end
 	return type_ .. "-" .. ts .. (slug ~= "" and ("-" .. slug) or "") .. ".md"
 end
-
--- File access
 
 ---@param path string
 ---@return string?
@@ -348,11 +315,8 @@ function M.notes()
 	return names
 end
 
--- Frontmatter
---
--- Only the initial block delimited by `---` is handled. This is deliberately
--- not a YAML parser: top-level `key: value` lines are located by prefix and
--- everything else is left byte for byte as it was.
+-- Only the initial block delimited by `---` is handled, by prefix, not by a
+-- YAML parser.
 
 ---Split content into the frontmatter text (the lines between the delimiters,
 ---ending with a newline) and the body. The frontmatter is nil when the
@@ -451,15 +415,8 @@ local function read_template(name)
 	return content
 end
 
----Zero-padded sequence number for the next note of a type (`007`).
----
----The ADR number is written by the template into the body heading
----(`# ADR-007 ...`), so the next value is the highest `ADR-NNN` found in the
----bodies plus one: deleting the newest ADR does not make the next one reuse
----its number, and references in prose are counted too, which keeps the
----number above any superseded mention. Notes without a number in the body,
----and the other types, which have no stored number, fall back to the count
----of their notes.
+---Zero-padded sequence number for the next note of a type. ADR reuses the
+---highest `ADR-NNN` in the bodies, and the other types count their notes.
 ---@param type_ string
 ---@return string
 local function next_number(type_)
@@ -502,9 +459,7 @@ local YAML_RESERVED = {
 ---@type table<string, boolean>
 local RAW_VARS = { date = true }
 
----Format a value for the right-hand side of a frontmatter line. It is written
----plain whenever YAML reads it back as the same string, and double-quoted
----otherwise (`: `, ` #`, a leading indicator, `true`, `2026`, ...).
+---Format a value for a frontmatter line, quoted only when YAML needs it.
 ---@param value string
 ---@return string
 local function yaml_scalar(value)
@@ -574,17 +529,8 @@ local function uuid()
 	return ("%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x"):format(unpack(b))
 end
 
----Substitute the template variables, literally, and leave any other double
----braces alone. The built-in variables are `{{title}}`, `{{date}}`,
----`{{date:FMT}}`, `{{id}}` and `{{adr_number}}`; `FMT` is a moment-like
----pattern (`{{date:DD/MM/YYYY}}`), and extra variables come from `ctx.vars`
----(`previous_note` and `next_note` for daily notes). Every value is computed
----at most once, and the lazy ones (`id`, `adr_number`) only when the
----template uses them.
----
----In the frontmatter, a line whose whole value is a quoted placeholder
----(`title: "{{title}}"`) is written without the quotes: they only keep the
----template valid YAML. They come back when the value needs them.
+---Substitute the template variables literally, leaving other double braces
+---alone. Every value is computed at most once.
 ---@param content string
 ---@param ctx { title: string, date: string, id: string?, vars: table<string, string>? } `id` keeps an existing id; one is generated when nil
 ---@return string
@@ -681,9 +627,8 @@ local function render(content, ctx)
 	)
 end
 
----Guarantee that the frontmatter of `content` has a `date` field. An existing
----one is left alone, a missing one is appended at the end of the frontmatter,
----and a note without frontmatter gets one.
+---Guarantee that the frontmatter of `content` has a `date` field, adding the
+---frontmatter block when the note has none.
 ---@param content string
 ---@param date string
 ---@return string
@@ -749,15 +694,6 @@ local function open(path)
 	vim.cmd.edit(vim.fn.fnameescape(path))
 end
 
--- Daily notes
---
--- The daily note of a day is `daily-YYYYMMDD.md`, one per day, defined by the
--- vault's README. Opening it is open-or-create: the first open of a day
--- creates the note from the `daily` template and every later one just opens
--- the file. The template feeds on the regular `{{date}}` (creation time) and
--- on two creator variables, `previous_note` and `next_note`, the wikilinks of
--- the neighbouring days. Those links may stay broken until the notes exist.
-
 ---File name and compact date of the daily note of `offset` days from today.
 ---The arithmetic goes through noon so that DST shifts cannot move the day.
 ---@param offset? integer
@@ -782,9 +718,7 @@ local function daily_name(offset)
 end
 
 ---Open the daily note of `offset` days from today, creating it from the
----`daily` template when it does not exist. An existing note is never
----touched. Returns the path, or nil and a message when the vault or the
----template is missing.
+---`daily` template when it does not exist.
 ---@param offset? integer
 ---@return string? path
 ---@return string? err
@@ -831,13 +765,8 @@ function M.daily(offset)
 	return path
 end
 
----Quick capture: append a Markdown task (`- [ ] title`) to the end of
----`TODO.md` in the vault root, creating the file when missing. If the file is
----open in a buffer, the line goes through the buffer and the file is saved;
----otherwise it is appended on disk. Prompts for the title when none is given.
----
----The TODO file is a plain dump for later processing: move the task where it
----belongs by hand, or turn it into a note with `:NotesNew`.
+---Append a Markdown task to `TODO.md` in the vault root, creating the file
+---when missing.
 ---@param title? string
 function M.capture(title)
 	local dir = require_vault()
@@ -878,11 +807,6 @@ end
 
 ---Run `on_choice` with the item chosen in fzf-lua, or in `vim.ui.select` when
 ---fzf-lua is missing. Cancelling calls nothing.
----
----fzf-lua is lazy-loaded (markdown triggers it), so the pickers of the notes
----workflow force the load first: outside a Markdown buffer the plugin is not
----on the runtimepath yet, and a plain require would fall back to
----`vim.ui.select`.
 ---@param items string[]
 ---@param prompt string
 ---@param on_choice fun(item: string)
@@ -929,9 +853,7 @@ local function pick(items, prompt, on_choice, header)
 	})
 end
 
----Quick capture: create a draft with `id`, an empty `description`, empty
----`aliases` and `date`, and open it,
----ready to type. There are no prompts.
+---Create and open a draft ready to type, with no prompts.
 function M.new_draft()
 	local dir = require_vault()
 	if not dir then
@@ -977,12 +899,7 @@ function M.new_note()
 	end, types_header(types))
 end
 
--- Templates in existing notes
-
----True for a real Markdown buffer backed by a file on disk. Special buffers
----(fzf, help, nofile) and unsaved files are not editable notes. Unlike
----`is_note_path`, the file may be anywhere: template insertion is not bound
----to the vault.
+---True for a real Markdown buffer backed by a file on disk.
 ---@param buf integer
 ---@return boolean
 local function is_markdown_buf(buf)
@@ -993,11 +910,8 @@ local function is_markdown_buf(buf)
 	return path ~= "" and uv.fs_stat(path) ~= nil
 end
 
----Apply a template to the current note. The frontmatter of the note, if any, is
----replaced by the one from the template, and the body of the template is
----inserted below the cursor. The existing body is never replaced. The note's
----own `title` and `date` feed the placeholders, so its creation date is kept.
----A missing `title` falls back to the file name without the extension.
+---Apply a template to the current note. The frontmatter is replaced by the
+---template one, and its body goes below the cursor.
 ---@param buf integer
 ---@param name string template name, with or without a valid type
 local function insert_template(buf, name)
@@ -1047,9 +961,8 @@ local function insert_template(buf, name)
 	vim.api.nvim_buf_set_lines(buf, 0, old_len, false, fm_lines)
 end
 
----Pick a template and insert its body into the current note. Works on any
----Markdown file on disk. Inside the vault only valid types are offered, and
----outside it every template is. The header lists only the classified types.
+---Pick a template and insert its body into the current note, on any Markdown
+---file on disk.
 function M.template()
 	local buf = vim.api.nvim_get_current_buf()
 	if not is_markdown_buf(buf) then
@@ -1070,8 +983,6 @@ function M.template()
 		end)
 	end, types_header(names))
 end
-
--- Search
 
 ---@return table? fzf
 local function require_fzf()
@@ -1110,9 +1021,7 @@ function M.find_files()
 	})
 end
 
----Live ripgrep over the content of the notes, showing file, line
----and text. Only the vault root is searched, so templates and attachments are
----left out.
+---Live ripgrep over the content of the notes, in the vault root only.
 function M.grep()
 	local dir = require_vault()
 	local fzf = dir and require_fzf()
@@ -1126,8 +1035,6 @@ function M.grep()
 			.. " --max-columns=4096 --max-depth=1 -g '*.md' -g '!README.md' -e",
 	})
 end
-
--- History
 
 local function load_history()
 	if history_loaded then
@@ -1190,6 +1097,7 @@ function M.open_vault()
 	end
 end
 
+---Install the commands and autocmds of the notes workflow.
 function M.setup()
 	local cmd = vim.api.nvim_create_user_command
 	cmd("NotesDraft", M.new_draft, { desc = "Notes: quick draft" })

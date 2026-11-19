@@ -18,9 +18,8 @@ local SESSION_DIR = vim.fn.stdpath("state") .. "/sessions/"
 ---@type table<string, boolean>
 local IGNORED_FILETYPES = { gitcommit = true, gitrebase = true }
 
----Number of buffers that represent real files on disk.
----Excludes special buffers (netrw, help, terminals, ...), unnamed buffers and
----IGNORED_FILETYPES.
+---Number of buffers that represent real files on disk, excluding special
+---buffers, unnamed buffers and the ignored filetypes.
 ---@return integer
 local function count_file_buffers()
 	local count = 0
@@ -34,8 +33,7 @@ local function count_file_buffers()
 end
 
 -- Delete explorer buffers, which are virtual `oil://` buffers, so they are not
--- written into the session file. The flag is set by the explorer plugin and the
--- filetype is kept as a fallback.
+-- written into the session file. The flag is set by the explorer plugin.
 -- See: lua/plugins/oil.lua
 local function remove_oil_buffers()
 	for _, buf in ipairs(vim.api.nvim_list_bufs()) do
@@ -74,18 +72,16 @@ function M.force_load()
 	return true
 end
 
----Absolute path of the session file for the current working directory.
----The cwd is flattened into a single file name: `/` becomes `__` and any
----character other than letters, digits, `-`, `.` and `_` becomes `_`.
+---Absolute path of the session file for the current working directory,
+---flattened into a single file name.
 ---@return string
 function M.path()
 	local name = vim.fn.getcwd():gsub("/", "__"):gsub("[^%w%-%._]", "_")
 	return SESSION_DIR .. name
 end
 
----Restore the session of the current directory, if one exists.
----Errors raised while sourcing are suppressed so that a partially outdated
----session (e.g. a deleted file) still opens.
+---Restore the session of the current directory, if one exists. Errors while
+---sourcing are suppressed, so a partly outdated session still opens.
 ---@return boolean restored true if a session file was found and sourced
 function M.load()
 	local path = M.path()
@@ -96,10 +92,8 @@ function M.load()
 	return true
 end
 
----Save the session of the current directory.
----Does nothing unless at least one real file buffer is open, so that
----opening and closing Neovim on the file explorer alone never overwrites
----an existing session.
+---Save the session of the current directory. Nothing happens without a real
+---file buffer, so the explorer alone never overwrites a session.
 function M.save()
 	if count_file_buffers() < 1 then
 		return

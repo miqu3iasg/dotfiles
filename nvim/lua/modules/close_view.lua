@@ -1,13 +1,15 @@
 -- lua/modules/close_view.lua
 
 -- Closes Fugitive views without ever quitting Neovim. The mappings are
--- buffer-local and installed by autocmds, so `setup()` must be called once.
+-- buffer-local and installed by autocmds, so `setup()` runs once at startup.
 --
--- Closing a `gitcommit` buffer discards it, which aborts the commit. Requires
--- vim-fugitive to be installed.
+-- Closing a `gitcommit` buffer discards it and aborts the commit. vim-fugitive
+-- is declared in `lua/config/pack.lua`.
 --
--- See: https://github.com/tpope/vim-fugitive
+-- See: doc/modules.txt
+-- See: lua/plugins/git.lua
 -- See: :help fugitive
+-- See: https://github.com/tpope/vim-fugitive
 
 local M = {}
 
@@ -20,10 +22,7 @@ local function is_fugitive_buf(buf)
 end
 
 ---Close a diff, keeping the working copy and closing the other diff windows.
----When every diff window is a Fugitive buffer, the current window is kept.
 ---Does nothing outside diff mode.
----
----Replaces Fugitive's own `dq`, which is not mapped in every window.
 function M.close_diff()
 	if not vim.wo.diff then
 		return
@@ -50,16 +49,8 @@ function M.close_diff()
 	vim.cmd("diffoff!")
 end
 
----Close the Fugitive view under the cursor without ever quitting Neovim.
----
----In diff mode it delegates to `close_diff`. On status and blame views it
----delegates to Fugitive's own `gq` when mapped, so the blame state is restored.
----Elsewhere it closes the window, or, when it is the last window, switches to
----the alternate buffer if it is a regular file and to an empty buffer
----otherwise.
----
----A `gitcommit` buffer is discarded, which aborts the commit. Errors are
----reported as warnings instead of being raised.
+---Close the Fugitive view under the cursor without quitting Neovim.
+---A `gitcommit` buffer is discarded, which aborts the commit.
 function M.close_view()
 	if vim.wo.diff then
 		return M.close_diff()
@@ -88,9 +79,7 @@ function M.close_view()
 	end
 end
 
----Install the buffer-local close mappings. `q` is mapped on Fugitive, blame,
----git and commit buffers. `gq` and `dq` are mapped on read-only buffers, except
----status and blame, which keep Fugitive's own `gq`.
+---Install the buffer-local close mappings on a Fugitive or read-only buffer.
 ---@param buf integer
 function M.map_close(buf)
 	if not vim.api.nvim_buf_is_valid(buf) then

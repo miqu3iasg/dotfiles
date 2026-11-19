@@ -1,23 +1,13 @@
 -- lua/modules/compile.lua
 
--- Native, Emacs-like `:Compile` that runs a build command asynchronously and
--- streams its output into a `*compilation*` buffer in a bottom split. When the
--- command fails, the output is parsed into the quickfix list.
+-- Emacs-like compile runner for this config. It runs a build command through
+-- `sh -c` asynchronously and streams the output into a bottom split.
 --
--- State is kept per working directory. Starting a new compile in the same
--- directory kills the previous one, and `:Recompile` reruns the last command.
--- Commands run through `sh -c`, so shell syntax works. Without arguments,
--- `:Compile` prompts for a command pre-filled with the default for the current
--- filetype. Only gcc/clang, javac and Python traceback output is parsed into
--- quickfix entries. Anything else still shows in the buffer.
+-- State is per working directory, so a new compile kills the previous one.
+-- `setup()` must run once, and `init.lua` calls it at startup.
 --
--- The output buffer uses the `qf` filetype so that it gets the same close
--- behavior as other utility buffers.
---
--- `setup()` must be called once to register the commands and keymaps.
---
+-- See: doc/modules.txt
 -- See: lua/config/autocmds.lua
--- See: lua/config/keymaps/search.lua
 -- See: :help quickfix
 
 local M = {}
@@ -36,16 +26,12 @@ local DEFAULT_COMMAND = {
 	java = "javac -d out % && java -cp out %:t:r",
 }
 
--- Each Python traceback frame becomes an entry and the indented source lines
--- are context. Every other line is dropped with `%-G`, which keeps the list
--- free of make output and blanks.
+-- gcc, clang and javac come first, then Python traceback frames, whose
+-- indented source lines are context. Every other line is dropped with `%-G`.
 ---@type string
 local ERRORFORMAT = table.concat({
-	-- gcc/clang
 	"%f:%l:%c: %m",
-	-- javac
 	"%f:%l: %m",
-	-- Python traceback frames, without the message text
 	'%A  File "%f"\\, line %l\\, in %.%#',
 	"%-C  %.%#",
 	"--In file included from %.%#",
@@ -239,6 +225,7 @@ function M.interrupt()
 	end
 end
 
+---Register the commands and keymaps.
 function M.setup()
 	vim.api.nvim_create_user_command("Compile", function(opts)
 		if opts.args ~= "" then

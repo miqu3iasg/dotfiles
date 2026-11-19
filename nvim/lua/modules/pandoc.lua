@@ -1,52 +1,23 @@
 -- lua/modules/pandoc.lua
 
--- Exports the current Markdown buffer to PDF, EPUB, DOCX or HTML by running
--- `pandoc` asynchronously, so the editor never blocks. The buffer is sent
--- through stdin, so unsaved changes are exported too. The result goes to the
--- exports folder and is opened in zathura for PDF and EPUB, or in xdg-open for
--- DOCX and HTML.
---
--- Preview mode builds and opens the document once, then rebuilds it on every
--- save. Zathura reloads the file by itself.
---
--- Each export loads the pipeline in `lua/pandoc/defaults.yaml`, an optional
--- `defaults.yaml` in the note's folder or a parent folder, the default
--- layout and language in `metadata.yaml`, and a profile from `profiles/`
--- when one is requested. Later files win, and the YAML header of the note
--- overrides all of them.
---
--- Wikilinks become plain text, and Obsidian image embeds become real images,
--- looked up in any `attachments/` folder above the note. Citations are
--- disabled, so `@john` is always plain text. A second filter adds a block with
--- the reference fields of the note below the title, with labels that follow
--- the `lang` of the document. HTML exports embed local images in the file
--- itself, so the document can be shared on its own.
---
--- Nothing is notified on success. Errors and pandoc warnings are shown with
--- pandoc's own message.
---
--- On Arch Linux, install the viewer and the export tools with:
+-- Export the current Markdown buffer to PDF, EPUB, DOCX or HTML through
+-- pandoc, with unsaved changes included, and rebuild on save in preview.
 --
 -- $ sudo pacman -S pandoc-cli zathura zathura-pdf-mupdf xdg-utils
+-- $ sudo pacman -S texlive-xetex texlive-latex texlive-latexextra texlive-latexrecommended texlive-fontsrecommended texlive-langportuguese
 --
--- PDF export through XeTeX needs these TeX Live packages:
---
--- $ sudo pacman -S texlive-xetex texlive-latex texlive-latexextra \
---   texlive-latexrecommended texlive-fontsrecommended texlive-langportuguese
---
+-- See: doc/pandoc.txt
 -- See: lua/lib/exports.lua
--- See: lua/pandoc/                        the pipeline data loaded by this module
--- See: doc/pandoc.txt                 the feature page
+-- See: lua/pandoc/defaults.yaml
 -- See: https://pandoc.org/MANUAL.html
--- See: :help vim.system()
 
 local exports = require("lib.exports")
 
 ---@class SharedPandoc
----@field formats string[] Supported export formats.
----@field viewers table<string, string> External application used to open each format.
----@field config_dir string Path to the Pandoc configuration directory.
----@field last table<integer, string> Last exported file, indexed by buffer number.
+---@field formats? string[] Supported export formats.
+---@field viewers? table<string, string> External application used to open each format.
+---@field config_dir? string Path to the Pandoc configuration directory.
+---@field last? table<integer, string> Last exported file, indexed by buffer number.
 
 ---@class PandocBuildOptions
 ---@field fmt? string Export format. Defaults to `"pdf"`.
@@ -117,9 +88,8 @@ end
 ---@type table<string, boolean>
 local image_exts = { png = true, jpg = true, jpeg = true, pdf = true, svg = true }
 
----Convert Obsidian embeds, which pandoc does not parse reliably. An image embed
----becomes a Markdown image, where `|300` sets the width and `|text` sets the
----caption. An embed of another note becomes its plain name.
+---Convert Obsidian embeds, which pandoc does not parse reliably, into Markdown
+---images or plain names.
 ---@param text string
 ---@return string
 local function preprocess(text)
@@ -275,9 +245,8 @@ function M.open(file)
 	end
 end
 
----Toggle the preview of the current buffer. Turning it on builds and opens the
----document once and rebuilds it on every save, and turning it off removes the
----rebuild.
+---Toggle the preview of the current buffer, which rebuilds the document on
+---every save.
 ---@param opts? PandocBuildOptions
 function M.preview(opts)
 	opts = vim.deepcopy(opts or {})
