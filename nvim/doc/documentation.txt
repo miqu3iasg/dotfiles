@@ -112,8 +112,6 @@ FORMATTING AND STYLE
     - Wrapping: comments wrap around column 78, aligned with the file body.
     - The buffer-local `opt_local`, global `vim.opt` and window `vim.wo` scopes are named when the distinction matters.
     - TODO comments state the missing thing and its context, not a mood.
-    - Deprecation: modules that fall out of use move to lua/archived/, outside lua/ and off the runtimepath, with their
-    header intact.
 
 THE FORMAT OF THE PAGES
     Each page is a single plain-text file in the style of a man page:

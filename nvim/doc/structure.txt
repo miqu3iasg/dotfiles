@@ -26,7 +26,6 @@ THE TREE
     |  |- lib/                shared utilities and domain logic
     |  |- language/           the language server stack
     |  |- snippets/           LuaSnip snippets, one file per filetype
-    |  |- archived/           deprecated modules, off the runtimepath
     |- lua/pandoc/            Pandoc pipeline: defaults, metadata, profiles
     |                         and Lua filters
     |- spell/                 custom spell files
@@ -91,10 +90,6 @@ THE LUA LAYERS
     snippets/ - LuaSnip snippets
         One file per filetype, loaded lazily; filetype-adaptive snippets in common.lua, and the comment and header
         machinery they build on in lib/headers.lua.
-
-    archived/ - deprecated, not deleted
-        Modules kept around for possible future use. They sit outside lua/ and off the runtimepath on purpose: Neovim
-        cannot reach them, but git history and the headers stay intact.
 
 LAYER RULES
     A layer may only require the layers below it, in this order:

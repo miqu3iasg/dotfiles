@@ -45,7 +45,6 @@ DIRECTORY LAYOUT
     lua/lib/               helpers and domain logic used by other modules; exposes no commands, autocmds or keymaps
     lua/language/          language server stack; one module per server under servers/
     lua/snippets/          LuaSnip snippets, one file per filetype
-    lua/archived/          deprecated modules kept off the runtimepath
     lua/pandoc/            Pandoc defaults, metadata, profiles and Lua filters
     spell/                 custom spell files
     nvim-pack-lock.json    revision lock file written by vim.pack
