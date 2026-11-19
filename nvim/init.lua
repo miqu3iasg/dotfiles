@@ -15,4 +15,4 @@ require("modules.scratch").setup()
 require("modules.compile").setup()
 require("modules.sessions").setup()
 
-vim.cmd.colorscheme("insanity")
+vim.cmd.colorscheme("plain")
