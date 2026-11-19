@@ -9,17 +9,14 @@
 local keys = require("lib.keys")
 local map = keys.map
 
--- TODO: the keymaps are cluttered with code. Extract the functions first, then
--- call only them inside each keymap.set.
-
 -- Prompt text, colored by the active colorscheme. Because of `default`, a
 -- colorscheme or user config can still override this group.
 vim.api.nvim_set_hl(0, "FilesPrompt", { link = "Question", default = true })
 
----Sentinel returned by `input()` when the prompt is cancelled.
+---Sentinel returned by `input()` when the prompt is cancelled
 local CANCEL = "\1<cancel>"
 
----Absolute path of the current file, or `nil` with a message when there is none.
+---Return the absolute path of the current file, or `nil` with a message when there is none
 ---@return string?
 local function current_file()
 	local file = vim.fn.expand("%:p")
@@ -30,7 +27,7 @@ local function current_file()
 	return file
 end
 
----Copy a value to the system clipboard. Empty values are ignored.
+---Copy a value to the system clipboard, ignoring empty values
 ---@param value string
 local function yank(value)
 	if value == "" then
@@ -39,9 +36,9 @@ local function yank(value)
 	vim.fn.setreg("+", value)
 end
 
----Map a key that yanks the result of a filename-modifier expression.
+---Map a key that yanks the result of a filename-modifier expression
 ---@param lhs string
----@param modifier string Filename modifier expression, such as `%:p:~`.
+---@param modifier string Filename modifier expression, such as `%:p:~`
 ---@param desc string
 --- See: :help filename-modifiers
 local function yank_map(lhs, modifier, desc)
@@ -50,10 +47,10 @@ local function yank_map(lhs, modifier, desc)
 	end, desc)
 end
 
----Prompt for a path with file completion, shown with `~` and returned absolute.
----@param prompt string Prompt text, without a trailing colon.
+---Prompt for a path with file completion, shown with `~` and returned absolute
+---@param prompt string Prompt text, without a trailing colon
 ---@param default string
----@return string? path Absolute path, `""` when empty, or `nil` when cancelled.
+---@return string? path Absolute path, `""` when empty, or `nil` when cancelled
 local function read_path(prompt, default)
 	vim.cmd("echohl FilesPrompt")
 	local ok, result = pcall(vim.fn.input, {
@@ -75,16 +72,16 @@ local function read_path(prompt, default)
 	return vim.fn.fnamemodify(vim.fn.expand(result), ":p")
 end
 
----Ask a yes/no question on the command line, with the accepted keys shown.
----`y`/`<Space>` accept, `n`/`<BS>`/`<Del>` refuse, `<C-c>`/`<Esc>` cancel.
----@param prompt string Question text, without the key hints.
----@return boolean? answer `nil` when cancelled.
+---Ask a yes/no question on the command line, with the accepted keys shown
+---`y`/`<Space>` accept, `n`/`<BS>`/`<Del>` refuse, `<C-c>`/`<Esc>` cancel
+---@param prompt string Question text, without the key hints
+---@return boolean? answer `nil` when cancelled
 local function confirm_action(prompt)
-	local keys = " (y/Space yes, n/DEL no, C-c/ESC quit) "
+	local hints = " (y/Space yes, n/DEL no, C-c/ESC quit) "
 	local notice = ""
 	while true do
 		vim.cmd("redraw")
-		vim.api.nvim_echo({ { notice .. prompt, "FilesPrompt" }, { keys, "Comment" } }, false, {})
+		vim.api.nvim_echo({ { notice .. prompt, "FilesPrompt" }, { hints, "Comment" } }, false, {})
 		local ok, key = pcall(vim.fn.getcharstr)
 
 		if ok and (key == "y" or key == "Y" or key == " ") then
@@ -102,13 +99,13 @@ local function confirm_action(prompt)
 	end
 end
 
-map("n", "<leader>nw", "<cmd>Setwd<CR>", "Set working directory to current file")
-
-map("n", "<leader>.", function()
+---Show the current working directory
+local function show_cwd()
 	vim.notify("Current directory: " .. vim.fn.getcwd(), vim.log.levels.INFO)
-end, "Show current working directory", { silent = true })
+end
 
-map("n", "<leader>nf", function()
+---Prompt for a path and open it, creating the file and its directory when missing
+local function find_or_create_file()
 	local current_dir = vim.fn.expand("%:p:h")
 	if current_dir == "" or current_dir == "." then
 		current_dir = vim.fn.getcwd()
@@ -136,9 +133,10 @@ map("n", "<leader>nf", function()
 		print("Wrote " .. vim.fn.fnamemodify(file, ":~"))
 	end
 	vim.cmd("edit " .. vim.fn.fnameescape(file))
-end, "Find or create new file")
+end
 
-map("n", "<leader>nr", function()
+---Rename the current file, offering to create the target directory
+local function rename_file()
 	local old = current_file()
 	if not old then
 		return
@@ -163,10 +161,10 @@ map("n", "<leader>nr", function()
 	vim.fn.delete(old)
 	vim.cmd("bd " .. vim.fn.bufnr(old))
 	print("Renamed to " .. vim.fn.fnamemodify(new, ":~"))
-end, "Rename current file")
+end
 
--- Deletes the file permanently, after confirmation.
-map("n", "<leader>nk", function()
+---Delete the current file permanently, after confirmation
+local function delete_file()
 	local file = current_file()
 	if not file then
 		return
@@ -182,9 +180,10 @@ map("n", "<leader>nk", function()
 	end
 	vim.cmd("bd!")
 	print("Deleted " .. vim.fn.fnamemodify(file, ":~"))
-end, "Delete current file")
+end
 
-map("n", "<leader>nx", function()
+---Toggle the executable permission on the current file
+local function toggle_executable()
 	local file = current_file()
 	if not file then
 		return
@@ -193,9 +192,10 @@ map("n", "<leader>nx", function()
 	local is_exec = vim.fn.executable(file) == 1
 	vim.fn.system({ "chmod", is_exec and "-x" or "+x", file })
 	print((is_exec and "Removed" or "Added") .. " executable permission: " .. file)
-end, "Toggle executable permission on current file")
+end
 
-map("n", "<leader>ne", function()
+---Reveal the current file in the system file explorer
+local function reveal_in_explorer()
 	local file = current_file()
 	if not file then
 		return
@@ -213,17 +213,29 @@ map("n", "<leader>ne", function()
 		-- xdg-open cannot select a file, so it opens the containing folder.
 		vim.fn.system({ "xdg-open", vim.fn.fnamemodify(file, ":h") })
 	end
-end, "Reveal current file in file explorer")
+end
+
+---Yank a `path:line` reference for the cursor position in the current file
+local function yank_file_line()
+	local path = vim.fn.expand("%:.")
+	if path == "" then
+		return
+	end
+	yank(path .. ":" .. vim.fn.line("."))
+end
+
+map("n", "<leader>nw", "<cmd>Setwd<CR>", "Set working directory to current file")
+map("n", "<leader>.", show_cwd, "Show current working directory", { silent = true })
+
+map("n", "<leader>nf", find_or_create_file, "Find or create new file")
+map("n", "<leader>nr", rename_file, "Rename current file")
+map("n", "<leader>nk", delete_file, "Delete current file")
+map("n", "<leader>nx", toggle_executable, "Toggle executable permission on current file")
+map("n", "<leader>ne", reveal_in_explorer, "Reveal current file in file explorer")
 
 yank_map("<leader>yp", "%:p", "Yank absolute file path")
 yank_map("<leader>yr", "%:.", "Yank relative file path")
 yank_map("<leader>yn", "%:t", "Yank file name")
 yank_map("<leader>yd", "%:p:h", "Yank containing directory path")
 
-map("n", "<leader>yl", function()
-	local path = vim.fn.expand("%:.")
-	if path == "" then
-		return
-	end
-	yank(path .. ":" .. vim.fn.line("."))
-end, "Yank file:line reference")
+map("n", "<leader>yl", yank_file_line, "Yank file:line reference")
