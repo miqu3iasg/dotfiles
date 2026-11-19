@@ -30,6 +30,11 @@ for app, exts in pairs({
 	end
 end
 
+-- Height of the picker split, as a fraction of the screen, or as an absolute
+-- number of lines when greater than 1.
+local picker_height = 0.3
+local picker_min_height = 8
+
 ---Open the entry under the cursor with its extension's viewer app, falling
 ---back to the OS default.
 local function open_with_viewer()
@@ -50,35 +55,99 @@ local function open_with_viewer()
 	end
 end
 
----Select the entry under the cursor, opening the file in the origin window
----when oil was opened as a picker split.
-local function select_entry()
-	local origin = vim.w.oil_origin_win ---@type integer?
-	local entry = oil.get_cursor_entry() ---@type oil.Entry?
-	local dir = oil.get_current_dir() ---@type string?
-	local default = require("oil.actions").select.callback
-
-	if not origin or not vim.api.nvim_win_is_valid(origin) or not entry or not dir then
-		return default()
+---Warn that the oil buffer has pending changes (renames, deletes) that would
+---be discarded by closing the picker.
+---@return boolean modified True when the buffer has unsaved changes.
+local function warn_if_modified()
+	if not vim.bo.modified then
+		return false
 	end
 
-	local path = dir .. entry.name ---@type string
-	local stat = vim.uv.fs_stat(path)
-	if entry.type == "directory" or (stat and stat.type == "directory") then
-		return default()
-	end
-
-	vim.api.nvim_win_close(0, true)
-	vim.api.nvim_set_current_win(origin)
-	vim.cmd.edit(vim.fn.fnameescape(path))
+	vim.notify("Oil: unsaved changes (:w to apply)", vim.log.levels.WARN)
+	return true
 end
 
----Open oil in a temporary horizontal split that acts as a file picker. The
----current window goes in `vim.w.oil_origin_win` of the new split.
+---Close the picker split and return focus to the origin window. Outside a
+---picker, fall back to the default oil close.
+local function close_picker()
+	local origin = vim.w.oil_origin_win ---@type integer?
+	if not origin then
+		return require("oil.actions").close.callback()
+	end
+
+	if warn_if_modified() then
+		return
+	end
+
+	-- The last window of the tab cannot be closed, so let oil restore the
+	-- previous buffer instead.
+	if #vim.api.nvim_tabpage_list_wins(0) > 1 then
+		vim.api.nvim_win_close(0, true)
+	else
+		require("oil.actions").close.callback()
+	end
+
+	if vim.api.nvim_win_is_valid(origin) then
+		vim.api.nvim_set_current_win(origin)
+	end
+end
+
+---Build a select keymap callback. Inside a picker split, files open in the
+---origin window (optionally in a new split of it) and the picker closes.
+---Directories are navigated inside the picker. Outside a picker, the default
+---oil action runs.
+---@param action string Name of the oil action used outside a picker.
+---@param split? "split"|"vsplit" Split to create in the origin window.
+---@return fun()
+local function make_select(action, split)
+	return function()
+		local actions = require("oil.actions")
+		local origin = vim.w.oil_origin_win ---@type integer?
+		local entry = oil.get_cursor_entry() ---@type oil.Entry?
+		local dir = oil.get_current_dir() ---@type string?
+
+		if not origin or not vim.api.nvim_win_is_valid(origin) or not entry or not dir then
+			return actions[action].callback()
+		end
+
+		local path = dir .. entry.name ---@type string
+		local stat = vim.uv.fs_stat(path)
+		if entry.type == "directory" or (stat and stat.type == "directory") then
+			return actions.select.callback()
+		end
+
+		if warn_if_modified() then
+			return
+		end
+
+		vim.api.nvim_win_close(0, true)
+		vim.api.nvim_set_current_win(origin)
+		if split then
+			vim.cmd("belowright " .. split)
+		end
+		vim.cmd.edit(vim.fn.fnameescape(path))
+	end
+end
+
+local select_entry = make_select("select")
+local select_entry_split = make_select("select_split", "split")
+local select_entry_vsplit = make_select("select_vsplit", "vsplit")
+
+---Open oil in a temporary bottom split that acts as a file picker. The
+---window that was current goes in `vim.w.oil_origin_win` of the new split.
 local function open_picker_split()
+	-- Reuse the picker if it is already open.
+	for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+		if vim.w[win].oil_origin_win then
+			return vim.api.nvim_set_current_win(win)
+		end
+	end
+
 	local origin = vim.api.nvim_get_current_win()
-	vim.cmd("belowright split")
+	local height = picker_height > 1 and picker_height or math.floor(vim.o.lines * picker_height)
+	vim.cmd(("botright %dsplit"):format(math.max(picker_min_height, height)))
 	vim.w.oil_origin_win = origin
+	vim.wo.winfixheight = true
 	oil.open()
 end
 
@@ -114,8 +183,14 @@ local keymaps = {
 	["<CR>"] = { callback = select_entry, desc = select_desc },
 	["H"] = "actions.parent",
 	["L"] = { callback = select_entry, desc = select_desc },
-	["sh"] = "actions.select_split",
-	["sv"] = "actions.select_vsplit",
+	["sh"] = {
+		callback = select_entry_split,
+		desc = "Select in horizontal split (of origin window if from split)",
+	},
+	["sv"] = {
+		callback = select_entry_vsplit,
+		desc = "Select in vertical split (of origin window if from split)",
+	},
 	["gp"] = {
 		"actions.preview",
 		opts = {
@@ -132,7 +207,7 @@ local keymaps = {
 	["gy"] = "actions.copy_entry_path",
 	["gh"] = "actions.toggle_hidden",
 	["cd"] = "actions.cd",
-	["q"] = "actions.close",
+	["q"] = { callback = close_picker, desc = "Close oil (closes the split if from picker)" },
 	["~"] = goto_home,
 	["_"] = goto_cwd,
 }
@@ -185,8 +260,8 @@ vim.keymap.set("n", "go", "<CMD>Oil<CR>", {
 	desc = "Open parent directory",
 })
 
-vim.keymap.set("n", "g-", open_picker_split, {
-	desc = "Open parent directory in horizontal split picker",
+vim.keymap.set("n", "gs", open_picker_split, {
+	desc = "Open parent directory in bottom split picker",
 })
 
 vim.keymap.set("n", "g~", goto_home.callback, { desc = goto_home.desc })
