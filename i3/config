@@ -32,10 +32,10 @@ exec --no-startup-id dunst
 exec --no-startup-id vicinae server
 
 # Password vault used by vpn
-exec --no-startup-id /usr/bin/gnome-keyring-daemon --start --components=secrets
+# exec --no-startup-id /usr/bin/gnome-keyring-daemon --start --components=secrets
 
 # Starts VPN
-exec --no-startup-id sh -c "sleep 5 && protonvpn-app"
+# exec --no-startup-id sh -c "sleep 5 && protonvpn-app"
 
 # Disable screen blanking and DPMS.
 exec --no-startup-id xset s off -dpms s noblank
