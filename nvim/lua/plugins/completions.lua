@@ -249,30 +249,31 @@ end
 map("i", "<C-n>", select_item(1), { expr = true, desc = "Next completion item / cycle snippet choice / open menu" })
 map("i", "<C-p>", select_item(-1), { expr = true, desc = "Prev completion item / cycle snippet choice / open menu" })
 
--- A single expr mapping, so the checks run in order and fall through.
-map("i", "<Tab>", function()
+-- A single expr mapping, so the checks run in order and fall through. An
+-- active placeholder wins over the completion menu, or Tab never leaves it.
+map({ "i", "s" }, "<Tab>", function()
 	if luasnip.expandable() then
 		return "<cmd>lua require('luasnip').expand()<cr>"
+	end
+	if luasnip.locally_jumpable(1) then
+		return "<cmd>lua require('luasnip').jump(1)<cr>"
 	end
 	if vim.fn.pumvisible() == 1 then
 		return "<C-n>"
 	end
-	if luasnip.jumpable(1) then
-		return "<cmd>lua require('luasnip').jump(1)<cr>"
-	end
 	return "<Tab>"
-end, { expr = true, desc = "Expand snippet, next completion item or next placeholder" })
+end, { expr = true, desc = "Expand snippet, next placeholder or next completion item" })
 
-map("i", "<S-Tab>", function()
+map({ "i", "s" }, "<S-Tab>", function()
+	if luasnip.locally_jumpable(-1) then
+		return "<cmd>lua require('luasnip').jump(-1)<cr>"
+	end
 	if vim.fn.pumvisible() == 1 then
 		return "<C-p>"
 	end
-	if luasnip.jumpable(-1) then
-		return "<cmd>lua require('luasnip').jump(-1)<cr>"
-	end
 	-- Native dedent
 	return "<C-d>"
-end, { expr = true, desc = "Prev completion item, previous placeholder or dedent" })
+end, { expr = true, desc = "Previous placeholder, prev completion item or dedent" })
 
 map("i", "<C-q>", function()
 	if luasnip.in_snippet() then
