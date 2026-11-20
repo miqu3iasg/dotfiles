@@ -221,11 +221,16 @@ local function line_prefix(style)
 	end
 end
 
+-- Indent of the usage entries, relative to the comment prefix. The title stays
+-- at the level of the header fields.
+local USAGE_INDENT = "  "
+local USAGE_NOTE_INDENT = "    "
+
 -- Pads a usage label so the commands line up in a column.
 ---@param text string
 ---@return string
 local function usage_label(text)
-	return "      " .. text .. string.rep(" ", 10 - #text)
+	return USAGE_INDENT .. text .. string.rep(" ", 10 - #text)
 end
 
 -- Compile/run instructions per filetype, which follow the usage title, with one
@@ -276,7 +281,7 @@ local usage_by_ft = {
 		return {
 			t({ "", wrap(style, usage_label("Run:") .. "$ mit-scheme --quiet --load ") }),
 			f(get_filename, {}),
-			t({ "", wrap(style, "      To evaluate line by line, use ,ee and ,er in the REPL.") }),
+			t({ "", wrap(style, USAGE_INDENT .. "To evaluate line by line, use ,ee and ,er in the REPL.") }),
 		}
 	end,
 	javascript = function(style)
@@ -289,10 +294,10 @@ local usage_by_ft = {
 		return {
 			t({ "", wrap(style, usage_label("Run:") .. "$ npx ts-node ") }),
 			f(get_filename, {}),
-			t({ "", wrap(style, "      Or compile then run:") }),
-			t({ "", wrap(style, "      $ tsc ") }),
+			t({ "", wrap(style, USAGE_INDENT .. "Or compile then run:") }),
+			t({ "", wrap(style, USAGE_NOTE_INDENT .. "$ tsc ") }),
 			f(get_filename, {}),
-			t({ "", wrap(style, "      $ node ") }),
+			t({ "", wrap(style, USAGE_NOTE_INDENT .. "$ node ") }),
 			f(get_basename, {}),
 			t(".js"),
 		}
@@ -317,19 +322,19 @@ local usage_by_ft = {
 		return {
 			t({ "", wrap(style, usage_label("Run:") .. "$ dotnet run ") }),
 			f(get_filename, {}),
-			t({ "", wrap(style, "      Single-file runs need .NET 10 or newer.") }),
+			t({ "", wrap(style, USAGE_INDENT .. "Single-file runs need .NET 10 or newer.") }),
 		}
 	end,
 	haskell = function(style)
 		return {
 			t({ "", wrap(style, usage_label("Run:") .. "$ runghc ") }),
 			f(get_filename, {}),
-			t({ "", wrap(style, "      Or compile then run:") }),
-			t({ "", wrap(style, "      $ ghc -o ") }),
+			t({ "", wrap(style, USAGE_INDENT .. "Or compile then run:") }),
+			t({ "", wrap(style, USAGE_NOTE_INDENT .. "$ ghc -o ") }),
 			f(get_basename, {}),
 			t(" "),
 			f(get_filename, {}),
-			t({ "", wrap(style, "      $ ./") }),
+			t({ "", wrap(style, USAGE_NOTE_INDENT .. "$ ./") }),
 			f(get_basename, {}),
 		}
 	end,
@@ -391,7 +396,7 @@ local function add_usage(add, style, ft, idx)
 	local usage_fn = usage_by_ft[ft]
 	add(t({ "", wrap(style, "") }))
 	if not inline_usage_fts[ft] then
-		add(t({ "", wrap(style, "    Usage:") }))
+		add(t({ "", wrap(style, "Usage:") }))
 	end
 	if usage_fn then
 		for _, n in ipairs(usage_fn(style)) do
@@ -399,7 +404,7 @@ local function add_usage(add, style, ft, idx)
 		end
 		return idx
 	end
-	add(t({ "", wrap(style, "      ") }))
+	add(t({ "", wrap(style, USAGE_INDENT) }))
 	-- Only the fallback consumes an index, since LuaSnip needs them contiguous.
 	add(i(idx, "how to compile/run this file"))
 	return idx + 1
