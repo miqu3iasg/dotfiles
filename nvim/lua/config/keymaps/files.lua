@@ -1,9 +1,12 @@
 -- lua/config/keymaps/files.lua
 
--- File and directory keymaps.
+-- File and directory keymaps, with a prompt that follows Emacs `find-file`:
+-- relative paths resolve against the buffer's directory and a missing file is
+-- created as soon as it is opened.
 --
 -- See: lua/lib/system.lua
 -- See: lua/config/commands.lua
+-- See: lua/config/options.lua
 -- See: :help map.txt
 
 local keys = require("lib.keys")
@@ -13,15 +16,50 @@ local map = keys.map
 -- colorscheme or user config can still override this group.
 vim.api.nvim_set_hl(0, "FilesPrompt", { link = "Question", default = true })
 
+-- The completion menu of a prompt is a plain list with a reverse-video
+-- selection, the way the Emacs minibuffer lists its completions.
+---@type table<string, table>?
+local pum_faces
+
+---Replace the popup menu faces with plain ones, then restore them
+---@param plain boolean
+local function plain_pum(plain)
+	if plain and not pum_faces then
+		pum_faces = {
+			Pmenu = vim.api.nvim_get_hl(0, { name = "Pmenu" }),
+			PmenuSel = vim.api.nvim_get_hl(0, { name = "PmenuSel" }),
+		}
+		vim.api.nvim_set_hl(0, "Pmenu", { link = "Normal" })
+		vim.api.nvim_set_hl(0, "PmenuSel", { reverse = true })
+	elseif pum_faces then
+		for name, attrs in pairs(pum_faces) do
+			vim.api.nvim_set_hl(0, name, attrs)
+		end
+		pum_faces = nil
+	end
+end
+
+vim.api.nvim_create_autocmd({ "CmdlineEnter", "CmdlineLeave" }, {
+	pattern = "@",
+	callback = function(ev)
+		plain_pum(ev.event == "CmdlineEnter")
+	end,
+})
+
 ---Sentinel returned by `input()` when the prompt is cancelled
 local CANCEL = "\1<cancel>"
 
----Return the absolute path of the current file, or `nil` with a message when there is none
+---Return the absolute path of the current file, or `nil` with a message when
+---the buffer is not visiting one
 ---@return string?
 local function current_file()
-	local file = vim.fn.expand("%:p")
+	if vim.bo.buftype ~= "" then
+		vim.notify("Not a file buffer: " .. vim.bo.buftype, vim.log.levels.WARN)
+		return nil
+	end
+	local file = vim.api.nvim_buf_get_name(0)
 	if file == "" then
-		print("Buffer is not visiting a file")
+		vim.notify("Buffer is not visiting a file", vim.log.levels.WARN)
 		return nil
 	end
 	return file
@@ -47,14 +85,39 @@ local function yank_map(lhs, modifier, desc)
 	end, desc)
 end
 
----Prompt for a path with file completion, shown with `~` and returned absolute
+---Resolve a typed path against the directory the prompt started in
+---@param path string
+---@param base string
+---@return string
+local function resolve(path, base)
+	if path:match("^[/~$]") or path:match("^%a:[/\\]") then
+		return vim.fn.fnamemodify(vim.fn.expand(path), ":p")
+	end
+	return vim.fn.fnamemodify(vim.fn.expand(vim.fs.joinpath(base, path)), ":p")
+end
+
+---Return the directory the prompt starts in, which is the current file's
+---directory, or the cwd for a buffer that is not visiting a file
+---@return string
+local function base_dir()
+	if vim.bo.buftype == "" then
+		local name = vim.api.nvim_buf_get_name(0)
+		if name ~= "" then
+			return vim.fs.dirname(name)
+		end
+	end
+	return vim.fn.getcwd()
+end
+
+---Prompt for a path with file completion, returned absolute, resolving
+---relative paths against the directory of `default`
 ---@param prompt string Prompt text, without a trailing colon
----@param default string
+---@param default string Pre-filled text, base for relative paths
 ---@return string? path Absolute path, `""` when empty, or `nil` when cancelled
 local function read_path(prompt, default)
 	vim.cmd("echohl FilesPrompt")
 	local ok, result = pcall(vim.fn.input, {
-		prompt = prompt .. " (Enter accept, TAB complete, C-c quit): ",
+		prompt = prompt .. ": ",
 		default = vim.fn.fnamemodify(default, ":~"),
 		completion = "file",
 		cancelreturn = CANCEL,
@@ -69,34 +132,32 @@ local function read_path(prompt, default)
 	if result == "" then
 		return ""
 	end
-	return vim.fn.fnamemodify(vim.fn.expand(result), ":p")
+	return resolve(result, vim.fn.fnamemodify(default, ":h"))
 end
 
----Ask a yes/no question on the command line, with the accepted keys shown
----`y`/`<Space>` accept, `n`/`<BS>`/`<Del>` refuse, `<C-c>`/`<Esc>` cancel
----@param prompt string Question text, without the key hints
----@return boolean? answer `nil` when cancelled
-local function confirm_action(prompt)
-	local hints = " (y/Space yes, n/DEL no, C-c/ESC quit) "
-	local notice = ""
-	while true do
-		vim.cmd("redraw")
-		vim.api.nvim_echo({ { notice .. prompt, "FilesPrompt" }, { hints, "Comment" } }, false, {})
-		local ok, key = pcall(vim.fn.getcharstr)
+---Ask a yes/no question on the command line, defaulting to no
+---@param question string
+---@return boolean
+local function confirm(question)
+	return vim.fn.confirm(question, "&Yes\n&No", 2) == 1
+end
 
-		if ok and (key == "y" or key == "Y" or key == " ") then
-			vim.cmd("redraw")
-			return true
-		elseif ok and (key == "n" or key == "N" or key == vim.keycode("<BS>") or key == vim.keycode("<Del>")) then
-			vim.cmd("redraw")
-			return false
-		elseif not ok or key == "\3" or key == "\27" then
-			vim.cmd("redraw")
-			print("Quit")
-			return nil
-		end
-		notice = "Please answer y or n. "
+---Offer to create a missing directory and report whether it is usable
+---@param dir string
+---@return boolean
+local function ensure_dir(dir)
+	if vim.fn.isdirectory(dir) == 1 then
+		return true
 	end
+	local name = vim.fn.fnamemodify(dir, ":~")
+	if not confirm("Directory " .. name .. " does not exist; create?") then
+		return false
+	end
+	if vim.fn.mkdir(dir, "p") == 0 then
+		vim.notify("Failed to create directory: " .. dir, vim.log.levels.ERROR)
+		return false
+	end
+	return true
 end
 
 ---Show the current working directory
@@ -104,33 +165,25 @@ local function show_cwd()
 	vim.notify("Current directory: " .. vim.fn.getcwd(), vim.log.levels.INFO)
 end
 
----Prompt for a path and open it, creating the file and its directory when missing
+---Prompt for a path and open it, offering to create a missing directory
 local function find_or_create_file()
-	local current_dir = vim.fn.expand("%:p:h")
-	if current_dir == "" or current_dir == "." then
-		current_dir = vim.fn.getcwd()
-	end
-
-	local file = read_path("Find file", current_dir .. "/")
+	local file = read_path("Find file", base_dir() .. "/")
 	if not file or file == "" then
 		return
 	end
 
 	local dir = vim.fn.fnamemodify(file, ":h")
-	if vim.fn.isdirectory(dir) == 0 then
-		if not confirm_action("Directory " .. vim.fn.fnamemodify(dir, ":~") .. " does not exist; create?") then
-			return
-		end
-		vim.fn.mkdir(dir, "p")
+	if not ensure_dir(dir) then
+		return
 	end
 
-	-- `:edit` on a missing path only opens an unsaved buffer, so create it first.
+	-- Create the file first, so the buffer never stays an unsaved `[New]`
+	-- one that is lost when it is abandoned.
 	if vim.fn.filereadable(file) == 0 and vim.fn.isdirectory(file) == 0 then
 		if vim.fn.writefile({}, file) ~= 0 then
 			vim.notify("Failed to create: " .. file, vim.log.levels.ERROR)
 			return
 		end
-		print("Wrote " .. vim.fn.fnamemodify(file, ":~"))
 	end
 	vim.cmd("edit " .. vim.fn.fnameescape(file))
 end
@@ -146,20 +199,36 @@ local function rename_file()
 	if not new or new == "" or new == old then
 		return
 	end
+	if vim.fn.isdirectory(new) == 1 then
+		vim.notify("Target is a directory: " .. new, vim.log.levels.ERROR)
+		return
+	end
 
 	-- `:saveas` cannot create the target directory, so it is offered here,
 	-- like the new file flow does.
-	local dir = vim.fn.fnamemodify(new, ":h")
-	if vim.fn.isdirectory(dir) == 0 then
-		if not confirm_action("Directory " .. vim.fn.fnamemodify(dir, ":~") .. " does not exist; create?") then
-			return
-		end
-		vim.fn.mkdir(dir, "p")
+	if not ensure_dir(vim.fn.fnamemodify(new, ":h")) then
+		return
 	end
 
-	vim.cmd("saveas " .. vim.fn.fnameescape(new))
-	vim.fn.delete(old)
-	vim.cmd("bd " .. vim.fn.bufnr(old))
+	local bang = ""
+	if vim.fn.filereadable(new) == 1 then
+		if not confirm("Overwrite " .. vim.fn.fnamemodify(new, ":~") .. "?") then
+			return
+		end
+		bang = "!"
+	end
+
+	-- `:saveas` keeps the current buffer and its undo, and leaves an empty
+	-- buffer for the old path, which is removed below.
+	if not pcall(vim.cmd, "saveas" .. bang .. " " .. vim.fn.fnameescape(new)) then
+		vim.notify("Failed to rename to: " .. new, vim.log.levels.ERROR)
+		return
+	end
+	if vim.fn.delete(old) ~= 0 then
+		vim.notify("Renamed, but the old file remains: " .. old, vim.log.levels.ERROR)
+		return
+	end
+	pcall(vim.cmd, "bd " .. vim.fn.bufnr(old))
 	print("Renamed to " .. vim.fn.fnamemodify(new, ":~"))
 end
 
@@ -170,7 +239,8 @@ local function delete_file()
 		return
 	end
 
-	if not confirm_action("Delete " .. vim.fn.fnamemodify(file, ":t") .. "?") then
+	local lost = vim.bo.modified and " Unsaved changes will be lost." or ""
+	if not confirm("Delete " .. vim.fn.fnamemodify(file, ":t") .. "?" .. lost) then
 		return
 	end
 
@@ -190,7 +260,11 @@ local function toggle_executable()
 	end
 
 	local is_exec = vim.fn.executable(file) == 1
-	vim.fn.system({ "chmod", is_exec and "-x" or "+x", file })
+	local result = vim.system({ "chmod", is_exec and "-x" or "+x", file }):wait()
+	if result.code ~= 0 then
+		vim.notify("chmod failed: " .. (result.stderr or ""), vim.log.levels.ERROR)
+		return
+	end
 	print((is_exec and "Removed" or "Added") .. " executable permission: " .. file)
 end
 
