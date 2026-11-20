@@ -202,17 +202,25 @@ end
 
 local map = vim.keymap.set
 
+---Open the completion menu using LSP completion when a client supports it,
+---keyword completion as a fallback. Returns the keys for the expr mapping.
+---@param dir integer 1 for the next item, -1 for the previous one.
+---@return string
+local function open_menu(dir)
+	if vim.lsp.get_clients({ bufnr = 0, method = "textDocument/completion" })[1] then
+		vim.lsp.completion.get()
+		return ""
+	end
+	return dir == 1 and "<C-n>" or "<C-p>" -- Builtin keyword completion.
+end
+
 -- The check runs on every press, so a buffer without an attached client falls
 -- back to keyword completion. With the menu open the key accepts the item.
 map("i", "<C-y>", function()
 	if vim.fn.pumvisible() == 1 then
 		return "<C-y>" -- Returned keys are not remapped, so this is the builtin.
 	end
-	if vim.lsp.get_clients({ bufnr = 0, method = "textDocument/completion" })[1] then
-		vim.lsp.completion.get()
-		return ""
-	end
-	return "<C-n>" -- Builtin keyword completion.
+	return open_menu(1)
 end, { expr = true, desc = "LSP completion, buffer words as fallback" })
 
 map("i", "<CR>", function()
@@ -234,12 +242,12 @@ local function select_item(dir)
 		if vim.fn.pumvisible() == 1 then
 			return dir == 1 and "<C-n>" or "<C-p>"
 		end
-		return dir == 1 and "<Down>" or "<Up>"
+		return open_menu(dir)
 	end
 end
 
-map("i", "<C-n>", select_item(1), { expr = true, desc = "Next completion item / cycle snippet choice / line down" })
-map("i", "<C-p>", select_item(-1), { expr = true, desc = "Prev completion item / cycle snippet choice / line up" })
+map("i", "<C-n>", select_item(1), { expr = true, desc = "Next completion item / cycle snippet choice / open menu" })
+map("i", "<C-p>", select_item(-1), { expr = true, desc = "Prev completion item / cycle snippet choice / open menu" })
 
 -- A single expr mapping, so the checks run in order and fall through.
 map("i", "<Tab>", function()
