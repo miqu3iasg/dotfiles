@@ -1,7 +1,6 @@
 -- lua/config/keymaps/files.lua
 
--- File and directory keymaps, built around a prompt that follows Emacs
--- `find-file`.
+-- File and directory keymaps.
 --
 -- See: lua/lib/system.lua
 -- See: lua/config/commands.lua
