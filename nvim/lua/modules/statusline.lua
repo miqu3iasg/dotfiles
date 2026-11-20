@@ -278,12 +278,12 @@ function M.setup()
 	_G.StlLine = M
 
 	vim.opt.laststatus = 2
-	vim.opt.showmode = false
+	vim.opt.showmode = true
 	vim.opt.shortmess:append("S")
 
 	vim.opt.statusline = table.concat({
-		"-- %{get(g:, 'sl_mode', '')} -- ",
-		"%{v:lua.StlLine.lead()}",
+		-- "-- %{get(g:, 'sl_mode', '')} -- ",
+		" %{v:lua.StlLine.lead()}",
 		"%{&diff && winnr('$') > 2 ? '  [' . bufnr() . ']' : ''}",
 		"  %<%{bufname() ==# '' ? '[No Name]' : fnamemodify(bufname(), ':p:~')}   %P %m",
 		"   L%l C%c",
