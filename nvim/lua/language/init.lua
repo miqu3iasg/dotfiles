@@ -123,9 +123,40 @@ vim.diagnostic.config({
 	float = { border = vim.o.winborder },
 })
 
+local diagnostics_enabled = false
+
+---Enable or disable the diagnostics display.
+---@param enable? boolean Force a state; omit to toggle.
+---@return boolean enabled The new state.
+local function toggle_diagnostics(enable)
+	if enable == nil then
+		diagnostics_enabled = not diagnostics_enabled
+	else
+		diagnostics_enabled = enable
+	end
+
+	vim.diagnostic.enable(diagnostics_enabled)
+
+	-- Re-enabling every namespace would bring back a lint that the lint toggle
+	-- turned off, so the lint state is reapplied after the display comes back.
+	if diagnostics_enabled then
+		local ok, lint_mod = pcall(require, "language.lint")
+		if ok and lint_mod.resync then
+			lint_mod.resync()
+		end
+	end
+
+	vim.notify("Diagnostics " .. (diagnostics_enabled and "enabled" or "disabled"), vim.log.levels.INFO)
+
+	return diagnostics_enabled
+end
+
 -- The diagnostics display starts off and follows the keymaps and server toggles.
--- See: lua/config/keymaps/misc.lua
-vim.diagnostic.enable(false)
+vim.diagnostic.enable(diagnostics_enabled)
+
+vim.keymap.set("n", "<leader>ud", function()
+	toggle_diagnostics()
+end, { desc = "Toggle diagnostics" })
 
 vim.lsp.enable(modules)
 

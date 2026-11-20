@@ -54,20 +54,6 @@ map("n", "<leader>vg", function()
 	vim.wo.signcolumn = vim.wo.signcolumn == "no" and "yes" or "no"
 end, "Toggle sign column")
 
-map("n", "<leader>ud", function()
-	local enabled = not vim.diagnostic.is_enabled()
-	vim.diagnostic.enable(enabled)
-	-- Re-enabling every namespace would bring back a lint that the lint toggle
-	-- turned off, so the lint state is reapplied after the display comes back.
-	if enabled then
-		local ok, lint_mod = pcall(require, "language.lint")
-		if ok and lint_mod.resync then
-			lint_mod.resync()
-		end
-	end
-	vim.notify("Diagnostics " .. (enabled and "enabled" or "disabled"))
-end, "Toggle diagnostics")
-
 map("n", "<leader>vh", function()
 	vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled({ bufnr = 0 }), { bufnr = 0 })
 end, "Toggle inlay hints (buffer)")
