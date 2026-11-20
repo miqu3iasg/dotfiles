@@ -38,7 +38,9 @@ vim.opt.completeopt = "menuone,noselect"
 
 vim.opt.path:append("**") -- Makes `:find` and `gf` recursive.
 vim.opt.wildmenu = true
-vim.opt.wildmode = "lastused,full"
+-- Tab completes the common prefix and lists the matches without stealing the
+-- typed text, and Enter accepts the text, like `find-file` in Emacs.
+vim.opt.wildmode = "noselect:longest:full,full"
 vim.opt.wildoptions = "pum,fuzzy"
 vim.opt.pumheight = 15
 
