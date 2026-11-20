@@ -298,12 +298,12 @@ local function yank_file_line()
 	yank(path .. ":" .. vim.fn.line("."))
 end
 
-map("n", "<leader>nw", "<cmd>Setwd<CR>", "Set working directory to current file")
+map("n", "<leader>wd", "<cmd>Setwd<CR>", "Set working directory to current file")
 map("n", "<leader>.", show_cwd, "Show current working directory", { silent = true })
 
 map("n", "<leader>nf", find_or_create_file, "Find or create new file")
 map("n", "<leader>nr", rename_file, "Rename current file")
-map("n", "<leader>nk", delete_file, "Delete current file")
+map("n", "<leader>nd", delete_file, "Delete current file")
 map("n", "<leader>nx", toggle_executable, "Toggle executable permission on current file")
 map("n", "<leader>ne", reveal_in_explorer, "Reveal current file in file explorer")
 
