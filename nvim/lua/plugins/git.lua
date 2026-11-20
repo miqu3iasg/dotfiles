@@ -6,10 +6,11 @@
 -- Destructive remote operations are left to the terminal, and `:GBrowse`
 -- needs vim-rhubarb.
 --
+-- Git comes from the distribution.
+--
 -- $ sudo pacman -S git
 --
 -- See: lua/modules/close_view.lua
--- See: https://git-scm.com/doc
 -- See: https://github.com/tpope/vim-fugitive
 -- See: https://github.com/lewis6991/gitsigns.nvim
 
@@ -18,46 +19,90 @@ local map = keys.map
 
 local log_format = "--color=never --date=short --pretty=format:'%h %cd  %s (%an)%d'"
 
----Open the history of the current file, the repository or the function under
----the cursor.
---- See: https://github.com/bruhtus/dotfiles/blob/master/.vim/after/autoload/enable/fugitive_log.vim
-local function git_log_normal()
-	local choice = vim.fn.confirm(
-		"Current file or All or Specific function git commit(s)?",
-		"&NCancel\n&JCurrent\n&KAll\n&LFunction",
-		1
-	)
-
-	if choice == 2 then
-		vim.cmd("-tab Git log " .. log_format .. " --follow %")
-	elseif choice == 3 then
-		vim.cmd("-tab Git log " .. log_format)
-	elseif choice == 4 then
-		-- Git must recognize functions for this filetype, otherwise nothing
-		-- matches.
-		local func = vim.fn.expand("<cword>")
-		local file = vim.fn.expand("%:p")
-		vim.cmd(("-tab Git log %s -L :%s:%s"):format(log_format, func, file))
-	end
-end
-
----Open the history of the selected line range.
-local function git_log_visual()
-	-- Leaving visual mode makes the '< and '> marks match the current selection.
-	vim.cmd("normal! \27")
-	local first = vim.fn.line("'<")
-	local last = vim.fn.line("'>")
-	local file = vim.fn.expand("%:p")
-
-	vim.cmd(("-tab Git log %s -L %d,%d:%s"):format(log_format, first, last, file))
-	vim.cmd("redraw!")
-end
-
----Ordered visual selection range, used by the partial hunk operations.
+---Return the ordered visual selection range
 ---@return integer[] range `{ first, last }`
 local function visual_range()
 	local a, b = vim.fn.line("."), vim.fn.line("v")
 	return { math.min(a, b), math.max(a, b) }
+end
+
+---Return the escaped path of the current buffer, or nil when it is not a
+---regular file such as a fugitive, terminal or unnamed buffer
+---@return string|nil path
+local function log_target()
+	local file = vim.api.nvim_buf_get_name(0)
+	if file == "" or file:match("^%w+://") then
+		vim.notify("Git log: buffer is not a regular file", vim.log.levels.WARN)
+		return nil
+	end
+	return vim.fn.fnameescape(file)
+end
+
+---Open `git log` in a new tab, ported from bruhtus dotfiles
+--- See: https://github.com/bruhtus/dotfiles/blob/master/.vim/after/autoload/enable/fugitive_log.vim
+---@param args string
+local function git_log(args)
+	vim.cmd(("-tab Git log %s %s"):format(log_format, args))
+end
+
+---Return the line range of the function or method enclosing the cursor, via
+---treesitter, so it does not depend on git knowing the filetype
+---@return integer|nil first
+---@return integer|nil last
+local function enclosing_function_range()
+	local ok, node = pcall(vim.treesitter.get_node)
+	if not ok then
+		return
+	end
+	while node do
+		local t = node:type()
+		if (t:find("function") or t:find("method")) and not t:find("call") then
+			local srow, _, erow, ecol = node:range()
+			-- A node ending at column 0 does not include that last row.
+			if ecol == 0 then
+				erow = erow - 1
+			end
+			return srow + 1, erow + 1
+		end
+		node = node:parent()
+	end
+end
+
+---Open the history of the current file, following renames
+local function git_log_file()
+	local file = log_target()
+	if file then
+		git_log("--follow " .. file)
+	end
+end
+
+---Open the history of the function under the cursor
+local function git_log_function()
+	local file = log_target()
+	if not file then
+		return
+	end
+
+	local first, last = enclosing_function_range()
+	if first then
+		git_log(("-L %d,%d:%s"):format(first, last, file))
+	else
+		-- Without a treesitter parser, fall back to git's own function detection.
+		git_log(("-L :%s:%s"):format(vim.fn.expand("<cword>"), file))
+	end
+end
+
+---Open the history of the selected line range
+local function git_log_visual()
+	local file = log_target()
+	if not file then
+		return
+	end
+	-- Read the range first, since leaving visual mode clears the selection.
+	local range = visual_range()
+	vim.cmd("normal! \27")
+	git_log(("-L %d,%d:%s"):format(range[1], range[2], file))
+	vim.cmd("redraw!")
 end
 
 vim.api.nvim_create_autocmd("FileType", {
@@ -80,8 +125,9 @@ map("n", "<leader>gp", "<cmd>Git push<cr>", "Push")
 
 map("n", "<leader>gl", "<cmd>-tab Git log --color=never --oneline --graph --decorate<cr>", "Git log (oneline)")
 map("n", "<leader>gL", "<cmd>-tab Git log --color=never --stat -p --decorate --date=short<cr>", "Git log (expanded)")
-map("n", "<leader>go", git_log_normal, "Git log (file/all/function)")
+map("n", "<leader>go", git_log_file, "Git log (file)")
 map("x", "<leader>go", git_log_visual, "Git log (selection)")
+map("n", "<leader>gf", git_log_function, "Git log (function)")
 
 map("n", "<leader>gd", "<cmd>silent Gvdiffsplit<cr>", "Diff against index")
 map("n", "<leader>gh", "<cmd>silent Gvdiffsplit HEAD<cr>", "Diff against HEAD")
@@ -105,17 +151,23 @@ require("gitsigns").setup({
 	word_diff = false,
 	current_line_blame = false,
 
-	-- The keymaps are buffer-local so the native `]c` and `[c` keep working
+	-- The keymaps are buffer-local so the native hunk motions keep working
 	-- outside tracked buffers and in diff mode, such as `Gvdiffsplit`.
 	on_attach = function(bufnr)
 		local gs = require("gitsigns")
 
+		---Map a key in the attached buffer only
+		---@param mode string|string[]
+		---@param lhs string
+		---@param rhs string|function
+		---@param desc string
 		local function bmap(mode, lhs, rhs, desc)
 			keys.map(mode, lhs, rhs, desc, { buffer = bufnr })
 		end
 
-		---Navigate hunks, falling back to the native diff motions in diff mode.
+		---Navigate hunks, falling back to the native diff motions in diff mode
 		---@param direction "next"|"prev"
+		---@return fun() action
 		local function nav(direction)
 			return function()
 				if vim.wo.diff then
@@ -128,19 +180,19 @@ require("gitsigns").setup({
 
 		bmap("n", "]c", nav("next"), "Next hunk")
 		bmap("n", "[c", nav("prev"), "Prev hunk")
-
 		bmap("n", "<leader>hs", gs.stage_hunk, "Stage/unstage hunk")
+		bmap("n", "<leader>hr", gs.reset_hunk, "Reset hunk")
+		bmap("n", "<leader>hp", gs.preview_hunk_inline, "Preview hunk")
+		bmap("n", "<leader>hb", gs.toggle_current_line_blame, "Toggle current line blame")
+
 		bmap("x", "<leader>hs", function()
 			gs.stage_hunk(visual_range())
 		end, "Stage/unstage selection")
 
-		bmap("n", "<leader>hr", gs.reset_hunk, "Reset hunk")
 		bmap("x", "<leader>hr", function()
 			gs.reset_hunk(visual_range())
 		end, "Reset selection")
 
-		bmap("n", "<leader>hp", gs.preview_hunk_inline, "Preview hunk")
-		bmap("n", "<leader>hb", gs.toggle_current_line_blame, "Toggle current line blame")
 		bmap("n", "<leader>hd", function()
 			diff_overlay = not diff_overlay
 			gs.toggle_deleted(diff_overlay)
