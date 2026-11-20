@@ -1,8 +1,7 @@
 -- lua/config/keymaps/files.lua
 
--- File and directory keymaps, with a prompt that follows Emacs `find-file`:
--- relative paths resolve against the buffer's directory and a missing file is
--- created as soon as it is opened.
+-- File and directory keymaps, built around a prompt that follows Emacs
+-- `find-file`.
 --
 -- See: lua/lib/system.lua
 -- See: lua/config/commands.lua
@@ -51,7 +50,7 @@ local CANCEL = "\1<cancel>"
 
 ---Return the absolute path of the current file, or `nil` with a message when
 ---the buffer is not visiting one
----@return string?
+---@return string? path
 local function current_file()
 	if vim.bo.buftype ~= "" then
 		vim.notify("Not a file buffer: " .. vim.bo.buftype, vim.log.levels.WARN)
@@ -88,7 +87,7 @@ end
 ---Resolve a typed path against the directory the prompt started in
 ---@param path string
 ---@param base string
----@return string
+---@return string resolved
 local function resolve(path, base)
 	if path:match("^[/~$]") or path:match("^%a:[/\\]") then
 		return vim.fn.fnamemodify(vim.fn.expand(path), ":p")
@@ -98,7 +97,7 @@ end
 
 ---Return the directory the prompt starts in, which is the current file's
 ---directory, or the cwd for a buffer that is not visiting a file
----@return string
+---@return string dir
 local function base_dir()
 	if vim.bo.buftype == "" then
 		local name = vim.api.nvim_buf_get_name(0)
@@ -113,7 +112,7 @@ end
 ---relative paths against the directory of `default`
 ---@param prompt string Prompt text, without a trailing colon
 ---@param default string Pre-filled text, base for relative paths
----@return string? path Absolute path, `""` when empty, or `nil` when cancelled
+---@return string? path Absolute path, `""` when empty, `nil` on cancel
 local function read_path(prompt, default)
 	vim.cmd("echohl FilesPrompt")
 	local ok, result = pcall(vim.fn.input, {
@@ -137,14 +136,14 @@ end
 
 ---Ask a yes/no question on the command line, defaulting to no
 ---@param question string
----@return boolean
+---@return boolean accepted
 local function confirm(question)
 	return vim.fn.confirm(question, "&Yes\n&No", 2) == 1
 end
 
 ---Offer to create a missing directory and report whether it is usable
 ---@param dir string
----@return boolean
+---@return boolean usable
 local function ensure_dir(dir)
 	if vim.fn.isdirectory(dir) == 1 then
 		return true
@@ -204,8 +203,8 @@ local function rename_file()
 		return
 	end
 
-	-- `:saveas` cannot create the target directory, so it is offered here,
-	-- like the new file flow does.
+	-- `:saveas` cannot create the target directory, so it is offered
+	-- here, like the new file flow does.
 	if not ensure_dir(vim.fn.fnamemodify(new, ":h")) then
 		return
 	end
@@ -218,8 +217,8 @@ local function rename_file()
 		bang = "!"
 	end
 
-	-- `:saveas` keeps the current buffer and its undo, and leaves an empty
-	-- buffer for the old path, which is removed below.
+	-- `:saveas` keeps the current buffer and its undo, and leaves an
+	-- empty buffer for the old path, which is removed below.
 	if not pcall(vim.cmd, "saveas" .. bang .. " " .. vim.fn.fnameescape(new)) then
 		vim.notify("Failed to rename to: " .. new, vim.log.levels.ERROR)
 		return
@@ -279,17 +278,19 @@ local function reveal_in_explorer()
 	if os_name == "mac" then
 		vim.fn.system({ "open", "-R", file })
 	elseif os_name == "windows" then
-		-- explorer.exe parses the raw command line and needs backslashes, so
-		-- this goes through cmd.exe with a plain string instead of an argv list.
+		-- `explorer.exe` parses the raw command line and needs
+		-- backslashes, so this goes through `cmd.exe` with a plain
+		-- string instead of an argv list.
 		local win_path = file:gsub("/", "\\")
 		os.execute(string.format('start "" explorer.exe /select,"%s"', win_path))
 	else
-		-- xdg-open cannot select a file, so it opens the containing folder.
+		-- `xdg-open` cannot select a file, so it opens the
+		-- containing folder.
 		vim.fn.system({ "xdg-open", vim.fn.fnamemodify(file, ":h") })
 	end
 end
 
----Yank a `path:line` reference for the cursor position in the current file
+---Yank the path and the cursor line of the current file as a reference
 local function yank_file_line()
 	local path = vim.fn.expand("%:.")
 	if path == "" then
@@ -312,4 +313,4 @@ yank_map("<leader>yr", "%:.", "Yank relative file path")
 yank_map("<leader>yn", "%:t", "Yank file name")
 yank_map("<leader>yd", "%:p:h", "Yank containing directory path")
 
-map("n", "<leader>yl", yank_file_line, "Yank file:line reference")
+map("n", "<leader>yl", yank_file_line, "Yank file and line reference")
