@@ -1103,11 +1103,13 @@ function M.setup()
 	cmd("NotesDraft", M.new_draft, { desc = "Notes: quick draft" })
 	cmd("NotesCapture", M.capture, { desc = "Notes: quick task capture into TODO.md" })
 	cmd("NotesNew", M.new_note, { desc = "Notes: new note (pick type and title)" })
+
 	-- The command callback receives the command table, which M.daily would
 	-- take as the offset; discard it and open today's note.
 	cmd("NotesDaily", function()
 		M.daily()
 	end, { desc = "Notes: open today's daily note" })
+
 	cmd("NotesTemplate", M.template, { desc = "Notes: insert template into the current note" })
 	cmd("NotesFiles", M.find_files, { desc = "Notes: find notes by name" })
 	cmd("NotesGrep", M.grep, { desc = "Notes: search note contents" })
