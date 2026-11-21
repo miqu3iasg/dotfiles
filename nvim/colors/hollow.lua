@@ -36,6 +36,7 @@ local p = {
 	-- Surfaces
 	line = "#111111", -- cursorline, statusline, code blocks
 	popup_bg = "#0d0d0d",
+	completion_bg = "#141414", -- completion menu only
 	inlay_bg = "#0a0a0a",
 	surface = "#1c1c1c",
 	surface_hi = "#303030",
@@ -50,6 +51,13 @@ local p = {
 	error = "#b86a6a",
 	warn = "#b09b72",
 	ok = "#678a67",
+
+	-- Diagnostic backgrounds (very dark tint of each severity color)
+	error_bg = "#0f0505", -- dark red
+	warn_bg = "#0f0b03", -- dark amber
+	info_bg = "#070707", -- dark gray (matches the gray info color)
+	hint_bg = "#050505", -- darker gray (matches the comment color)
+	ok_bg = "#040d06", -- dark green
 
 	-- Search
 	search_fg = "#D6C17A",
@@ -165,20 +173,22 @@ local editor = {
 
 -- Popups and floating windows
 local popup = {
-	NormalFloat = { fg = p.fg, bg = p.popup_bg },
-	FloatBorder = { fg = p.border, bg = p.popup_bg },
-	FloatTitle = { fg = p.fg, bg = p.popup_bg },
-	FloatFooter = { fg = p.dim, bg = p.popup_bg },
+	-- Hover, documentation, diagnostics and other floats: pure black
+	NormalFloat = { fg = p.fg, bg = p.black },
+	FloatBorder = { fg = p.border, bg = p.black },
+	FloatTitle = { fg = p.fg, bg = p.black },
+	FloatFooter = { fg = p.dim, bg = p.black },
 
-	Pmenu = { fg = p.fg, bg = p.popup_bg },
+	-- Completion menu: the only popup lighter than the background
+	Pmenu = { fg = p.fg, bg = p.completion_bg },
 	PmenuSel = { fg = p.fg, bg = p.surface },
-	PmenuExtra = { fg = p.dim, bg = p.popup_bg },
+	PmenuExtra = { fg = p.dim, bg = p.completion_bg },
 	PmenuExtraSel = { fg = p.fg, bg = p.surface_hi },
-	PmenuKind = { fg = p.dim, bg = p.popup_bg },
+	PmenuKind = { fg = p.dim, bg = p.completion_bg },
 	PmenuKindSel = { fg = p.fg, bg = p.surface_hi },
-	PmenuMatch = { fg = p.white, bg = p.popup_bg, bold = true },
+	PmenuMatch = { fg = p.white, bg = p.completion_bg, bold = true },
 	PmenuMatchSel = { fg = p.white, bg = p.surface_hi, bold = true },
-	PmenuSbar = { bg = p.popup_bg },
+	PmenuSbar = { bg = p.completion_bg },
 	PmenuThumb = { bg = p.border },
 	WildMenu = { fg = p.fg, bg = p.surface_hi },
 }
@@ -280,10 +290,25 @@ local diagnostics = {
 	DiagnosticOk = { fg = p.ok },
 	DiagnosticUnnecessary = { fg = p.comment },
 
-	DiagnosticUnderlineError = { sp = p.error, undercurl = true },
-	DiagnosticUnderlineWarn = { sp = p.warn, undercurl = true },
-	DiagnosticUnderlineInfo = { sp = p.fg_alt, undercurl = true },
-	DiagnosticUnderlineHint = { sp = p.comment, undercurl = true },
+	-- Virtual text: same color as the sign, with a faint background
+	DiagnosticVirtualTextError = { fg = p.error, bg = p.error_bg },
+	DiagnosticVirtualTextWarn = { fg = p.warn, bg = p.warn_bg },
+	DiagnosticVirtualTextInfo = { fg = p.fg_alt, bg = p.info_bg },
+	DiagnosticVirtualTextHint = { fg = p.comment, bg = p.hint_bg },
+	DiagnosticVirtualTextOk = { fg = p.ok, bg = p.ok_bg },
+
+	-- Full-line background (used by `signs.linehl` in vim.diagnostic.config)
+	DiagnosticLineError = { bg = p.error_bg },
+	DiagnosticLineWarn = { bg = p.warn_bg },
+	DiagnosticLineInfo = { bg = p.info_bg },
+	DiagnosticLineHint = { bg = p.hint_bg },
+
+	-- Straight underline instead of curls
+	DiagnosticUnderlineError = { sp = p.error, underline = true },
+	DiagnosticUnderlineWarn = { sp = p.warn, underline = true },
+	DiagnosticUnderlineInfo = { sp = p.fg_alt, underline = true },
+	DiagnosticUnderlineHint = { sp = p.comment, underline = true },
+	DiagnosticUnderlineOk = { sp = p.ok, underline = true },
 
 	LspInlayHint = { fg = p.comment, bg = p.inlay_bg, italic = true },
 	LspReferenceText = { bg = p.surface },
