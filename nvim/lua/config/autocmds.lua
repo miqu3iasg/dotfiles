@@ -52,7 +52,12 @@ vim.api.nvim_create_autocmd("QuickFixCmdPost", {
 vim.api.nvim_create_autocmd("FileType", {
 	group = vim.api.nvim_create_augroup("no_auto_comment", {}),
 	desc = "Do not continue comments on new lines",
-	callback = function()
+	callback = function(ev)
+		-- The Java ftplugin adds `r` and `o` back, so the removal would undo it.
+		-- See: after/ftplugin/java.lua
+		if ev.match == "java" then
+			return
+		end
 		vim.opt_local.formatoptions:remove({ "c", "r", "o" })
 	end,
 })

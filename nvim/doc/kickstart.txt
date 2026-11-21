@@ -255,8 +255,9 @@ LANGUAGE SERVERS
     Server modules follow the UserLspServerModule contract in lua/language/types.lua: a `config` table for
     vim.lsp.config and an optional `on_attach(client, bufnr)` hook.
 
-    Java is special: jdtls is installed through Mason but started by its own module, lua/language/servers/jdtls.lua,
-    never by this stack, so the LSP toggle leaves it alone.
+    Java is special: jdtls is installed through Mason but started per buffer by its own module,
+    lua/language/servers/jdtls.lua, never by this stack. The LSP toggle starts and stops it separately, and the client
+    stops when its last Java buffer is closed.
 
     Other stack-wide decisions:
 

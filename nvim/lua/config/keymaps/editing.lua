@@ -134,6 +134,14 @@ km("n", "<leader>cn", [[*``"_cgn]], {
 	desc = "Change next occurrence of word under cursor (repeat with .)",
 })
 
+km("x", "<leader>cn", [[y/\V<C-r>=escape(@", '/\')<CR><CR>N"_cgn]], {
+	desc = "Change next occurrence of selection (repeat with .)",
+})
+
+km("n", "<BS>", function()
+	return vim.wo.spell and "mz[s1z=`z" or "<BS>"
+end, { expr = true, desc = "Fix previous misspelling with the first suggestion" })
+
 km({ "x", "o" }, "<Tab>", "%", {
 	remap = true,
 	desc = "Jump to matching pair",
@@ -145,7 +153,9 @@ km("n", "<leader>U", function()
 end, { desc = "Open undotree" })
 
 km("i", "<C-a>", "<Home>", { desc = "Beginning of line" })
-km("i", "<C-e>", "<End>", { desc = "End of line" })
+km("i", "<C-e>", function()
+	return vim.fn.pumvisible() == 1 and "<C-e>" or "<End>"
+end, { expr = true, desc = "End of line (or cancel completion)" })
 km("i", "<C-f>", "<Right>", { desc = "Forward char" })
 km("i", "<C-b>", "<Left>", { desc = "Backward char" })
 km("i", "<C-c>", "<C-o>zz", { desc = "Recenter" })

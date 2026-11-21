@@ -3,6 +3,9 @@
 -- Shared LSP setup for the server modules in `servers/`, which register
 -- themselves here, plus the toggle for the whole stack.
 --
+-- `jdtls` is outside `vim.lsp.enable`, so the toggle starts and stops it
+-- separately, and its module reads `enabled()` before starting.
+--
 -- Servers come from Mason; the JavaScript ones need Node.js and Java needs a JDK.
 --
 -- $ sudo pacman -S nodejs npm jdk-openjdk
@@ -13,6 +16,8 @@
 -- See: :help lsp
 
 -- A malformed module fails with the server name instead of a broken attach.
+local M = {}
+
 local types = require("language.types")
 
 -- `jdtls` is missing because nvim-jdtls starts it per buffer.
@@ -162,6 +167,12 @@ vim.lsp.enable(modules)
 
 local lsp_enabled = true
 
+---Whether the language servers are enabled.
+---@return boolean
+function M.enabled()
+	return lsp_enabled
+end
+
 ---Enable or disable every language server in `modules` at once.
 ---@param enable? boolean Force a state; omit to toggle.
 ---@return boolean enabled The new state.
@@ -174,11 +185,19 @@ local function toggle_lsp(enable)
 
 	if lsp_enabled then
 		vim.lsp.enable(modules)
+
+		-- `jdtls` is not started by `vim.lsp.enable`, so its open buffers are
+		-- started here.
+		for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+			if vim.api.nvim_buf_is_loaded(buf) and vim.bo[buf].filetype == "java" then
+				require("language.servers.jdtls").start(buf)
+			end
+		end
 	else
 		vim.lsp.enable(modules, false)
 
 		for _, client in ipairs(vim.lsp.get_clients()) do
-			if vim.tbl_contains(modules, client.name) then
+			if client.name == "jdtls" or vim.tbl_contains(modules, client.name) then
 				client:stop()
 			end
 		end
@@ -196,3 +215,5 @@ end, { desc = "Toggle LSP" })
 -- Linters load with the stack, so their toggle exists from the start.
 -- See: lua/language/lint.lua
 require("language.lint")
+
+return M

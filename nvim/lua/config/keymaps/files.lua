@@ -313,3 +313,5 @@ yank_map("<leader>yn", "%:t", "Yank file name")
 yank_map("<leader>yd", "%:p:h", "Yank containing directory path")
 
 map("n", "<leader>yl", yank_file_line, "Yank file and line reference")
+
+map("n", "gf", "gF", "Go to file under cursor, at the line after the colon")

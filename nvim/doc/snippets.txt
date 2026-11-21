@@ -28,11 +28,11 @@ THE TRIGGERS
         docd    deprecation notice, in the language's idiomatic syntax
         doce    example block, testable where the language supports it
 
-    Language files add triggers for constructs only they have: Java has docg for generic classes, docr for records and
-    docpkg for package-info.java, plus snippets for the standalone Javadoc tags; Go renders the package comment through
-    docm, the module-overview form, and adds snippets for the Go 1.19 doc comment syntax (headings and symbol links)
-    and for testable examples; Lua's docf adds @field lines with an optional scope, and its field concept lives on
-    annotations instead of one-line comments.
+    Language files add triggers for constructs only they have: Java has docg for generic classes, docgm for generic
+    methods, docr for records and docpkg for package-info.java, plus snippets for the standalone Javadoc tags (including
+    docsnip for {@snippet}); Go renders the package comment through docm, the module-overview form, and adds snippets
+    for the Go 1.19 doc comment syntax (headings and symbol links) and for testable examples; Lua's docf adds @field
+    lines with an optional scope, and its field concept lives on annotations instead of one-line comments.
 
 THE SHAPE OF A BLOCK
     Rules every doc block follows, in any language:

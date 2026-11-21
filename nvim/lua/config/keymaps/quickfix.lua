@@ -31,6 +31,7 @@ km("n", "]q", "<cmd>cnext<cr>zz", { desc = "Next quickfix item" })
 km("n", "[q", "<cmd>cprev<cr>zz", { desc = "Previous quickfix item" })
 km("n", "]Q", "<cmd>clast<cr>", { desc = "Last quickfix item" })
 km("n", "[Q", "<cmd>cfirst<cr>", { desc = "First quickfix item" })
+
 km("n", "<leader>q", function()
 	local qf_win = vim.fn.getqflist({ winid = 0 }).winid
 	if qf_win ~= 0 then
@@ -39,6 +40,7 @@ km("n", "<leader>q", function()
 		vim.cmd("copen")
 	end
 end, { desc = "Toggle quickfix list" })
+
 km("n", "<leader>s[", "<cmd>colder<cr>", { desc = "Older quickfix list" })
 km("n", "<leader>s]", "<cmd>cnewer<cr>", { desc = "Newer quickfix list" })
 

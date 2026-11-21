@@ -107,6 +107,7 @@ map({ "n", "x" }, "<localleader>lL", lists.action(lists.cycle, -1), "Cycle list 
 map({ "n", "x" }, "<localleader>lm", lists.action(lists.cycle_marker), "Cycle marker (- * + / . ))")
 map({ "n", "x" }, "<localleader>lr", lists.action(lists.renumber), "Renumber ordered list")
 map({ "n", "x" }, "<localleader>lx", lists.action(lists.clear), "Remove list formatting")
+-- TODO: add map to cycle among checkbox status like [/] [x] and so on
 
 map("i", ",", ",<C-g>u", "Break undo sequence at comma")
 map("i", ".", ".<C-g>u", "Break undo sequence at period")
@@ -244,6 +245,10 @@ local function shift_heading(delta)
 	end
 end
 
-map("n", "<localleader>hd", function() shift_heading(1) end, "Demote heading")
-map("n", "<localleader>hu", function() shift_heading(-1) end, "Promote heading")
+map("n", "<localleader>hd", function()
+	shift_heading(1)
+end, "Demote heading")
+map("n", "<localleader>hu", function()
+	shift_heading(-1)
+end, "Promote heading")
 map("n", "<localleader>cp", "<cmd>NotesCapture<cr>", "Capture task into TODO.md")

@@ -1,10 +1,13 @@
 -- lua/lib/search.lua
 
--- Project and buffer search through `:grep`, `:vimgrep` and `:lvimgrep`.
--- Call `setup()` once, then use the other functions from keymaps.
+-- Project and buffer search through `:grep`, `:vimgrep` and `:lvimgrep`, and
+-- actions on every match of the last search pattern. Call `setup()` once,
+-- then use the other functions from keymaps.
 --
+-- See: doc/lib.txt
 -- See: lua/config/keymaps/search.lua
 -- See: lua/config/autocmds.lua
+-- See: :help matchbufline()
 
 local M = {}
 
@@ -85,6 +88,72 @@ function M.vimgrep(pattern)
 	if not ok or #vim.fn.getqflist() == 0 then
 		vim.cmd("cclose")
 		vim.notify("No matches for: " .. pattern, vim.log.levels.WARN)
+	end
+end
+
+---Return the last search pattern, notifying when there is none
+---@return string|nil pattern
+local function last_pattern()
+	local pat = vim.fn.getreg("/")
+	if pat == "" then
+		vim.notify("No previous search pattern", vim.log.levels.WARN)
+		return nil
+	end
+	return pat
+end
+
+---Prefix a pattern with a case flag, so `matchbufline()` follows 'smartcase'
+---the way a search does, since the function itself ignores it
+---@param pat string
+---@return string
+local function with_case(pat)
+	if pat:find("\\[cC]") then
+		return pat
+	end
+	-- Uppercase letters after a backslash, such as `\S`, do not count.
+	local bare = pat:gsub("\\.", "")
+	if vim.o.ignorecase and not (vim.o.smartcase and bare:find("%u")) then
+		return "\\c" .. pat
+	end
+	return "\\C" .. pat
+end
+
+---Yank every match of the last search pattern into a register, one per line
+---Matches that span more than one line are not supported
+---@param reg? string Register name, `"` by default.
+function M.yank_matches(reg)
+	local pat = last_pattern()
+	if not pat then
+		return
+	end
+
+	local found = vim.fn.matchbufline(vim.api.nvim_get_current_buf(), with_case(pat), 1, "$")
+	if #found == 0 then
+		vim.notify("No matches", vim.log.levels.WARN)
+		return
+	end
+
+	local texts = vim.tbl_map(function(m)
+		return m.text
+	end, found)
+	vim.fn.setreg(reg or '"', texts, "l")
+	vim.notify(("Yanked %d matches"):format(#texts))
+end
+
+---Delete every match of the last search pattern in the buffer, keeping the
+---cursor, the jumplist and the search pattern untouched
+function M.delete_matches()
+	if not last_pattern() then
+		return
+	end
+
+	local view = vim.fn.winsaveview()
+	-- An empty pattern in `:s` means the last search pattern.
+	local ok, err = pcall(vim.cmd, "keeppatterns keepjumps %s///ge")
+	vim.fn.winrestview(view)
+
+	if not ok then
+		vim.notify(tostring(err), vim.log.levels.ERROR)
 	end
 end
 

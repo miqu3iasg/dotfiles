@@ -35,3 +35,10 @@ end, { desc = "Open command-line window" })
 km("c", "/", function()
 	return vim.fn.wildmenumode() == 1 and "<C-y>" or "/"
 end, { expr = true, desc = "Accept completion and keep going down the path" })
+
+-- Expands a star typed right after a double star into `/*`, which completes
+-- the recursive glob that `:find` and `:edit` accept.
+km("c", "*", function()
+	local before = vim.fn.getcmdline():sub(1, vim.fn.getcmdpos() - 1)
+	return before:match("%*%*$") and "/*" or "*"
+end, { expr = true, desc = "Third * in a row becomes **/*" })

@@ -75,8 +75,13 @@ THE LIBRARIES
         full command line shared with :Grep), `:vimgrep` with the Vim regex engine (M.vimgrep) and `:lvimgrep` on the
         current buffer (M.buffer_grep). The quickfix window is opened by the QuickFixCmdPost autocmd in
         config/autocmds.lua, never from here. M.setup only sets the GNU grep fallback for when ripgrep is missing, and
-        M.flash temporarily highlights positions without touching the search register. The keymaps call this from
-        config/keymaps/search.lua. API: M.setup, M.run, M.grep, M.vimgrep, M.buffer_grep, M.get_selection, M.flash.
+        M.flash temporarily highlights positions without touching the search register. It also acts on every match of
+        the last search pattern in the current buffer: M.yank_matches copies each match, one per line, into a register
+        (the unnamed one by default) and M.delete_matches removes them from the buffer, leaving the cursor, the jumplist
+        and the last search pattern as they were. Both follow 'ignorecase' and 'smartcase' as a search does, and
+        M.yank_matches handles only matches inside a single line. The keymaps call this from config/keymaps/search.lua.
+        API: M.setup, M.run, M.grep, M.vimgrep, M.buffer_grep, M.get_selection, M.flash, M.yank_matches,
+        M.delete_matches.
 
     exports
         Single source of truth for where exported documents go, used by the pandoc setup, so

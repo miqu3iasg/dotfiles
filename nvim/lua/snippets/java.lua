@@ -4,7 +4,8 @@
 -- Mirrored nodes keep related declarations in sync; indentation is four spaces.
 --
 -- See: doc/snippets.txt
--- See: https://docs.oracle.com/javase/8/docs/technotes/tools/windows/javadoc.html
+-- See: https://docs.oracle.com/en/java/javase/21/docs/specs/javadoc/doc-comment-spec.html
+-- See: https://www.oracle.com/java/technologies/javase/writing-doc-comments.html#orderoftags
 -- See: https://google.github.io/styleguide/javaguide.html#s7-javadoc
 
 local ls = require("luasnip")
@@ -14,6 +15,7 @@ local t = ls.text_node
 local i = ls.insert_node
 local f = ls.function_node
 local d = ls.dynamic_node
+local c = ls.choice_node
 
 ---Current file name without its extension, used as the default class name.
 ---@return string
@@ -416,10 +418,12 @@ return {
 		i(2, "Longer description: responsibilities, invariants, thread-safety, usage notes."),
 		t({ "", " *", " * @author " }),
 		i(3, "Miquéias Alves Medeiros"),
+		t({ "", " * @version " }),
+		i(4, "1.0"),
 		t({ "", " * @see " }),
-		i(4, "RelatedClass"),
+		i(5, "RelatedClass"),
 		t({ "", " * @since " }),
-		i(5, "1.0"),
+		i(6, "1.0"),
 		t({ "", " */", "" }),
 		i(0),
 	}),
@@ -430,16 +434,43 @@ return {
 		i(1, "Summary fragment ending with a period."),
 		t({ "", " *", " * <p>" }),
 		i(2, "Longer description: responsibilities, invariants, thread-safety, usage notes."),
+		t({ "", " *", " * @author " }),
+		i(3, "Miquéias Alves Medeiros"),
+		t({ "", " * @version " }),
+		i(4, "1.0"),
+		t({ "", " * @param <" }),
+		i(5, "T"),
+		t("> "),
+		i(6, "the type of ..."),
+		t({ "", " * @see " }),
+		i(7, "RelatedClass"),
+		t({ "", " * @since " }),
+		i(8, "1.0"),
+		t({ "", " */", "" }),
+		i(0),
+	}),
+
+	-- Documentation for a generic method: the type parameter's @param comes
+	-- before the value parameters.
+	s("docgm", {
+		t({ "/**", " * " }),
+		i(1, "Summary fragment ending with a period."),
+		t({ "", " *", " * <p>" }),
+		i(2, "Longer description: responsibilities, invariants, thread-safety, usage notes."),
 		t({ "", " *", " * @param <" }),
 		i(3, "T"),
 		t("> "),
 		i(4, "the type of ..."),
-		t({ "", " * @author " }),
-		i(5, "Miquéias Alves Medeiros"),
-		t({ "", " * @see " }),
-		i(6, "RelatedClass"),
-		t({ "", " * @since " }),
-		i(7, "1.0"),
+		t({ "", " * @param " }),
+		i(5, "paramName"),
+		t(" "),
+		i(6, "description"),
+		t({ "", " * @return " }),
+		i(7, "description"),
+		t({ "", " * @throws " }),
+		i(8, "IllegalArgumentException"),
+		t(" "),
+		i(9, "if ..."),
 		t({ "", " */", "" }),
 		i(0),
 	}),
@@ -448,55 +479,73 @@ return {
 	s("docr", {
 		t({ "/**", " * " }),
 		i(1, "Summary fragment ending with a period."),
-		t({ "", " *", " * @param " }),
-		i(2, "component"),
-		t(" "),
-		i(3, "description of the component"),
-		t({ "", " * @since " }),
+		t({ "", " *", " * <p>" }),
+		i(2, "Longer description: responsibilities, invariants, thread-safety, usage notes."),
+		t({ "", " *", " * @author " }),
+		i(3, "Miquéias Alves Medeiros"),
+		t({ "", " * @version " }),
 		i(4, "1.0"),
+		t({ "", " * @param " }),
+		i(5, "component"),
+		t(" "),
+		i(6, "description of the component"),
+		t({ "", " * @see " }),
+		i(7, "RelatedClass"),
+		t({ "", " * @since " }),
+		i(8, "1.0"),
 		t({ "", " */", "" }),
 		i(0),
 	}),
 
 	-- Method documentation with parameter, return, and exception tags.
 	-- The summary is a fragment such as "Returns the customer ID.".
+	-- Describe the contract, not the type: null policy, units, valid range,
+	-- side effects, and when each exception is thrown.
 	-- Remove the tags that do not apply.
 	s("doc", {
 		t({ "/**", " * " }),
 		i(1, "Summary fragment ending with a period."),
+		t({ "", " *", " * <p>" }),
+		i(2, "Longer description: responsibilities, invariants, thread-safety, usage notes."),
 		t({ "", " *", " * @param " }),
-		i(2, "paramName"),
+		i(3, "paramName"),
 		t(" "),
-		i(3, "description"),
+		i(4, "description"),
 		t({ "", " * @param " }),
-		i(4, "paramName"),
+		i(5, "paramName"),
 		t(" "),
-		i(5, "description"),
-		t({ "", " * @return " }),
 		i(6, "description"),
+		t({ "", " * @return " }),
+		i(7, "description"),
 		t({ "", " * @throws " }),
-		i(7, "IllegalArgumentException"),
+		i(8, "IllegalArgumentException"),
 		t(" "),
-		i(8, "if ..."),
+		i(9, "if ..."),
 		t({ "", " */", "" }),
 		i(0),
 	}),
 
 	-- Documentation for void methods and constructors (no @return tag).
+	-- Document the contract: null policy, units, valid range, side effects.
 	s("docv", {
 		t({ "/**", " * " }),
 		i(1, "Summary fragment ending with a period."),
+		t({ "", " *", " * <p>" }),
+		i(2, "Longer description: responsibilities, invariants, thread-safety, usage notes."),
 		t({ "", " *", " * @param " }),
-		i(2, "paramName"),
+		i(3, "paramName"),
 		t(" "),
-		i(3, "description"),
+		i(4, "description"),
 		t({ "", " * @throws " }),
-		i(4, "IllegalArgumentException"),
+		i(5, "IllegalArgumentException"),
 		t(" "),
-		i(5, "if ..."),
+		i(6, "if ..."),
 		t({ "", " */", "" }),
 		i(0),
 	}),
+
+	-- Extra @param line inside an existing doc block.
+	s("docp", { t("@param "), i(1, "paramName"), t(" "), i(2, "description"), i(0) }),
 
 	-- One-line documentation comment for fields and constants.
 	s("docf", { t("/** "), i(1, "Summary fragment."), t({ " */", "" }), i(0) }),
@@ -508,24 +557,33 @@ return {
 		i(1, "Summary fragment ending with a period."),
 		t({ "", " *", " * <p>" }),
 		i(2, "Overview of the package: what it contains and how the pieces fit together."),
-		t({ "", " *", " * @since " }),
-		i(3, "1.0"),
+		t({ "", " *", " * @author " }),
+		i(3, "Miquéias Alves Medeiros"),
+		t({ "", " * @version " }),
+		i(4, "1.0"),
+		t({ "", " * @see " }),
+		i(5, "RelatedClass"),
+		t({ "", " * @since " }),
+		i(6, "1.0"),
 		t({ "", " */", "package " }),
-		dynamic_default(4, get_package),
+		dynamic_default(7, get_package),
 		t(";"),
 		i(0),
 	}),
 
 	-- Deprecated documentation followed by the @Deprecated annotation.
 	-- The text says why the element is deprecated and what replaces it.
-	s("dep", {
+	-- Tab through to add forRemoval = true when the API will be removed.
+	s("docd", {
 		t({ "/**", " * " }),
 		i(1, "Summary fragment ending with a period."),
 		t({ "", " *", " * @deprecated " }),
 		i(2, "Use {@link Other} instead."),
 		t({ "", " */", '@Deprecated(since = "' }),
 		i(3, "1.0"),
-		t({ '")', "" }),
+		t('"'),
+		c(4, { t(""), t(", forRemoval = true") }),
+		t({ ")", "" }),
 		i(0),
 	}),
 
@@ -537,9 +595,17 @@ return {
 	s("val", { t("{@value "), i(1, "Class#CONSTANT"), t("}"), i(0) }),
 	s("inh", { t("{@inheritDoc}"), i(0) }),
 	s("seeref", { t("@see "), i(1, "Reference"), i(0) }),
+	s("hidden", { t("@hidden"), i(0) }),
+	s("serial", { t("@serial "), i(1, "field description"), i(0) }),
+	s("summary", { t("{@summary "), i(1), t("}"), i(0) }),
+	s("index", { t("{@index "), i(1, "word"), t(" "), i(2, "description"), t("}"), i(0) }),
+	s("systemprop", { t("{@systemProperty "), i(1, "property.name"), t("}"), i(0) }),
+
+	-- External, testable example for Java 18+; the file lives in snippet-files.
+	s("docsnip", { t('{@snippet file="'), i(1, "Example.java"), t('"}'), i(0) }),
 
 	-- Code example inside a Javadoc block. Keep the leading asterisks.
-	s("pre", {
+	s("doce", {
 		t({ "<pre>{@code", " * " }),
 		i(1, "example code"),
 		t({ "", " * }</pre>" }),

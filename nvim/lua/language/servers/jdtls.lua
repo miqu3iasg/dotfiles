@@ -5,10 +5,12 @@
 --
 -- nvim-jdtls starts it per buffer, unlike the other modules in `servers/`.
 -- The editor options and keymaps live in `after/ftplugin/java.lua`.
+-- The client stops with its last buffer, and the LSP toggle gates it.
 --
 -- :MasonInstall jdtls
 -- $ sudo pacman -S jdk21-openjdk maven
 --
+-- See: lua/language/init.lua
 -- See: after/ftplugin/java.lua
 -- See: https://github.com/mfussenegger/nvim-jdtls
 -- See: https://github.com/eclipse-jdtls/eclipse.jdt.ls
@@ -115,6 +117,10 @@ end
 ---Notifies instead of raising when the server or a JDK 21+ is missing.
 ---@param bufnr? integer Defaults to the current buffer.
 function M.start(bufnr)
+	if not require("language").enabled() then
+		return
+	end
+
 	if vim.fn.isdirectory(pkg .. "/jdtls") == 0 then
 		vim.notify("Run :MasonInstall jdtls", vim.log.levels.WARN)
 		return
@@ -241,6 +247,24 @@ function M.start(bufnr)
 	}
 
 	require("jdtls").start_or_attach(config)
+
+	-- The JVM stops with its last buffer, so it does not idle for the rest of
+	-- the session. Switching buffers keeps it, since the buffer stays loaded
+	-- and attached.
+	vim.api.nvim_create_autocmd({ "BufDelete", "BufWipeout" }, {
+		group = vim.api.nvim_create_augroup("JavaLspLifecycle", { clear = true }),
+		desc = "Java: stop jdtls when its last buffer is closed",
+		callback = function()
+			-- The buffer detaches after the event, so the check is deferred.
+			vim.schedule(function()
+				for _, client in ipairs(vim.lsp.get_clients({ name = "jdtls" })) do
+					if next(client.attached_buffers) == nil then
+						client:stop()
+					end
+				end
+			end)
+		end,
+	})
 
 	-- Reload the project configuration when a build file is saved.
 	vim.api.nvim_create_autocmd("BufWritePost", {

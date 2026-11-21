@@ -72,8 +72,8 @@ ADDING A LANGUAGE SERVER
 
         1.  Add the server name to the `modules` list in lua/language/init.lua. The order is meaningless.
         2.  Mason installs it at startup (scheduled). To install manually: `:MasonInstall <server>`.
-        3.  If the server is only ever started elsewhere (like jdtls), put it in `install_only` instead; the LSP toggle
-        leaves those alone.
+        3.  If the server is only ever started elsewhere (like jdtls), put it in `install_only` instead; the stack
+        ignores it, and any toggle has to handle its clients itself.
         4.  A malformed module fails startup with the server's name, thanks to the shape validation in types.lua; keep
         the contract exact.
 

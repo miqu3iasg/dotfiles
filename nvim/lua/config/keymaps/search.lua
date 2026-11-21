@@ -1,6 +1,7 @@
 -- lua/config/keymaps/search.lua
 
--- Scrolling, search navigation, highlights, grep and file pickers.
+-- Scrolling, search navigation, highlights, grep, matches of the last search
+-- and file pickers.
 --
 -- See: lua/config/options.lua
 -- See: lua/lib/search.lua
@@ -61,6 +62,19 @@ km("n", "<leader>eo", "<cmd>oldfiles<cr>:edit #<", { desc = "Pick recent file" }
 km("n", "<leader>em", "<cmd>marks<cr>:normal! `", { desc = "Pick mark" })
 km("n", "<leader>eh", ":help ", { desc = "Search help" })
 km("n", "<leader>eH", ":helpgrep ", { desc = "Grep in all help files" })
+
+km("n", "ym", function()
+	search.yank_matches(vim.v.register)
+end, { desc = "Yank all matches of last search (accepts a register)" })
+
+km("n", "cm", ":%s///g<Left><Left>", {
+	desc = "Substitute all matches of last search (type the replacement)",
+})
+
+km("n", "<leader>er", function()
+	local root = vim.fs.root(0, { ".git" }) or vim.fn.getcwd()
+	return ":edit " .. vim.fn.fnameescape(root) .. "/**/*"
+end, { expr = true, desc = "Edit file from project root" })
 
 km("n", "<leader>en", ":find ~/dotfiles/nvim/", { desc = "Find file in ~/dotfiles/nvim" })
 km("n", "<leader>es", ":find ~/dev/repos/studies/", { desc = "Find file in ~/dev/repos/studies" })
