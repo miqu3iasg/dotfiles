@@ -122,9 +122,17 @@ vim.api.nvim_create_autocmd("LspAttach", {
 })
 
 vim.diagnostic.config({
-	virtual_text = false,
+	virtual_text = { prefix = "" },
 	severity_sort = true,
 	underline = true,
+	signs = {
+		linehl = {
+			[vim.diagnostic.severity.ERROR] = "DiagnosticLineError",
+			[vim.diagnostic.severity.WARN] = "DiagnosticLineWarn",
+			[vim.diagnostic.severity.INFO] = "DiagnosticLineInfo",
+			[vim.diagnostic.severity.HINT] = "DiagnosticLineHint",
+		},
+	},
 	float = { border = vim.o.winborder },
 })
 
