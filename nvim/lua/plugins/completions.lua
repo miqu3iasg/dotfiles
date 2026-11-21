@@ -84,6 +84,9 @@ end
 ---@type table<integer, boolean>
 local completion_bufs = {}
 
+-- The toggle forces the popup on everywhere; off keeps the filetype default.
+local autotrigger_enabled = false
+
 ---Enable native LSP completion on `buf`, restricting only the automatic popup
 ---to `TRIGGER_FILETYPES` and skipping huge files.
 ---@param client vim.lsp.Client
@@ -101,7 +104,7 @@ local function maybe_enable(client, buf)
 
 	completion_bufs[buf] = true
 
-	local autotrigger = TRIGGER_FILETYPES[vim.bo[buf].filetype] == true
+	local autotrigger = autotrigger_enabled or TRIGGER_FILETYPES[vim.bo[buf].filetype] == true
 	vim.lsp.completion.enable(true, client.id, buf, { autotrigger = autotrigger })
 end
 
@@ -132,6 +135,47 @@ for _, client in ipairs(vim.lsp.get_clients()) do
 		maybe_enable(client, buf)
 	end
 end
+
+---Rebuild the completion handle of `buf`, since Neovim installs the autotrigger
+---autocmds only when the handle is first created.
+---@param buf integer
+local function apply_autotrigger(buf)
+	local autotrigger = autotrigger_enabled or TRIGGER_FILETYPES[vim.bo[buf].filetype] == true
+	local clients = vim.lsp.get_clients({ bufnr = buf, method = "textDocument/completion" })
+
+	-- All clients must go before any comes back, or the handle survives.
+	for _, client in ipairs(clients) do
+		vim.lsp.completion.enable(false, client.id, buf)
+	end
+	for _, client in ipairs(clients) do
+		vim.lsp.completion.enable(true, client.id, buf, { autotrigger = autotrigger })
+	end
+end
+
+---Force the automatic popup on, or restore the filetype default.
+---@param enable? boolean Force a state; omit to toggle.
+---@return boolean enabled The new state.
+local function toggle_autotrigger(enable)
+	if enable == nil then
+		autotrigger_enabled = not autotrigger_enabled
+	else
+		autotrigger_enabled = enable
+	end
+
+	for buf in pairs(completion_bufs) do
+		if vim.api.nvim_buf_is_valid(buf) then
+			apply_autotrigger(buf)
+		end
+	end
+
+	vim.notify("Completion popup " .. (autotrigger_enabled and "enabled" or "disabled"), vim.log.levels.INFO)
+
+	return autotrigger_enabled
+end
+
+vim.keymap.set("n", "<leader>uc", function()
+	toggle_autotrigger()
+end, { desc = "Toggle automatic completion popup" })
 
 -- Markdown stays out of `TRIGGER_FILETYPES`, so note-link completion comes
 -- from Obsidian's LSP only.
