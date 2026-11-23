@@ -16,6 +16,7 @@ local i = ls.insert_node
 local f = ls.function_node
 local d = ls.dynamic_node
 local c = ls.choice_node
+local h = require("lib.headers")
 
 ---Current file name without its extension, used as the default class name.
 ---@return string
@@ -595,6 +596,14 @@ return {
 	s("val", { t("{@value "), i(1, "Class#CONSTANT"), t("}"), i(0) }),
 	s("inh", { t("{@inheritDoc}"), i(0) }),
 	s("seeref", { t("@see "), i(1, "Reference"), i(0) }),
+	s("seel", {
+		t('@see <a href="'),
+		f(h.get_clipboard, {}),
+		t('">'),
+		i(1, "label"),
+		t("</a>"),
+		i(0),
+	}),
 	s("hidden", { t("@hidden"), i(0) }),
 	s("serial", { t("@serial "), i(1, "field description"), i(0) }),
 	s("summary", { t("{@summary "), i(1), t("}"), i(0) }),
