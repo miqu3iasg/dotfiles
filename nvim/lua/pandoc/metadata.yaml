@@ -17,7 +17,7 @@
 # keys such as pdf-engine belong in defaults files.
 #
 # See: lua/modules/pandoc.lua        the module that loads this file
-# See: doc/pandoc.txt                the export feature page
+# See: doc/pandoc.md                the export feature page
 lang: en-US
 # Page layout
 documentclass: article

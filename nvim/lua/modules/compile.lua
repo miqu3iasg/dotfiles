@@ -6,7 +6,7 @@
 -- State is per working directory, so a new compile kills the previous one.
 -- `setup()` must run once, and `init.lua` calls it at startup.
 --
--- See: doc/modules.txt
+-- See: doc/modules.md
 -- See: lua/config/autocmds.lua
 -- See: :help quickfix
 

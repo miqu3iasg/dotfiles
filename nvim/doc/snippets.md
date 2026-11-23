@@ -1,0 +1,102 @@
+# Snippets
+
+The documentation snippet standard of this configuration
+
+## Synopsis
+
+- `doc/snippets.md` — this page
+- `lua/snippets/common.lua` — file headers and shared helpers
+
+## Description
+
+The lua/snippets/ folder holds LuaSnip snippets, one file per filetype. Two families follow a standard that is shared across languages: the file headers in common.lua and the documentation blocks (the doc* snippets) in each language file. A trigger names a documentation concept, not a language syntax, so muscle memory carries from one language to the next; what changes per language is only how the concept renders in that language's official documentation style - Javadoc in Java, JSDoc in JavaScript, the Google style in Python, GoDoc in Go, kernel-doc in C, LuaLS annotations in Lua.
+
+The machinery the header snippets build on - comment styles, filename helpers and the header field constructors - lives in lib/headers.lua.
+
+## The triggers
+
+The doc triggers, and what each one expands to in any language:
+
+- `doc` — function or method documentation, above the declaration
+- `docv` — the same, for declarations without a return value
+- `docc` — class, interface, struct or type documentation
+- `docm` — module or package overview, at the top of the file
+- `docf` — one-line comment for a field, attribute or constant
+- `docp` — an extra parameter line inside an existing doc block
+- `docd` — deprecation notice, in the language's idiomatic syntax
+- `doce` — example block, testable where the language supports it
+
+Language files add triggers for constructs only they have: Java has docg for generic classes, docgm for generic methods, docr for records and docpkg for package-info.java, plus snippets for the standalone Javadoc tags (including docsnip for {@snippet}); Go renders the package comment through docm, the module-overview form, and adds snippets for the Go 1.19 doc comment syntax (headings and symbol links) and for testable examples; Lua's docf adds @field lines with an optional scope, and its field concept lives on annotations instead of one-line comments.
+
+## The shape of a block
+
+Rules every doc block follows, in any language:
+
+- The first line is a summary in the style the language prescribes: a summary fragment ending with a period in Javadoc, a full sentence starting with the identifier name in Go, a short description in Python.
+- Tags and sections appear in the order the official style lists them, and the block carries only the tags that apply: the tag lines that do not apply are deleted after expansion.
+- Types appear in placeholders where the style requires them: `{type}` in JSDoc, `type` in LuaLS annotations.
+- The block ends with a line break so the declaration it documents sits right below it.
+- The final cursor position (i(0)) is outside the comment, on the declaration.
+- Placeholders are English. The author appears only in file headers; Java keeps `@author` because Javadoc convention expects it there.
+
+## File headers
+
+common.lua provides four file headers. They expand to the buffer's filetype comment style and adapt their usage block to the language:
+
+- `head` — personal file header: File, Author, Created, Description, and an editable SPDX line
+- `shead` — header for code written while studying a book or article: the identification fields, the source metadata (Source, By, Location), the usage block, the description and the license block
+- `ehead` — header for exercises: the shead fields plus a problem statement and a reference list
+- `ahead` — proprietary header: a Google-style copyright line, the description and a proprietary SPDX identifier
+
+The header layout, in field order: identification, context, usage, description, license:
+
+```
+File:        main.c
+Author:      Miquéias Alves Medeiros <https://github.com/miqu3iasg>
+Created:     2026-11-14
+
+Usage:
+  Compile:  $ gcc -Wall -Wextra -Wpedantic -std=c23 main.c -o main
+  Run:      $ ./main
+
+Description: what the file does and why it exists
+
+SPDX-License-Identifier: AGPL-3.0-only
+Copyright:   Copyright (c) 2026 Miquéias Alves Medeiros.
+```
+
+Rules the headers follow:
+
+- There is no Modified field: modification dates are the version control system's job.
+- The SPDX line is the last field, editable on the first jump. Study and personal headers default to AGPL-3.0-only; the proprietary header defaults to LicenseRef-Proprietary.
+- The usage block is a `Usage:` title with `Compile:` and `Run:` labels aligned with each other, each command prefixed by `$ `. Java keeps its own aligned labels, `Compilation:` and `Execution:`, without the title. A filetype without a usage entry gets the title plus an editable placeholder.
+- In `ahead` the copyright line opens the header, Google proprietary style: `Copyright (c) YEAR HOLDER. All rights reserved.`
+
+Supporting snippets around the headers: `shb` for a shebang line (Python headers are docstrings only, so the interpreter line comes from this snippet), `spdx` for a standalone license line, `see` and `seec` for `See:` references (the latter pasting the clipboard), `path` for the file path, `refs` and `drefs` for reference lists, and `mail`, `gh` and `author` for contact fields.
+
+## Per language
+
+Each language file renders the standard with its official style, documented in its header together with the source of the format:
+
+- `lua/snippets/java.lua` — Javadoc (Oracle) + Google Java Style
+- `lua/snippets/python.lua` — PEP 257 + Google Style section 3.8
+- `lua/snippets/c.lua` — Linux kernel-doc
+- `lua/snippets/lua.lua` — LuaLS annotations (LuaCATS)
+- `lua/snippets/sql.lua` — plain SQL comments, plus schema/migration blocks
+
+The other snippet files (lisp, markdown) hold snippets of their own kind and do not implement this standard.
+
+## Files
+
+- `lua/snippets/common.lua` — file headers, SPDX, shebangs, references and helpers
+- `lua/snippets/<ft>.lua` — snippets per filetype, including the doc blocks
+- `lua/lib/headers.lua` — the header machinery the snippets build on
+- `lua/plugins/completions.lua` — loads the snippet modules lazily by filetype
+
+## See also
+
+- [documentation](./documentation.md)
+- [development](./development.md)
+- [kickstart](./kickstart.md)
+- [lib](./lib.md)
+- [modules](./modules.md)

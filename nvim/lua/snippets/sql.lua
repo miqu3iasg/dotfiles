@@ -3,7 +3,7 @@
 -- SQL snippets for queries, joins, clauses, schema changes and comments, with
 -- upper-case keywords and four-space indentation.
 --
--- See: doc/snippets.txt
+-- See: doc/snippets.md
 -- See: https://github.com/sql-formatter-org/sql-formatter
 
 local ls = require("luasnip")

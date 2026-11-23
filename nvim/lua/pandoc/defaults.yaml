@@ -11,7 +11,7 @@
 #
 # See: https://pandoc.org/MANUAL.html#default-files
 # See: lua/modules/pandoc.lua        the module that loads this file
-# See: doc/pandoc.txt                the export feature page
+# See: doc/pandoc.md                the export feature page
 #
 # Markdown extensions enabled for notes:
 #

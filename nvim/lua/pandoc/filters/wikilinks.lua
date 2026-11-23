@@ -6,7 +6,7 @@
 -- Image embeds are rewritten earlier in lua/modules/pandoc.lua, because Pandoc
 -- does not parse them reliably.
 --
--- See: doc/pandoc.txt
+-- See: doc/pandoc.md
 -- See: https://pandoc.org/lua-filters.html
 
 ---@class pandoc.Inline

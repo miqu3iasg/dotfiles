@@ -5,7 +5,7 @@
 --
 -- The verdict is cached in `vim.b.bigfile` and never recomputed.
 --
--- See: doc/lib.txt
+-- See: doc/lib.md
 -- See: lua/plugins/completions.lua
 
 local M = {}

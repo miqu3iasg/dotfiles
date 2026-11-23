@@ -6,7 +6,7 @@
 -- Comment styles and header builders come from lib/headers.lua, which owns the
 -- filename and field logic this file only wires into snippets.
 --
--- See: doc/snippets.txt
+-- See: doc/snippets.md
 -- See: lua/lib/headers.lua
 -- See: https://spdx.dev/ids/
 

@@ -4,7 +4,7 @@
 -- actions on every match of the last search pattern. Call `setup()` once,
 -- then use the other functions from keymaps.
 --
--- See: doc/lib.txt
+-- See: doc/lib.md
 -- See: lua/config/keymaps/search.lua
 -- See: lua/config/autocmds.lua
 -- See: :help matchbufline()

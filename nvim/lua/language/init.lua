@@ -11,7 +11,7 @@
 -- $ sudo pacman -S nodejs npm jdk-openjdk
 -- :MasonInstall clangd css-lsp emmet-language-server eslint-lsp html-lsp lua-language-server marksman pyright tailwindcss-language-server vtsls jdtls
 --
--- See: doc/kickstart.txt
+-- See: doc/kickstart.md
 -- See: lua/language/lint.lua
 -- See: :help lsp
 

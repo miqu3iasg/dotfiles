@@ -6,8 +6,8 @@
 -- The root comes from `M.markers`, falling back to the note's folder, or from
 -- `vim.g.exports_root`. An unnamed buffer counts as `scratch`.
 --
--- See: doc/lib.txt
--- See: doc/pandoc.txt
+-- See: doc/lib.md
+-- See: doc/pandoc.md
 
 local M = {}
 

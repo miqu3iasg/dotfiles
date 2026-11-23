@@ -7,7 +7,7 @@
 -- The content survives because the buffer is hidden, not wiped. Special
 -- buffers get a vertical split instead of being replaced.
 --
--- See: doc/modules.txt
+-- See: doc/modules.md
 -- See: lua/config/keymaps/buffers.lua
 
 local M = {}

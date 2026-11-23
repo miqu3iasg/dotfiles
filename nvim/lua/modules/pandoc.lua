@@ -6,7 +6,7 @@
 -- $ sudo pacman -S pandoc-cli zathura zathura-pdf-mupdf xdg-utils
 -- $ sudo pacman -S texlive-xetex texlive-latex texlive-latexextra texlive-latexrecommended texlive-fontsrecommended texlive-langportuguese
 --
--- See: doc/pandoc.txt
+-- See: doc/pandoc.md
 -- See: lua/lib/exports.lua
 -- See: lua/pandoc/defaults.yaml
 -- See: https://pandoc.org/MANUAL.html

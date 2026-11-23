@@ -3,7 +3,7 @@
 -- Global autocmds for window layout, editing conveniences, searches, big
 -- files, startup, sessions and utility buffers.
 --
--- See: doc/kickstart.txt
+-- See: doc/kickstart.md
 -- See: lua/modules/sessions.lua
 -- See: :help autocmd
 

@@ -3,7 +3,7 @@
 -- Python snippets for practice problem scaffolding and Google-style
 -- docstrings with Args, Returns, Yields and Raises sections.
 --
--- See: doc/snippets.txt
+-- See: doc/snippets.md
 -- See: https://peps.python.org/pep-0257/
 -- See: https://google.github.io/styleguide/pyguide.html#s38-comments-and-docstrings
 

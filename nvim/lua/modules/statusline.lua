@@ -7,7 +7,7 @@
 -- Segment functions are exposed as the global `StlLine`, because the
 -- statusline string calls them through `v:lua`. `setup()` must run once.
 --
--- See: doc/modules.txt
+-- See: doc/modules.md
 -- See: lua/modules/window_zoom.lua
 -- See: :help 'statusline'
 

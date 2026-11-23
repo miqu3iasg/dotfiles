@@ -6,7 +6,7 @@
 -- The markers and the cycle order come from `vim.g.markdown_list_*`, with
 -- buffer-local `vim.b` overrides.
 --
--- See: doc/modules.txt
+-- See: doc/modules.md
 -- See: lua/plugins/formatting.lua
 -- See: after/ftplugin/markdown.lua
 

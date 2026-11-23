@@ -3,7 +3,7 @@
 -- Entry point of the config. It loads options, keymaps, autocmds, filetypes,
 -- commands, the eager plugins and the modules, in that order.
 --
--- See: doc/structure.txt
+-- See: doc/structure.md
 
 vim.loader.enable()
 vim.deprecate = function() end

@@ -6,7 +6,7 @@
 -- Formatting runs only when neither `g:disable_autoformat` nor
 -- `b:disable_autoformat` is set.
 --
--- See: doc/lib.txt
+-- See: doc/lib.md
 
 local M = {}
 
