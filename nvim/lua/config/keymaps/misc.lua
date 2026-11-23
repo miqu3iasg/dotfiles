@@ -54,6 +54,16 @@ map("n", "<leader>vg", function()
 	vim.wo.signcolumn = vim.wo.signcolumn == "no" and "yes" or "no"
 end, "Toggle sign column")
 
+map("n", "<leader>vb", function()
+	if vim.g.colors_name == "solarized" then
+		vim.o.background = "dark"
+		vim.cmd.colorscheme("hollow")
+	else
+		vim.o.background = "light"
+		vim.cmd.colorscheme("solarized")
+	end
+end, "Toggle light/dark colorscheme")
+
 map("n", "<leader>vh", function()
 	vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled({ bufnr = 0 }), { bufnr = 0 })
 end, "Toggle inlay hints (buffer)")
