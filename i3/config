@@ -1,95 +1,42 @@
 # i3 config file (v4)
 #
 # Please see https://i3wm.org/docs/userguide.html for a complete reference!
+#
+# The i3 window manager configuration.
+#
+# See: i3/scripts/i3gaps.sh
+# See: i3/scripts/monitor-setup.sh
+# See: i3/scripts/statusbar.sh
 
 set $mod Mod1
 set $mod2 Mod4
+
+# Paths used by the keybindings below. Variables are expanded textually
+# by i3 before the config is parsed, so they can be used inside `exec`
+# strings. See: https://i3wm.org/docs/userguide.html#variables
+set $bin /home/miqu3iasg/.local/bin
+set $scripts ~/.config/i3/scripts
 
 # Font
 # font pango:JetBrainsMono Nerd Font 10
 font xft:URWGothic-Book 10
 
-# blue litht filter
-# exec --no-startup-id redshift -O 4000
-
-# Start XDG autostart .desktop files using dex.
-exec --no-startup-id dex --autostart --environment i3
-
-# Clipboard manager daemon
-# exec --no-startup-id greenclip daemon
-
-# xss-lock grabs a logind suspend inhibit lock and will use i3lock to lock
-# the screen before suspend.
-exec --no-startup-id xss-lock --transfer-sleep-lock -- i3lock --nofork
-
-# NetworkManager applet.
-exec --no-startup-id nm-applet
-
-# Notification daemon
-exec --no-startup-id dunst
-
-# Vicinae server
-exec --no-startup-id vicinae server
-
-# Password vault used by vpn
-# exec --no-startup-id /usr/bin/gnome-keyring-daemon --start --components=secrets
-
-# Starts VPN
-# exec --no-startup-id sh -c "sleep 5 && protonvpn-app"
-
-# Disable screen blanking and DPMS.
-exec --no-startup-id xset s off -dpms s noblank
-
-# Audio controls
-set $refresh_i3status killall -SIGUSR1 i3status
-
-bindsym XF86AudioRaiseVolume exec --no-startup-id \
-    pactl set-sink-volume @DEFAULT_SINK@ +10% && $refresh_i3status
-
-bindsym XF86AudioLowerVolume exec --no-startup-id \
-    pactl set-sink-volume @DEFAULT_SINK@ -10% && $refresh_i3status
-
-bindsym XF86AudioMute exec --no-startup-id \
-    pactl set-sink-mute @DEFAULT_SINK@ toggle && $refresh_i3status
-
-bindsym XF86AudioMicMute exec --no-startup-id \
-    pactl set-source-mute @DEFAULT_SOURCE@ toggle && $refresh_i3status
-
-# Brightness controls
-bindsym XF86MonBrightnessUp exec --no-startup-id \
-    brightnessctl set +10% && $refresh_i3status
-
-bindsym XF86MonBrightnessDown exec --no-startup-id \
-    brightnessctl set 10%- && $refresh_i3status
-
-# Window behavior
-floating_modifier $mod
-tiling_drag modifier titlebar
-popup_during_fullscreen leave_fullscreen
-
-focus_follows_mouse no
-focus_on_window_activation urgent
-no_focus [tiling_from=auto]
-
+# Borders and gaps
+default_border pixel 1
+default_floating_border pixel 1
 hide_edge_borders smart
-# hide_edge_borders both
+title_align center
 
 gaps inner 0
 gaps outer 0
 smart_gaps off
 
-# default_border normal
-# default_floating_border normal 0
+# Runs a script that toggles the gaps at runtime, since the
+# values above start the session with gaps disabled.
+bindsym $mod+g exec --no-startup-id $scripts/i3gaps.sh
 
-default_border pixel 1
-default_floating_border pixel 1
-
-title_align center
-
-# Ao trocar de workspace pela segunda vez, volta pra anterior (toggle)
-workspace_auto_back_and_forth yes
-
-# Colors: pure black, minimalist, low contrast
+# Colors
+# See: https://i3wm.org/docs/userguide.html#_changing_colors
 # class                 border      background  text        indicator   child_border
 client.focused          #2a2a2a     #242424     #a8a8a8     #2a2a2a     #1c1c1c
 client.focused_inactive #1e1e1e     #181818     #707070     #1e1e1e     #101010
@@ -99,23 +46,171 @@ client.placeholder      #000000     #000000     #222222     #000000     #000000
 
 client.background       #000000
 
-# Resize
+# Autostart
+#
+# `--no-startup-id` is used on every daemon so i3 does not wait for it to
+# map a window before continuing. Daemons use `exec` so they are started
+# once per session and not again on every reload.
+# See: https://i3wm.org/docs/userguide.html#exec
 
+# Start XDG autostart .desktop files using dex.
+exec --no-startup-id dex --autostart --environment i3
+
+# xss-lock grabs a logind suspend inhibit lock and will use i3lock to lock
+# the screen before suspend. The `xset` call right after it keeps the
+# screen on, so locking happens only on suspend and never after idle.
+# See: https://man.archlinux.org/man/xss-lock.1
+exec --no-startup-id xss-lock --transfer-sleep-lock -- i3lock --nofork
+exec --no-startup-id xset s off -dpms s noblank
+
+exec --no-startup-id nm-applet
+exec --no-startup-id dunst
+exec --no-startup-id vicinae server
+exec --no-startup-id copyq --start-server
+# exec --no-startup-id greenclip daemon
+
+# The terminal used by the scratchpad described further below, and the
+# notifier for the pomodoro script.
+exec --no-startup-id tmuxdd
+exec --no-startup-id $bin/pomo.sh notify
+
+# blue light filter
+# exec --no-startup-id redshift -O 4000
+
+# Swaps Caps Lock and Ctrl. This is `exec_always` because a restart of i3
+# or a keyboard replug can reset the layout options.
+exec_always --no-startup-id setxkbmap -option ctrl:swapcaps
+
+# `exec` (not `exec_always`): runs once per session, so it does not reset
+# the wallpaper or call `autorandr`/`feh` on every `$mod+Shift+r` reload.
+exec --no-startup-id $scripts/monitor-setup.sh
+
+# Polybar
+# exec_always --no-startup-id ~/.config/polybar/launch.sh
+
+# Window behavior
+#
+# Focus never follows the mouse, and a window that asks for attention
+# only gets the urgent hint instead of stealing focus. Windows opened
+# automatically in the tiling layout do not take focus either.
+# See: https://i3wm.org/docs/userguide.html#_focus_follows_mouse
+# See: https://i3wm.org/docs/userguide.html#_focus_on_window_activation
+# See: https://i3wm.org/docs/userguide.html#_no_focus
+floating_modifier $mod
+tiling_drag modifier titlebar
+popup_during_fullscreen leave_fullscreen
+
+focus_follows_mouse no
+focus_on_window_activation urgent
+no_focus [tiling_from=auto]
+
+# Pressing the key of the current workspace jumps back to the previous
+# one. See: https://i3wm.org/docs/userguide.html#_workspace_auto_back_and_forth
+workspace_auto_back_and_forth yes
+
+# Window rules
+#
+# Dialogs, pop-ups and small utility windows float, and anything that
+# floats on its own is centered. The order matters here: the centering
+# rule has to come after the rules that make windows float.
+# See: https://i3wm.org/docs/userguide.html#for_window
+for_window [class="(?i)copyq"] floating enable
+for_window [class="(?i)pavucontrol"] floating enable
+for_window [class="(?i)blueman-manager"] floating enable
+for_window [class="(?i)nm-connection-editor"] floating enable
+for_window [window_role="pop-up"] floating enable
+for_window [window_role="task_dialog"] floating enable
+for_window [window_type="dialog"] floating enable
+for_window [class="(?i)zen" window_type="dialog"] floating enable
+for_window [floating_from="auto"] move position center
+
+# Music and chat live together on workspace 5.
+# See: https://i3wm.org/docs/userguide.html#assign_workspace
+assign [class="(?i)spotify"] $ws5
+assign [class="(?i)discord"] $ws5
+
+# for_window [class=".*"] title_format "%title"
+
+# Layout
+#
+# New workspaces start tabbed, with vertical splits as the default
+# orientation. `$mod+w` and `$mod+v` choose the direction of the next
+# split, and `$mod+y` toggles it.
+workspace_layout tabbed
+default_orientation vertical
+
+bindsym $mod+w split h
+bindsym $mod+v split v
+bindsym $mod+y split toggle
+
+bindsym $mod+Shift+y layout stacking
+bindsym $mod+Shift+w layout tabbed
+bindsym $mod+Shift+s layout toggle split
+bindsym $mod+Shift+t layout toggle splith tabbed
+
+bindsym $mod+space focus mode_toggle
+bindsym $mod+Shift+space floating toggle, resize set 1200 px 700 px, move position center
+bindsym $mod+t floating disable
+bindsym $mod+f fullscreen toggle
+
+bindsym $mod+q kill
+
+# Focus
+bindsym $mod+h focus left
+bindsym $mod+j focus down
+bindsym $mod+k focus up
+bindsym $mod+l focus right
+
+bindsym $mod+Ctrl+a focus parent
+
+# Jump to the most recent window that raised the urgent hint.
+bindsym $mod+Ctrl+i [urgent=latest] focus
+
+# Cycle between the tabs of a tabbed or stacked container.
+bindsym $mod+Tab focus next sibling
+bindsym $mod+Shift+Tab focus prev sibling
+
+# Focus the other monitor. The external monitor sits above the laptop, so
+# the directions are up and down instead of left and right.
+bindsym $mod+Ctrl+j focus output down
+bindsym $mod+Ctrl+k focus output up
+
+# Move windows
+bindsym $mod+Shift+h move left
+bindsym $mod+Shift+j move down
+bindsym $mod+Shift+k move up
+bindsym $mod+Shift+l move right
+
+bindsym $mod+Shift+Left move left
+bindsym $mod+Shift+Down move down
+bindsym $mod+Shift+Up move up
+bindsym $mod+Shift+Right move right
+
+# Moves only the window to the other monitor, leaving its workspace where
+# it is. To move a whole workspace, see the workspace section below.
+bindsym $mod+Ctrl+Shift+j move container to output down
+bindsym $mod+Ctrl+Shift+k move container to output up
+
+# Resize
+#
+# Two ways to resize. The binding mode is for longer adjustments, and the
+# direct bindings on `$mod+u/i/o/p` are for a single nudge. The direct ones
+# try to shrink first and fall back to growing the opposite edge, so each
+# key moves the same edge no matter where the window sits in the layout.
+# See: https://i3wm.org/docs/userguide.html#_resizing_containers_windows
 set $resize i3-msg resize
 set $resize_size 2 px or 2 ppt
 
-
-# Resize mode
 mode "resize" {
-    bindsym h resize shrink width 2 px or 2 ppt
-    bindsym l resize grow width 2 px or 2 ppt
-    bindsym k resize grow height 2 px or 2 ppt
-    bindsym j resize shrink height 2 px or 2 ppt
+    bindsym h resize shrink width $resize_size
+    bindsym l resize grow width $resize_size
+    bindsym k resize grow height $resize_size
+    bindsym j resize shrink height $resize_size
 
-    bindsym Left resize shrink width 2 px or 2 ppt
-    bindsym Right resize grow width 2 px or 2 ppt
-    bindsym Up resize grow height 2 px or 2 ppt
-    bindsym Down resize shrink height 2 px or 2 ppt
+    bindsym Left resize shrink width $resize_size
+    bindsym Right resize grow width $resize_size
+    bindsym Up resize grow height $resize_size
+    bindsym Down resize shrink height $resize_size
 
     bindsym Return mode "default"
     bindsym Escape mode "default"
@@ -123,10 +218,6 @@ mode "resize" {
 
 bindsym $mod+r mode "resize"
 
-# Toggle gaps
-bindsym $mod+g exec --no-startup-id ~/.config/i3/scripts/i3gaps.sh
-
-# Direct resize (mod+u/i/o/p)
 bindsym $mod+u exec --no-startup-id \
     $resize shrink right $resize_size &>/dev/null || \
     $resize grow left $resize_size
@@ -143,82 +234,12 @@ bindsym $mod+p exec --no-startup-id \
     $resize grow right $resize_size &>/dev/null || \
     $resize shrink left $resize_size
 
-# Pause mode
-
-mode "pause" {
-    bindsym $mod+Shift+p mode "default"
-}
-
-bindsym $mod+Shift+p mode "pause"
-
-# Focus
-
-bindsym $mod+h focus left
-bindsym $mod+j focus down
-bindsym $mod+k focus up
-bindsym $mod+l focus right
-
-bindsym Control+Left focus left
-bindsym Control+Down focus down
-bindsym Control+Up focus up
-bindsym Control+Right focus right
-
-# Focus parent
-bindsym $mod+Ctrl+a focus parent
-
-# Focus latest urgent window
-bindsym $mod+Ctrl+i [urgent=latest] focus
-
-# Focus monitor
-bindsym $mod+Ctrl+j focus output down
-bindsym $mod+Ctrl+k focus output up
-
-# Move windows
-
-bindsym $mod+Shift+h move left
-bindsym $mod+Shift+j move down
-bindsym $mod+Shift+k move up
-bindsym $mod+Shift+l move right
-
-bindsym $mod+Shift+Left move left
-bindsym $mod+Shift+Down move down
-bindsym $mod+Shift+Up move up
-bindsym $mod+Shift+Right move right
-
-# Move the window directly to the other monitor (without moving the entire workspace)
-bindsym $mod+Ctrl+Shift+j move container to output down
-bindsym $mod+Ctrl+Shift+k move container to output up
-
-
-# Split / Layout
-
-workspace_layout tabbed
-default_orientation vertical
-
-bindsym $mod+w split h
-bindsym $mod+v split v
-
-bindsym $mod+y split toggle
-
-bindsym $mod+space focus mode_toggle
-
-bindsym $mod+Shift+space floating toggle, resize set 1200 px 700 px, move position center
-
-bindsym $mod+t floating disable
-
-bindsym $mod+f fullscreen toggle
-
-bindsym $mod+Shift+y layout stacking
-bindsym $mod+Shift+w layout tabbed
-bindsym $mod+Shift+s layout toggle split
-bindsym $mod+Shift+t layout toggle splith tabbed
-
-# Window management
-
-bindsym $mod+q kill
-
-# Workspace navigation
-
+# Workspaces
+#
+# Workspaces 1 to 3 prefer the external monitor and fall back to the
+# laptop screen when it is not connected. The remaining ones stay on the
+# laptop.
+# See: https://i3wm.org/docs/userguide.html#_automatically_putting_workspaces_on_specific_screens
 set $ws1 "1"
 set $ws2 "2"
 set $ws3 "3"
@@ -229,25 +250,13 @@ set $ws7 "7"
 set $ws8 "8"
 set $ws9 "9"
 
-# Next / previous / recent workspace (global, spans all monitors)
-bindsym $mod+n workspace next
-bindsym $mod+a workspace prev
-bindsym $mod+d workspace back_and_forth
+workspace 1 output HDMI-1 eDP-1
+workspace 2 output HDMI-1 eDP-1
+workspace 3 output HDMI-1 eDP-1
+workspace 4 output eDP-1
+workspace 5 output eDP-1
+workspace 6 output eDP-1
 
-# Next / previous workspace apenas no monitor focado
-bindsym $mod+Ctrl+n workspace next_on_output
-bindsym $mod+Ctrl+Shift+a workspace prev_on_output
-
-# Move current container to previous workspace
-bindsym $mod+Shift+d \
-    move container to workspace back_and_forth; \
-    workspace back_and_forth
-
-# Cycle between siblings (tabs of a tabbed/stacked container)
-bindsym $mod+Tab focus next sibling
-bindsym $mod+Shift+Tab focus prev sibling
-
-# Switch workspace
 bindsym $mod+1 workspace number $ws1
 bindsym $mod+2 workspace number $ws2
 bindsym $mod+3 workspace number $ws3
@@ -258,45 +267,38 @@ bindsym $mod+7 workspace number $ws7
 bindsym $mod+8 workspace number $ws8
 bindsym $mod+9 workspace number $ws9
 
-# Move workspace between monitors
-## (in my current setup, my external monitor is above the laptop, hence up/down instead of left/right)
+# `next` and `prev` span all monitors, while the `_on_output` variants
+# stay on the focused one.
+bindsym $mod+n workspace next
+bindsym $mod+a workspace prev
+bindsym $mod+d workspace back_and_forth
+
+bindsym $mod+Ctrl+n workspace next_on_output
+bindsym $mod+Ctrl+Shift+a workspace prev_on_output
+
+# Moves the whole workspace to the other monitor. Same geometry as above:
+# the external monitor is over the laptop, hence up and down. `$mod+Shift+f`
+# and `$mod+Shift+Ctrl+s` do the same thing.
 bindsym $mod+Shift+a move workspace to output up
 bindsym $mod+Shift+f move workspace to output down
 bindsym $mod+Shift+Ctrl+s move workspace to output down
 
+# Moves the focused container to a workspace and follows it there.
+bindsym $mod+Shift+1 move container to workspace number $ws1; workspace number $ws1
+bindsym $mod+Shift+2 move container to workspace number $ws2; workspace number $ws2
+bindsym $mod+Shift+3 move container to workspace number $ws3; workspace number $ws3
+bindsym $mod+Shift+4 move container to workspace number $ws4; workspace number $ws4
+bindsym $mod+Shift+5 move container to workspace number $ws5; workspace number $ws5
+bindsym $mod+Shift+6 move container to workspace number $ws6; workspace number $ws6
+bindsym $mod+Shift+7 move container to workspace number $ws7; workspace number $ws7
+bindsym $mod+Shift+8 move container to workspace number $ws8; workspace number $ws8
+bindsym $mod+Shift+9 move container to workspace number $ws9; workspace number $ws9
 
-# Move focused container to workspace
+bindsym $mod+Shift+d \
+    move container to workspace back_and_forth; \
+    workspace back_and_forth
 
-bindsym $mod+Shift+1 \
-    move container to workspace number $ws1; workspace number $ws1
-
-bindsym $mod+Shift+2 \
-    move container to workspace number $ws2; workspace number $ws2
-
-bindsym $mod+Shift+3 \
-    move container to workspace number $ws3; workspace number $ws3
-
-bindsym $mod+Shift+4 \
-    move container to workspace number $ws4; workspace number $ws4
-
-bindsym $mod+Shift+5 \
-    move container to workspace number $ws5; workspace number $ws5
-
-bindsym $mod+Shift+6 \
-    move container to workspace number $ws6; workspace number $ws6
-
-bindsym $mod+Shift+7 \
-    move container to workspace number $ws7; workspace number $ws7
-
-bindsym $mod+Shift+8 \
-    move container to workspace number $ws8; workspace number $ws8
-
-bindsym $mod+Shift+9 \
-    move container to workspace number $ws9; workspace number $ws9
-
-
-# Send container to workspace without following it
-
+# Same as above, but staying on the current workspace.
 bindsym $mod+Ctrl+1 move container to workspace number $ws1
 bindsym $mod+Ctrl+2 move container to workspace number $ws2
 bindsym $mod+Ctrl+3 move container to workspace number $ws3
@@ -308,16 +310,10 @@ bindsym $mod+Ctrl+8 move container to workspace number $ws8
 bindsym $mod+Ctrl+9 move container to workspace number $ws9
 
 # Scratchpad
-
-exec --no-startup-id tmuxdd
-
-# for_window [instance="scratchmux"] \
-#     title_format "scratchmux", \
-#     border normal 1, \
-#     move scratchpad, \
-#     sticky enable, \
-#     resize set 900 520
-
+#
+# Ported from bruhtus dotfiles <https://github.com/bruhtus>.
+# See: https://github.com/bruhtus/dotfiles/blob/master/.config/i3/config
+# See: https://i3wm.org/docs/userguide.html#_scratchpad
 for_window [instance="scratchmux"] \
     title_format "scratchmux", \
     move scratchpad, \
@@ -325,17 +321,6 @@ for_window [instance="scratchmux"] \
     resize set 80 ppt 80 ppt, \
     move position center
 
-bindsym $mod+Ctrl+plus move scratchpad
-
-bindsym $mod+Ctrl+minus [instance="^(?!scratchmux|scratchtodo)"] scratchpad show
-
-bindsym $mod+s [instance="scratchmux"] \
-    scratchpad show, \
-    move position center
-
-bindsym $mod+Ctrl+Shift+m exec --no-startup-id tmuxdd
-
-# Scratchpad for TODOs
 for_window [instance="scratchtodo"] \
     title_format "scratchtodo", \
     move scratchpad, \
@@ -343,91 +328,92 @@ for_window [instance="scratchtodo"] \
     resize set 60 ppt 70 ppt, \
     move position center
 
-bindsym $mod+comma exec --no-startup-id /home/miqu3iasg/.local/bin/todo-toggle
+bindsym $mod+s [instance="scratchmux"] \
+    scratchpad show, \
+    move position center
 
-# Application assignments
+bindsym $mod+Ctrl+Shift+m exec --no-startup-id tmuxdd
+bindsym $mod+comma exec --no-startup-id $bin/todo-toggle
 
-# for_window [class=".*"] title_format "%title"
-
-for_window [class="(?i)copyq"] floating enable
-for_window [class="(?i)pavucontrol"] floating enable
-for_window [class="(?i)blueman-manager"] floating enable
-for_window [class="(?i)nm-connection-editor"] floating enable
-for_window [window_role="pop-up"] floating enable
-for_window [window_role="task_dialog"] floating enable
-for_window [window_type="dialog"] floating enable
-for_window [class="(?i)zen" window_type="dialog"] floating enable
-for_window [floating_from="auto"] move position center
-
-assign [class="(?i)spotify"] $ws5
-assign [class="(?i)discord"] $ws5
-
-# Notification controls (Dunst)
-bindsym $mod+Ctrl+space exec dunstctl close-all
-bindsym Ctrl+Shift+space exec dunstctl history-pop
+# The generic scratchpad keys skip the two named ones through a negative
+# lookahead, so that `$mod+Ctrl+minus` only cycles through windows that
+# were sent there by hand.
+bindsym $mod+Ctrl+plus move scratchpad
+bindsym $mod+Ctrl+minus [instance="^(?!scratchmux|scratchtodo)"] scratchpad show
 
 # Applications
-
-# Terminal
 bindsym $mod+Return exec kitty
 
-# Zen Browser
-bindsym $mod+b exec --no-startup-id zen-browser; workspace number $ws3
+# Browsers. The Zen binding also jumps to workspace 3, where browsers live.
+bindsym $mod+b exec --no-startup-id helium-browser; workspace number $ws3
+bindsym $mod2+b exec --no-startup-id zen-browser; workspace number $ws3
 
-# Helium Browser
-bindsym $mod2+b exec --no-startup-id helium-browser
-bindsym $mod2+Shift+b exec --no-startup-id helium-browser; workspace number $ws3
-
-# Clipboard
-bindsym $mod2+v exec --no-startup-id copyq toggle
-
-# Obsidian
 bindsym $mod2+o exec --no-startup-id obsidian; workspace number $ws2
+bindsym $mod+e exec --no-startup-id thunar
 
-# Rofi
+# Launchers and clipboard
 bindsym $mod+m exec --no-startup-id rofi -show drun
-
-# Vicinae
 bindsym $mod2+m exec --no-startup-id vicinae toggle
 bindsym $mod2+f exec --no-startup-id vicinae vicinae://launch/files/search
 bindsym $mod2+period exec --no-startup-id vicinae vicinae://launch/core/search-emojis
+bindsym $mod2+v exec --no-startup-id copyq toggle
 
-# Thunar
-bindsym $mod+e exec --no-startup-id thunar
+# Notification controls (Dunst)
+# See: https://dunst-project.org/documentation/dunstctl/
+bindsym $mod+Ctrl+space exec dunstctl close-all
+bindsym Ctrl+Shift+space exec dunstctl history-pop
 
-# Monitors
-workspace 1 output HDMI-1 eDP-1
-workspace 2 output HDMI-1 eDP-1
-workspace 3 output HDMI-1 eDP-1
-workspace 4 output eDP-1
-workspace 5 output eDP-1
-workspace 6 output eDP-1
+# Audio and brightness
+#
+# `$refresh_i3status` tells i3status to redraw after each volume or
+# brightness change, so the bar stays in sync.
+set $refresh_i3status killall -SIGUSR1 i3status
 
-# Productivy
+bindsym XF86AudioRaiseVolume exec --no-startup-id \
+    pactl set-sink-volume @DEFAULT_SINK@ +10% && $refresh_i3status
 
-# Lock screen
+bindsym XF86AudioLowerVolume exec --no-startup-id \
+    pactl set-sink-volume @DEFAULT_SINK@ -10% && $refresh_i3status
+
+bindsym XF86AudioMute exec --no-startup-id \
+    pactl set-sink-mute @DEFAULT_SINK@ toggle && $refresh_i3status
+
+bindsym XF86AudioMicMute exec --no-startup-id \
+    pactl set-source-mute @DEFAULT_SOURCE@ toggle && $refresh_i3status
+
+bindsym XF86MonBrightnessUp exec --no-startup-id \
+    brightnessctl set +10% && $refresh_i3status
+
+bindsym XF86MonBrightnessDown exec --no-startup-id \
+    brightnessctl set 10%- && $refresh_i3status
+
+# Pomo Timer
+# See: https://github.com/bruhtus/dotfiles/blob/master/.local/bin/pomo
+bindsym $mod+Ctrl+p exec --no-startup-id $bin/pomo.sh start
+bindsym $mod+Ctrl+Shift+p exec --no-startup-id $bin/pomo.sh pause
+bindsym $mod+Ctrl+x exec --no-startup-id $bin/pomo.sh stop
+
+# Screenshots go through a single script, which receives the capture mode.
+bindsym F10 exec --no-startup-id $bin/print.sh full
+bindsym $mod+F10 exec --no-startup-id $bin/print.sh area
+bindsym $mod+Shift+F10 exec --no-startup-id $bin/print.sh clip
+bindsym $mod+Ctrl+F10 exec --no-startup-id $bin/print.sh window
+
+# Session
 bindsym $mod+Ctrl+l exec --no-startup-id i3lock --nofork -c 000000
 
-# Quick capture
-bindsym $mod+Shift+g exec --no-startup-id sh -c \
-    'echo "$(date +%Y-%m-%d\ %H:%M) - $(rofi -dmenu -p "Quick note")" >> ~/personal/documents/vault/Dumping.md'
-
-# Pomodoro
-bindsym $mod+Ctrl+p exec --no-startup-id /home/miqu3iasg/.local/bin/pomo.sh start
-bindsym $mod+Ctrl+Shift+p exec --no-startup-id /home/miqu3iasg/.local/bin/pomo.sh pause
-bindsym $mod+Ctrl+x exec --no-startup-id /home/miqu3iasg/.local/bin/pomo.sh stop
-
-# Reload / Restart / Exit
-
 bindsym $mod+Shift+r reload
-
 bindsym $mod+Shift+Ctrl+r restart
 
 bindsym $mod+Shift+e exec \
     "i3-nagbar -t warning -m 'You pressed the exit shortcut. Do you really want to exit i3? This will end your X session.' -B 'Yes, exit i3' 'i3-msg exit'"
 
 # System mode
-
+#
+# A binding mode that gathers the destructive actions behind a second
+# keypress. `reboot` and `shutdown now` rely on polkit allowing
+# passwordless execution; without it they fail silently.
+# See: https://i3wm.org/docs/userguide.html#_binding_modes
 set $mode_system (e)xit, (r)eboot, (Shift+s)hutdown
 
 bindsym $mod+plus mode "$mode_system"
@@ -441,21 +427,22 @@ mode "$mode_system" {
     bindsym Escape mode "default"
 }
 
-# Screenshots
-bindsym F10 exec --no-startup-id /home/miqu3iasg/.local/bin/print.sh full
-bindsym $mod+F10 exec --no-startup-id /home/miqu3iasg/.local/bin/print.sh area
-bindsym $mod+Shift+F10 exec --no-startup-id /home/miqu3iasg/.local/bin/print.sh clip
-bindsym $mod+Ctrl+F10 exec --no-startup-id /home/miqu3iasg/.local/bin/print.sh window
-
 # i3bar
+#
+# One bar per monitor, both with the same look and the same status script.
+# Only the `id` and the `output` differ, and the font is shared through a
+# variable to keep the two blocks in sync.
+# See: https://i3wm.org/docs/userguide.html#_configuring_i3bar
+set $bar_font pango:JetBrainsMono Nerd Font Bold 9
+
 bar {
     id bar-ext
-    status_command ~/.config/i3/scripts/statusbar.sh
+    status_command $scripts/statusbar.sh
     output HDMI-1
     position bottom
     tray_output primary
     separator_symbol "  "
-    font pango:JetBrainsMono Nerd Font Bold 9
+    font $bar_font
 
     colors {
         background #000000
@@ -473,12 +460,12 @@ bar {
 
 bar {
     id bar-laptop
-    status_command ~/.config/i3/scripts/statusbar.sh
+    status_command $scripts/statusbar.sh
     output eDP-1
     position bottom
     tray_output primary
     separator_symbol "  "
-    font pango:JetBrainsMono Nerd Font Bold 9
+    font $bar_font
 
     colors {
         background #000000
@@ -493,18 +480,3 @@ bar {
         binding_mode       #2e2e2e  #242424    #c8c8c8
     }
 }
-
-# Polybar
-# exec_always --no-startup-id ~/.config/polybar/launch.sh
-
-# Keyboard
-exec_always --no-startup-id setxkbmap -option ctrl:swapcaps
-
-# Clipboard
-exec --no-startup-id copyq --start-server
-
-# Dual monitors
-exec_always --no-startup-id ~/.config/i3/scripts/monitor-setup.sh
-
-# Pomodoro notifications
-exec --no-startup-id /home/miqu3iasg/.local/bin/pomo.sh notify
