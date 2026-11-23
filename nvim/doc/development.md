@@ -43,8 +43,7 @@ require("lib.lazy").setup({
 })
 ```
 
-The plugin name is derived from `src` and must match the directory `vim.pack` installs.
-3. Nothing else: no `pack.lua` entry, no `init.lua` entry. The lazy plugin is fully self-declared and disappears with its file.
+The plugin name is derived from `src` and must match the directory `vim.pack` installs. 3. Nothing else: no `pack.lua` entry, no `init.lua` entry. The lazy plugin is fully self-declared and disappears with its file.
 
 An on-demand plugin declares no `filetypes` and loads through an explicit `require("lib.lazy").load(name)` call. The pattern lives in the adapter itself: its keymaps are stubs that load the plugin and then call the picker function, so the first press pays the load and every later press is instant.
 
