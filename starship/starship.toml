@@ -53,6 +53,21 @@ cyan = "black"
 git_add = "black"
 git_del = "red"
 
+[palettes.solarized_light]
+fg = "bright-green"
+muted = "bright-yellow"
+subtle = "bright-black"
+faint = "bright-black"
+faintest = "white"
+red = "red"
+green = "green"
+yellow = "yellow"
+blue = "blue"
+magenta = "purple"
+cyan = "cyan"
+git_add = "green"
+git_del = "red"
+
 [palettes.darkthrone]
 fg = "#f1f1f1"
 muted = "#aaaaaa"
