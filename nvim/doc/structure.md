@@ -13,67 +13,115 @@ The tree is organized so that every kind of knowledge has exactly one home: edit
 
 ## The tree
 
-```
-nvim/
-|- init.lua               entry point; fixes the load order, nothing else
-|- colors/                custom colorschemes, one file per scheme
-|- after/
-|  |- ftplugin/           buffer-local options per filetype, applied
-|  |                      after the runtime ftplugins
-|  |- queries/            Tree-sitter query overrides
-|- lua/
-|  |- config/             editor behavior loaded at startup
-|  |- plugins/            one adapter file per plugin suite
-|  |- modules/            whole features written for this config
-|  |- lib/                shared utilities and domain logic
-|  |- language/           the language server stack
-|  |- snippets/           LuaSnip snippets, one file per filetype
-|- lua/pandoc/            Pandoc pipeline: defaults, metadata, profiles
-|                         and Lua filters
-|- spell/                 custom spell files
-|- doc/                   the doc pages, plain text (this folder)
-|- nvim-pack-lock.json    revision lock file written by vim.pack
-|- LICENSE
-```
+### `init.lua`
+
+Entry point; fixes the load order, nothing else.
+
+### `colors/`
+
+Custom colorschemes, one file per scheme. The scheme name is the file name.
+
+### `after/ftplugin/`
+
+Buffer-local options per filetype, applied after the runtime ftplugins.
+
+### `after/queries/`
+
+Tree-sitter query overrides.
+
+### `lua/config/`
+
+Editor behavior loaded at startup.
+
+### `lua/plugins/`
+
+One adapter file per plugin suite.
+
+### `lua/modules/`
+
+Whole features written for this config.
+
+### `lua/lib/`
+
+Shared utilities and domain logic.
+
+### `lua/language/`
+
+The language server stack.
+
+### `lua/snippets/`
+
+LuaSnip snippets, one file per filetype.
+
+### `lua/pandoc/`
+
+Pandoc pipeline: defaults, metadata, profiles and Lua filters.
+
+### `spell/`
+
+Custom spell files.
+
+### `doc/`
+
+The doc pages.
+
+### `nvim-pack-lock.json`
+
+Revision lock file written by `vim.pack`.
+
+### `LICENSE`
+
+License file.
 
 ## Top-level folders
 
-`colors/`
-: Colorschemes are runtimepath-loaded by `vim.cmd.colorscheme`, so they live in the conventional `colors/` folder, outside `lua/`. One file per scheme; the scheme name is the file name. The color machinery they share (blending, the xterm-256 conversion, highlight application, the markdown-frontmatter namespace) lives in `lua/lib/colors.lua`.
+### `colors/`
 
-`after/`
-: The `after/` directory is loaded after everything else in the runtimepath, which is exactly what filetype overrides need: `after/ftplugin/<ft>.lua` runs after Neovim's own ftplugin for the filetype, so its options win. That is why every filetype option lives here and not in a custom layer. `after/queries/` overrides Tree-sitter queries the same way (Markdown textobjects).
+Colorschemes are runtimepath-loaded by `vim.cmd.colorscheme`, so they live in the conventional `colors/` folder, outside `lua/`. One file per scheme; the scheme name is the file name. The color machinery they share (blending, the xterm-256 conversion, highlight application, the markdown-frontmatter namespace) lives in `lua/lib/colors.lua`.
 
-`lua/pandoc/`
-: The export pipeline is data, not code: `defaults.yaml` (the writer pipeline), `metadata.yaml` (default layout and language), `profiles/` (per-document styles, such as `abnt.yaml`) and `filters/` (wikilinks, metadata blocks). The Lua module `lua/modules/pandoc.lua` orchestrates these files; it holds no document logic itself. The feature page is `doc/pandoc.md`.
+### `after/`
 
-`doc/`
-: The doc pages describing the config, plain text in the style of a man page, written at full width for the editor to wrap. `doc/reading.md` explains how to read them; the standard itself is `documentation.md`.
+The `after/` directory is loaded after everything else in the runtimepath, which is exactly what filetype overrides need: `after/ftplugin/<ft>.lua` runs after Neovim's own ftplugin for the filetype, so its options win. That is why every filetype option lives here and not in a custom layer. `after/queries/` overrides Tree-sitter queries the same way (Markdown textobjects).
 
-`spell/`
-: Custom spell dictionaries, loaded by Neovim's spelling machinery directly.
+### `lua/pandoc/`
+
+The export pipeline is data, not code: `defaults.yaml` (the writer pipeline), `metadata.yaml` (default layout and language), `profiles/` (per-document styles, such as `abnt.yaml`) and `filters/` (wikilinks, metadata blocks). The Lua module `lua/modules/pandoc.lua` orchestrates these files; it holds no document logic itself. The feature page is `doc/pandoc.md`.
+
+### `doc/`
+
+The doc pages describing the config, plain text in the style of a man page, written at full width for the editor to wrap. `doc/reading.md` explains how to read them; the standard itself is `documentation.md`.
+
+### `spell/`
+
+Custom spell dictionaries, loaded by Neovim's spelling machinery directly.
 
 ## The lua layers
 
 Everything under `lua/` is split into layers by what a file is, and the split is the contract:
 
-`config/` — behavior loaded at startup
-: `options.lua` (global options), `autocmds.lua` (global autocmds), `commands.lua` (user commands), `pack.lua` (`vim.pack` declarations and build hooks), and `keymaps/` (keymaps split by theme, one file per group, with its own `init.lua` that sets the leaders). Files here run once, in the order fixed by `init.lua`, and are not required by anything else.
+### `config/` — behavior loaded at startup
 
-`plugins/` — adapters for third-party plugins
-: One file per plugin suite, never more. The file owns the plugin's setup and any keymap that only makes sense inside it. A plugin that should load lazily declares that itself, at the bottom of its own file, through `lib/lazy.lua`. `init.lua` in this folder is the ordered load list.
+`options.lua` (global options), `autocmds.lua` (global autocmds), `commands.lua` (user commands), `pack.lua` (`vim.pack` declarations and build hooks), and `keymaps/` (keymaps split by theme, one file per group, with its own `init.lua` that sets the leaders). Files here run once, in the order fixed by `init.lua`, and are not required by anything else.
 
-`modules/` — whole features written for this config
-: Self-contained components such as the statusline, per-directory sessions, the scratch buffer, the compile runner and the notes workflow. Each exposes `setup()` when it must register commands, autocmds or keymaps, and owns its own state, reached only through its API. See `doc/modules.md`.
+### `plugins/` — adapters for third-party plugins
 
-`lib/` — shared utilities and domain logic
-: Everything that exists to be required by other modules: the buffer helpers, the big-file detector, the lazy loader, the autoformat state, the export path logic and so on. The criterion is binary: something that exposes commands, autocmds or keymaps goes in `modules/`; anything else goes in `lib/`. See `doc/lib.md`.
+One file per plugin suite, never more. The file owns the plugin's setup and any keymap that only makes sense inside it. A plugin that should load lazily declares that itself, at the bottom of its own file, through `lib/lazy.lua`. `init.lua` in this folder is the ordered load list.
 
-`language/` — the language server stack
-: One module per server under `servers/` (config table plus an optional `on_attach` hook), the shared setup in `init.lua`, the module contract in `types.lua` and the external linters in `lint.lua`. It slots into the plugins load list as a full module, because it must load between completions and fzf.
+### `modules/` — whole features written for this config
 
-`snippets/` — LuaSnip snippets
-: One file per filetype, loaded lazily; filetype-adaptive snippets in `common.lua`, and the comment and header machinery they build on in `lib/headers.lua`.
+Self-contained components such as the statusline, per-directory sessions, the scratch buffer, the compile runner and the notes workflow. Each exposes `setup()` when it must register commands, autocmds or keymaps, and owns its own state, reached only through its API. See `doc/modules.md`.
+
+### `lib/` — shared utilities and domain logic
+
+Everything that exists to be required by other modules: the buffer helpers, the big-file detector, the lazy loader, the autoformat state, the export path logic and so on. The criterion is binary: something that exposes commands, autocmds or keymaps goes in `modules/`; anything else goes in `lib/`. See `doc/lib.md`.
+
+### `language/` — the language server stack
+
+One module per server under `servers/` (config table plus an optional `on_attach` hook), the shared setup in `init.lua`, the module contract in `types.lua` and the external linters in `lint.lua`. It slots into the plugins load list as a full module, because it must load between completions and fzf.
+
+### `snippets/` — LuaSnip snippets
+
+One file per filetype, loaded lazily; filetype-adaptive snippets in `common.lua`, and the comment and header machinery they build on in `lib/headers.lua`.
 
 ## Layer rules
 
