@@ -9,60 +9,69 @@ The lua/modules/ layer: whole features built for this config
 
 ## Description
 
-lua/modules/ holds the features this config writes for itself, instead of delegating to a plugin: the statusline, per-directory sessions, the scratch buffer, the compile runner, the Pandoc export, the notes workflow and a handful of editors' conveniences. Together they are the most opinionated part of the config, and the part most adapted to the author's workflow.
+`lua/modules/` holds the features this config writes for itself, instead of delegating to a plugin: the statusline, per-directory sessions, the scratch buffer, the compile runner, the Pandoc export, the notes workflow and a handful of editors' conveniences. Together they are the most opinionated part of the config, and the part most adapted to the author's workflow.
 
 A module is a whole feature, not a utility. The contract:
 
 - One file per feature, opened with the standard header.
-- Each exposes setup() when it must register commands, autocmds or keymaps. Feature-level setup is called from init.lua in a fixed order; module-specific commands that only make sense for the module are registered inside it.
+- Each exposes `setup()` when it must register commands, autocmds or keymaps. Feature-level setup is called from `init.lua` in a fixed order; module-specific commands that only make sense for the module are registered inside it.
 - State is module-owned. It lives in the module's locals and is reached only through its API; no other file writes it. This is what keeps a module replaceable without a project-wide search.
-- A module never reaches into a plugin's internals when a public API exists, and never duplicates what config/ already provides - it requires lib/ helpers instead.
+- A module never reaches into a plugin's internals when a public API exists, and never duplicates what `config/` already provides - it requires `lib/` helpers instead.
 
 ## The modules
 
-statusline
-: A native statusline built on the 'statusline' option, no plugin. The active window shows editor state, position, search and selection info, git branch, diagnostics and macro recording; inactive windows get a reduced version. Costly or asynchronous pieces are cached in vim.g.sl_mode, vim.b.git_branch (looked up asynchronously, cached per directory) and vim.b.sl_file_size (read from disk, so stale until save). API: M.lead, M.major, M.diag, M.selection, M.search and M.setup, rendered through the 'statusline' option.
+### `lua/modules/statusline.lua`
 
-sessions
-: Minimal, fully automatic, per-directory session management on :mksession and :source, active only inside tmux. On VimEnter with no file arguments it restores the session of the directory; on exit it saves it. Files live in stdpath("state")/sessions/, one per cwd. A save happens only when at least one real file buffer is open, so browsing alone never overwrites a stored session. API: M.enabled, M.path, M.load, M.save. 'sessionoptions' in config/options.lua must match what it saves.
+A native statusline built on the `'statusline'` option, no plugin. The active window shows editor state, position, search and selection info, git branch, diagnostics and macro recording; inactive windows get a reduced version. Costly or asynchronous pieces are cached in `vim.g.sl_mode`, `vim.b.git_branch` (looked up asynchronously, cached per directory) and `vim.b.sl_file_size` (read from disk, so stale until save). API: `M.lead`, `M.major`, `M.diag`, `M.selection`, `M.search` and `M.setup`, rendered through the `'statusline'` option.
 
-scratch
-: A single persistent scratch buffer for throwaway notes and pastes. Toggling replaces the buffer of the current window (special buffers such as Oil, terminals and Fugitive views get a vertical split instead) and leaving it restores the previous buffer, so the layout never changes. The buffer is hidden, not wiped, and survives every toggle until :Scratch! deletes it. API: M.toggle, M.split, M.leave, M.wipe, M.setup. Commands: :Scratch, :ScratchSplit, :Scratch!.
+### `lua/modules/sessions.lua`
 
-compile
-: An Emacs-like compile runner: runs a build command asynchronously through `sh -c` and streams the output into a *compilation* buffer in a bottom split; on nonzero exit the output is parsed into the quickfix list (gcc/clang, javac and Python tracebacks). State is per working directory, so a new compile kills the previous one. API: M.command, M.prompt, M.recompile, M.interrupt, M.setup. Commands: :Compile, :Recompile, :CompileInterrupt.
+Minimal, fully automatic, per-directory session management on `:mksession` and `:source`, active only inside tmux. On `VimEnter` with no file arguments it restores the session of the directory; on exit it saves it. Files live in `stdpath("state")/sessions/`, one per cwd. A save happens only when at least one real file buffer is open, so browsing alone never overwrites a stored session. API: `M.enabled`, `M.path`, `M.load`, `M.save`. `'sessionoptions'` in `config/options.lua` must match what it saves.
 
-pandoc
-: Exports the current Markdown buffer to PDF, EPUB, DOCX or HTML by running pandoc asynchronously, through stdin, so unsaved changes are exported too. Preview mode rebuilds on every save. The pipeline itself is data: lua/pandoc/defaults.yaml, lua/pandoc/metadata.yaml, per-folder defaults, profiles/ and filters/. Results go where lib/exports.lua points and open in zathura or xdg-open. API: M.build, M.open, M.preview, M.setup. Buffer-local commands: :Pandoc, :PandocPreview. The feature page is doc/pandoc.md.
+### `lua/modules/scratch.lua`
 
-notes
-: A flat vault of Markdown notes managed from Neovim: quick drafts and typed notes from user-maintained templates, template insertion, quick task capture at the end of TODO.md (M.capture / :NotesCapture / <leader>oc), daily notes (daily-YYYYMMDD.md, open-or-create via M.daily / :NotesDaily / <leader>oa), search by name and content, reopening the last note. The vault is just a folder: $ARCANUM_DIR, or ~/dev/arcanum when unset. File names follow the vault's TYPE-YYYYMMDD-HHmmss[-SLUG].md rule. The largest module in the config, and a good example of state ownership: the template list, the name parser and the history all live here. API: M.vault, M.create, M.new_draft, M.new_note, M.capture, M.daily, M.template, M.find_files, M.grep, M.last, M.open_vault, M.setup. Commands: :NotesDraft, :NotesCapture, :NotesNew, :NotesDaily, :NotesTemplate, :NotesFiles, :NotesGrep, :NotesLast, :NotesOpen.
+A single persistent scratch buffer for throwaway notes and pastes. Toggling replaces the buffer of the current window (special buffers such as Oil, terminals and Fugitive views get a vertical split instead) and leaving it restores the previous buffer, so the layout never changes. The buffer is hidden, not wiped, and survives every toggle until `:Scratch!` deletes it. API: `M.toggle`, `M.split`, `M.leave`, `M.wipe`, `M.setup`. Commands: `:Scratch`, `:ScratchSplit`, `:Scratch!`.
 
-window_zoom
-: Zooms the focused window by showing it as the only window of a new tab, the original layout staying intact in its own tab. Toggling again closes the zoom tab. The state is the tabpage-local t:zoomed, read by the statusline; closing the tab by any other means also ends the zoom. API: M.is_zoomed, M.toggle.
+### `lua/modules/compile.lua`
 
-close_view
-: Closes Fugitive views (index, status, blame, commit buffers) without ever quitting Neovim; closing a commit buffer discards it and aborts the commit. Buffer-local mappings are installed by autocmds, so setup() runs once at startup. API: M.close_diff, M.close_view, M.map_close, M.setup.
+An Emacs-like compile runner: runs a build command asynchronously through `sh -c` and streams the output into a `*compilation*` buffer in a bottom split; on nonzero exit the output is parsed into the quickfix list (gcc/clang, javac and Python tracebacks). State is per working directory, so a new compile kills the previous one. API: `M.command`, `M.prompt`, `M.recompile`, `M.interrupt`, `M.setup`. Commands: `:Compile`, `:Recompile`, `:CompileInterrupt`.
 
-markdown_lists
-: Native list editing for Markdown buffers: toggling markers and checklists, cycling list types, renumbering, promotion and demotion, on the current line or the selection, with formatter helpers that keep markers and indentation as written. API: M.toggle, M.toggle_checklist, M.cycle, M.clear, M.cycle_marker, M.renumber and the formatting helpers.
+### `lua/modules/pandoc.lua`
+
+Exports the current Markdown buffer to PDF, EPUB, DOCX or HTML by running pandoc asynchronously, through stdin, so unsaved changes are exported too. Preview mode rebuilds on every save. The pipeline itself is data: `lua/pandoc/defaults.yaml`, `lua/pandoc/metadata.yaml`, per-folder defaults, `profiles/` and `filters/`. Results go where `lib/exports.lua` points and open in `zathura` or `xdg-open`. API: `M.build`, `M.open`, `M.preview`, `M.setup`. Buffer-local commands: `:Pandoc`, `:PandocPreview`. The feature page is `doc/pandoc.md`.
+
+### `lua/modules/notes.lua`
+
+A flat vault of Markdown notes managed from Neovim: quick drafts and typed notes from user-maintained templates, template insertion, quick task capture at the end of `TODO.md` (`M.capture` / `:NotesCapture` / `<leader>oc`), daily notes (`daily-YYYYMMDD.md`, open-or-create via `M.daily` / `:NotesDaily` / `<leader>oa`), search by name and content, reopening the last note. The vault is just a folder: `$ARCANUM_DIR`, or `~/dev/arcanum` when unset. File names follow the vault's `TYPE-YYYYMMDD-HHmmss[-SLUG].md` rule. The largest module in the config, and a good example of state ownership: the template list, the name parser and the history all live here. API: `M.vault`, `M.create`, `M.new_draft`, `M.new_note`, `M.capture`, `M.daily`, `M.template`, `M.find_files`, `M.grep`, `M.last`, `M.open_vault`, `M.setup`. Commands: `:NotesDraft`, `:NotesCapture`, `:NotesNew`, `:NotesDaily`, `:NotesTemplate`, `:NotesFiles`, `:NotesGrep`, `:NotesLast`, `:NotesOpen`.
+
+### `lua/modules/window_zoom.lua`
+
+Zooms the focused window by showing it as the only window of a new tab, the original layout staying intact in its own tab. Toggling again closes the zoom tab. The state is the tabpage-local `t:zoomed`, read by the statusline; closing the tab by any other means also ends the zoom. API: `M.is_zoomed`, `M.toggle`.
+
+### `lua/modules/close_view.lua`
+
+Closes Fugitive views (index, status, blame, commit buffers) without ever quitting Neovim; closing a commit buffer discards it and aborts the commit. Buffer-local mappings are installed by autocmds, so `setup()` runs once at startup. API: `M.close_diff`, `M.close_view`, `M.map_close`, `M.setup`.
+
+### `lua/modules/markdown_lists.lua`
+
+Native list editing for Markdown buffers: toggling markers and checklists, cycling list types, renumbering, promotion and demotion, on the current line or the selection, with formatter helpers that keep markers and indentation as written. API: `M.toggle`, `M.toggle_checklist`, `M.cycle`, `M.clear`, `M.cycle_marker`, `M.renumber` and the formatting helpers.
 
 ## Who calls modules
 
-Feature-level modules (statusline, scratch, compile) are set up directly by init.lua, in the startup order. Modules scoped to a context are set up by the code that owns the context: pandoc and notes register buffer-local commands and autocmds from their setup(), called by init.lua; close_view and markdown_lists are wired by the filetypes and keymap files that use them. A module that needs shared logic requires it from lib/, never the other way around.
+Feature-level modules (statusline, scratch, compile) are set up directly by `init.lua`, in the startup order. Modules scoped to a context are set up by the code that owns the context: pandoc and notes register buffer-local commands and autocmds from their `setup()`, called by `init.lua`; `close_view` and `markdown_lists` are wired by the filetypes and keymap files that use them. A module that needs shared logic requires it from `lib/`, never the other way around.
 
 ## Writing a new module
 
-See doc/development.md (ADDING A MODULE). The short version: if it exposes commands, autocmds or keymaps, it is a module; give it the standard header, make setup() register what it owns, keep its state private behind its API, and require lib/ for anything another file also needs.
+See `doc/development.md` (ADDING A MODULE). The short version: if it exposes commands, autocmds or keymaps, it is a module; give it the standard header, make `setup()` register what it owns, keep its state private behind its API, and require `lib/` for anything another file also needs.
 
 ## Files
 
-- doc/reading.md — how to read the pages
-- lua/modules/ — the modules
-- doc/structure.md — the folder structure
-- doc/lib.md — the shared-helpers layer
-- doc/philosophy.md — why the config builds features from scratch
-- doc/modules.md — this page
+- `doc/reading.md` — how to read the pages
+- `lua/modules/` — the modules
+- `doc/structure.md` — the folder structure
+- `doc/lib.md` — the shared-helpers layer
+- `doc/philosophy.md` — why the config builds features from scratch
+- `doc/modules.md` — this page
 
 ## See also
 
