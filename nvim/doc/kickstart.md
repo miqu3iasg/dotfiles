@@ -5,312 +5,215 @@ Guide to this hand-rolled Neovim configuration
 ## Synopsis
 
 - `doc/kickstart.md` — this page
-- `doc/reading.md` — how to read the pages
+- `README.md` — the short repo overview
+- `doc/reading.md` — how to read the doc pages
 
 ## Description
 
-A hand-rolled Neovim configuration built on the native plugin manager (`vim.pack`), the native LSP stack (`vim.lsp.config` / `vim.lsp.enable`) and a small set of deliberately chosen plugins. There is no distribution and no lazy-loading framework; the one bit of lazy loading (heavy filetype-bound plugins) is a few lines in `lua/lib/lazy.lua`. Every module is small and every `require` is explicit, which keeps startup around 70-80 ms.
+A hand-rolled Neovim configuration built on the native plugin manager (`vim.pack`), the native LSP stack (`vim.lsp.config` / `vim.lsp.enable`) and a deliberately small plugin set. There is no distribution and no lazy-loading framework; the only lazy loading is a small helper in `lua/lib/lazy.lua`. Every `require` is explicit, and startup stays around 70-80 ms with the eager set.
 
-Keymaps are deliberately not documented here: they change often, and a stale keymap list is worse than none. The live source of truth is the matching file in `lua/config/keymaps/` and `:map`. Everything else about the config is described below.
+Keymaps are deliberately not documented here. They change often, and a stale keymap list is worse than none. The live source is the matching file in `lua/config/keymaps/`, the plugin adapter, and `:map`.
+
+The pages that go deeper:
+
+- [structure](./structure.md) — the folders and the layer rules;
+- [config](./config.md) — options, autocmds, filetypes, commands and the health check;
+- [plugins](./plugins.md) — the plugin set, adapters and lazy loading;
+- [language](./language.md) — the LSP stack, server by server;
+- [modules](./modules.md) — the features written for this config;
+- [lib](./lib.md) — the shared helpers;
+- [notes](./notes.md) — the note vault workflow;
+- [pandoc](./pandoc.md) — the Markdown export pipeline;
+- [colorschemes](./colorschemes.md) — the themes;
+- [philosophy](./philosophy.md) — why the config builds features from scratch;
+- [documentation](./documentation.md) — the documentation standard;
+- [development](./development.md) — how to extend the config;
+- [snippets](./snippets.md) — the snippet and header standard;
+- [troubleshooting](./troubleshooting.md) — diagnosing failures.
+
+## Quick start
+
+1. Install Neovim 0.12 or newer.
+2. Clone the repo where Neovim reads its config, or point `$XDG_CONFIG_HOME` at its parent.
+3. Install the base tools for your platform. On Arch Linux:
+
+```sh
+sudo pacman -S git tmux fzf ripgrep fd nodejs npm \
+  clang jdk21-openjdk tree-sitter-cli make \
+  pandoc-cli texlive-xetex texlive-latex texlive-latexextra \
+  texlive-latexrecommended texlive-fontsrecommended texlive-langportuguese \
+  zathura zathura-pdf-mupdf zathura-djvu zathura-cb imv mpv xdg-utils \
+  wl-clipboard
+```
+
+4. Start Neovim. `vim.pack` installs the declared plugins on first launch; Mason is asked for the language servers after startup.
+5. Run `:checkhealth config`. Fix errors before warnings.
+6. If you use the note workflow, create or point at the vault: `$ARCANUM_DIR`, or `~/dev/arcanum`.
+7. For the Markdown browser preview, run `:call mkdp#util#install()` once after the plugin installs or updates.
+
+LuaSnip needs `make` and a C compiler to build `jsregexp`; jdtls needs Python 3; Tree-sitter needs the tree-sitter CLI. Formatters and linters are external and are installed through Mason or the distribution; only language servers are requested automatically at startup.
 
 ## Startup
 
 `init.lua` only fixes the load order:
 
-1. `vim.loader.enable()`, `vim.deprecate` disabled
-2. `config.options` — global editor options
-3. `config.keymaps` — leader keys and keymap modules
-4. `config.autocmds` — global autocmds
-5. `config.commands` — user commands
-6. `modules.statusline` — native statusline
-7. `modules.scratch` — persistent scratch buffer
-8. `config.pack` — `vim.pack` plugin declarations
-9. `plugins` — one adapter file per plugin suite
-10. `modules.compile` — `:Compile` / `:Recompile`
-11. colorscheme `hollow`
+1. `vim.loader.enable()` and `vim.deprecate = function() end`.
+2. `config.options`.
+3. `config.keymaps`, which sets the leaders and loads the keymap modules.
+4. `config.autocmds`.
+5. `config.filetypes`.
+6. `config.commands`.
+7. `modules.statusline.setup()`.
+8. `config.pack`, which declares and installs the eager plugins.
+9. `plugins`, which loads each adapter inside `pcall`.
+10. `modules.scratch.setup()`.
+11. `modules.compile.setup()`.
+12. `modules.sessions.setup()`.
+13. `vim.cmd.colorscheme("plain")`.
 
-Nothing else runs at startup. Lazily loaded plugins attach later, when the first buffer of a declared filetype appears (see LAZY LOADING).
+Nothing else runs at startup. Lazy plugins attach later, when the first buffer of a declared filetype appears. The notes module is set up by the Markdown adapter, and the Pandoc commands by the Markdown ftplugin, because both are context-bound.
 
 ## Directory layout
 
 ```
 init.lua               load order only
-colors/                custom colorschemes
+colors/                custom colorschemes, one file per scheme
 after/ftplugin/        buffer-local options per filetype, applied after the runtime ftplugins
 after/queries/         Tree-sitter query overrides
-lua/config/            editor behavior loaded at startup
+lua/config/            options, autocmds, filetypes, commands, health and the keymap modules
 lua/plugins/           one adapter file per third-party plugin suite
-lua/modules/           self-contained components written for this config; each exposes setup() and owns its own state
-lua/lib/               helpers and domain logic used by other modules; exposes no commands, autocmds or keymaps
-lua/language/          language server stack; one module per server under servers/
+lua/modules/           self-contained features; state private behind a setup() when they register anything
+lua/lib/               shared helpers and domain logic; no commands, autocmds or keymaps
+lua/language/          native LSP stack, one module per server under servers/, plus lint.lua
 lua/snippets/          LuaSnip snippets, one file per filetype
 lua/pandoc/            Pandoc defaults, metadata, profiles and Lua filters
 spell/                 custom spell files
-nvim-pack-lock.json    revision lock file written by vim.pack
-doc/                   the doc pages, plain text (this folder)
+nvim-pack-lock.json    revision lock written by vim.pack
+doc/                   these pages
 ```
 
-The layer rule is binary: a module that exposes commands, autocmds or keymaps goes in `modules/`; anything else goes in `lib/`. A layer may only require the layers below it: `init.lua`, then `config`, `plugins`, `modules` and `lib`. Nothing in `lib/` requires upwards. See `doc/structure.md` for the full tree, `doc/modules.md` for the feature layer and `doc/lib.md` for the helpers.
+The layer rule is binary: a file that exposes commands, autocmds or keymaps is a module; anything else is a lib. A layer may only require the layers below it: `init.lua`, then `config`, `plugins`, `modules`, `lib`. Nothing in `lib/` requires upwards. See [structure](./structure.md).
 
-## Options
+## Editor behavior
 
-Highlights of `lua/config/options.lua`. The full list is in the file itself; each option's help is available with `:help 'name'`.
+`lua/config/options.lua` sets the defaults, `lua/config/autocmds.lua` the global events. The decisions a reader is most likely to notice:
 
-Editing
+- the clipboard is `unnamedplus`, undo is persistent and no swap or backup files are written;
+- `'list'` is off by default, but `'listchars'` is configured for when it is useful; there are no number columns by default;
+- search is case-insensitive until a pattern has an uppercase letter, and `:substitute` previews inside the window;
+- ripgrep is the `'grepprg'` when installed, so `:Grep` and the project substitution follow `--smart-case`;
+- `'path'` is recursive;
+- sessions are per directory and per tmux, restored on entry and saved on exit;
+- big files disable Tree-sitter, completion, diagnostics, folds, spell and the costly display pieces;
+- utility windows (help, quickfix, man, health, Fugitive, undotree) close with `q` or `<Esc>` and drop `listchars`;
+- a save creates missing parent directories, strips trailing whitespace and jumps to the last cursor position when the file is opened again.
 
-- `'clipboard'` — unnamedplus: yanks go to the system clipboard
-- `'expandtab'` — 4-space indentation by default; `vim-sleuth` detects the existing style of each file
-- `'undofile'` — persistent undo with 10000 levels; because of it, `'swapfile'` and `'backup'` are off
-- `'foldmethod'` — manual, every fold starts open
-- `'nrformats'` — octal removed, so `Ctrl-A` on `007` does not increment to `010`
+The full behavior is in [config](./config.md).
 
-Search
+## Commands
 
-- `'ignorecase'`/`'smartcase'` — case-insensitive unless the pattern has uppercase; `'inccommand'` nosplit, so `:substitute`, `:global` and `:vimgrep` preview their matches as typed; ripgrep is used as `'grepprg'` when installed (with `--smart-case`, so project grep follows the same case rule), which the project-wide features rely on.
+Global commands from `lua/config/commands.lua`:
 
-Display
+| Command               | Behavior                                                                         |
+| --------------------- | -------------------------------------------------------------------------------- |
+| `:Setwd`              | Change the working directory to the current file's directory.                    |
+| `:Grep {args}`        | Run the grep program with raw flags and open the quickfix, e.g. `:Grep -w word`. |
+| `:FormatEnable`       | Enable autoformat on save globally.                                              |
+| `:FormatDisable`      | Disable autoformat on save globally.                                             |
+| `:FormatToggleBuffer` | Toggle autoformat for the current buffer.                                        |
+| `:PackAdd {repos}`    | Add plugins, installing missing ones.                                            |
+| `:PackDel {names}`    | Delete plugins by name.                                                          |
+| `:PackUpdate [names]` | Update all plugins, or the named ones.                                           |
 
-- `'list'` with tabs, trailing spaces, spaces and non-breaking spaces marked; `'scrolloff'` 4; no number columns; single window borders; block cursor everywhere (`'guicursor'`); `'termguicolors'`.
+Feature commands are documented with their feature:
 
-Navigation
+- `:Compile`, `:Recompile`, `:CompileInterrupt` — [modules](./modules.md);
+- `:Scratch`, `:ScratchSplit`, `:Scratch!` — [modules](./modules.md);
+- `:SessionSave`, `:SessionLoad` — [modules](./modules.md);
+- `:Pandoc`, `:PandocPreview` — [pandoc](./pandoc.md);
+- `:Notes*` — [notes](./notes.md).
 
-- `'path'` includes `**`, making `:find` and `gf` recursive; `'switchbuf'` uselast, so buffer jumps reuse the window that last showed the buffer; splits go right and below.
+## What is inside
 
-Sessions
+Editor configuration
 
-- `'sessionoptions'` is fixed here and must match what `modules/sessions.lua` saves and restores.
+- native options, autocmds and user commands in `lua/config/`;
+- keymaps split by theme in `lua/config/keymaps/`;
+- a health check for the external tools in `lua/config/health.lua`.
 
-## Autocmds
+Plugins
 
-Global autocmds live in `lua/config/autocmds.lua`, grouped per concern with named augroups:
-
-- `VimResized` — keep splits evenly sized after a terminal resize
-- `TextYankPost` — highlight yanked text
-- `FileType` — do not continue comments on new lines
-- `CmdlineEnter` — while a `:` command is typed, `smartcase` is off so completions such as `:find *Foo` stay case-insensitive
-- `CmdlineEnter` — starting a `/` or `?` search always turns `hlsearch` on
-- `QuickFixCmdPost` — open the quickfix window when a command filled the list with entries; an empty list keeps the window closed
-- `FileType` — disable heavy features on big files (see `lua/lib/bigfile.lua`): Treesitter, completion, diagnostics, folds and spell go off
-- `BufRead` — `.env` files get `dosini` highlighting
-- `VimEnter` — startup behavior: inside tmux, restore the session of the directory; otherwise open the file explorer, also when launched with a single directory argument
-- `VimLeavePre` — save the session of the current directory, tmux only
-- `BufWritePre` — create missing parent directories on save
-- `BufReadPost` — jump to the last cursor position, except in git commit buffers
-- `BufWritePre` — strip trailing whitespace, skipping special and non-modifiable buffers
-- `FileType` — utility buffers (help, quickfix, man, undotree, Fugitive views, health, ...) are unlisted and close with `q` or `<Esc>`; `listchars` are off in them
-- `TermOpen` — terminals start in insert mode with a clean UI
-- `FileType` — the built-in undotree opens on the far left with a fixed width of 40 columns
-
-## User commands
-
-Global user commands (`lua/config/commands.lua`):
-
-- `:Setwd` — change the working directory to the current file's directory
-- `:Grep {args}` — run the grep program with the arguments and open the quickfix when there are entries; flags of the program are accepted (`:Grep -w word`)
-- `:FormatEnable` — re-enable autoformat on save
-- `:FormatDisable` — disable autoformat on save
-- `:PackAdd {repos}` — add plugins to the session, installing the missing ones
-- `:PackDel {names}` — delete plugins by name
-- `:PackUpdate [names]` — update all plugins, or only the named ones
-
-Buffer-local and module commands:
-
-- `:Compile [cmd]` — run a build command asynchronously into `*compilation*`; without an argument it prompts pre-filled with the default for the filetype (see COMPILATION)
-- `:Recompile` — rerun the last command of this directory
-- `:CompileInterrupt` — kill the running command of this directory
-- `:Scratch` — toggle the scratch buffer
-- `:ScratchSplit` — open the scratch in a vertical split
-- `:Scratch!` — wipe the scratch buffer
-- `:Pandoc [profile]` — export the current buffer (see PANDOC), buffer-local
-- `:PandocPreview` — export on every save and open the result, buffer-local
-- `:NotesDraft` — create a quick draft (see NOTES)
-- `:NotesNew` — create a typed note from a template
-- `:NotesDaily` — open today's daily note, created when missing
-- `:NotesTemplate` — insert a template into the current note
-- `:NotesFiles` — find notes by name
-- `:NotesGrep` — search note contents
-- `:NotesLast` — reopen the last visited note
-- `:NotesOpen` — open the vault folder
-
-## Plugin management
-
-Plugins are managed by Neovim's built-in package manager, `vim.pack`. There is no third-party plugin manager and no lockfile tooling beyond the revision file `nvim-pack-lock.json` that `vim.pack` itself writes.
-
-Eager plugins are declared in `lua/config/pack.lua` with a short comment per plugin. Everything they need at install time runs in a `PackChanged` autocmd created in the same file: `nvim-treesitter` gets `:TSUpdate` and LuaSnip builds `jsregexp` with `make install_jsregexp`, which needs a C toolchain and only warns on failure. A plugin that needs a build step must be handled there.
-
-Lazy loading is the only indirection in the config, and it is a single helper, `lua/lib/lazy.lua`. A lazy plugin declares itself at the bottom of its own adapter file, in the module shape of `lua/plugins/lisp.lua` (filetype trigger) and `lua/plugins/fzf.lua` (on-demand trigger):
-
-```lua
-require("lib.lazy").setup({
-    src = "https://github.com/...",   -- vim.pack source
-    filetypes = { "tex" },            -- load triggers; omitted when the load is on demand
-    configure = M.configure,          -- module function, runs before :packadd
-    after = M.after,                  -- module function, runs after :packadd
-})
-```
-
-The plugin is installed at startup but its `plugin/` scripts only run when the first buffer of one of the filetypes appears, or when the adapter loads it explicitly with `require("lib.lazy").load(name)` from its own keymap stubs, which is how a plugin without a natural filetype trigger loads on first use. Loading runs `configure`, then `:packadd`, then `after`, and then fires the `FileType` event again for the triggering buffer, because the plugin was not on the runtimepath when the original event ran. All lazy plugins are inspectable in one place with `:autocmd LazyPack`.
-
-To update every plugin: `:PackUpdate` or `:lua vim.pack.update()`.
-
-## The plugin set
-
-File explorer
-
-- `canola.nvim`, a fork of `oil.nvim`: the filesystem is edited as a normal buffer, replacing `netrw`. Deletions go to the trash and simple edits are applied without confirmation. Entries open with an extension-specific viewer (`zathura`, `imv`, `mpv`), falling back to `xdg-open`. See `lua/plugins/oil.lua`.
-
-Tree-sitter
-
-- `nvim-treesitter` for syntax-aware parsing and highlighting, plus `nvim-treesitter-textobjects` for motions and selections. Parsers are requested for automatic installation in `lua/plugins/treesitter.lua` (max 4 concurrent jobs); highlighting per filetype is activated separately. Needs the tree-sitter CLI on PATH.
-
-Completion and snippets
-
-- No completion plugin: native LSP completion plus LuaSnip. The menu's only source is the LSP; LuaSnip's own snippets are expanded by trigger, autosnippet or snippet keymaps. The menu opens automatically only on the filetypes listed in `TRIGGER_FILETYPES` (`lua/plugins/completions.lua`); elsewhere completion is manual and the omnifunc still works. Snippet definitions live in `lua/snippets/`, one file per filetype, loaded lazily; shared helpers are in `lua/snippets/common.lua`.
-
-Formatting and linting
-
-- `conform.nvim` runs external formatters on demand and on save, with a chain per filetype in `lua/plugins/formatting.lua`: `stylua` (Lua), `clang-format` (C/C++), `astyle` (Java), `ruff` (Python), `prettierd` (web), `yamlfmt`, `taplo`, `sql-formatter`, `asmfmt` and others, with `trim_whitespace` and `trim_newlines` as the fallback chain for every filetype. The on/off state lives in `lib/autoformat.lua` with global and buffer-local scopes (`:FormatEnable`, `:FormatDisable`). External linters run through `nvim-lint` (`lua/language/lint.lua`); Python is linted with `ruff`, which is the same tool `conform` formats with.
+- `vim.pack` declarations in `lua/config/pack.lua`, one adapter per plugin suite in `lua/plugins/`;
+- Tree-sitter parsing, conform formatting, native LSP completion with LuaSnip, fzf-lua searching, Fugitive and gitsigns, canola.nvim as the explorer, Obsidian and img-clip for notes, flash, mini.ai and mini.align, tmux navigation, colorizer and sleuth;
+- fzf-lua and Conjure lazy-load by filetype or on first use. The details are in [plugins](./plugins.md).
 
 Language servers
 
-- See LANGUAGE SERVERS below.
+- clangd, cssls, emmet, eslint, html, lua_ls, marksman, pyright, tailwindcss and vtsls through `vim.lsp.enable`;
+- jdtls through nvim-jdtls, per buffer, outside the shared stack;
+- Mason installs the servers after startup; formatting stays with conform, and Python linting with ruff through nvim-lint. See [language](./language.md).
 
-Fuzzy finder
+Features written for this config
 
-- `fzf-lua` wraps `fzf` for files, buffers, grep, diagnostics and help. It loads on demand, from its own keymaps and from the first markdown buffer (the obsidian picker resolves through it). Needs `fzf`, `grep`, `ripgrep` and `fd`. `lib/substitute` also calls ripgrep directly for project-wide substitutions.
+- a native statusline, per-directory sessions, a persistent scratch buffer, an Emacs-like compile runner, a Pandoc exporter, the notes vault, window zoom, Fugitive view closing and Markdown list editing. See [modules](./modules.md).
 
-Git
+Documents
 
-- `vim-fugitive` for repository operations (staging, committing, diffing, blaming), `vim-rhubarb` so `:GBrowse` builds GitHub URLs, and `gitsigns.nvim` for hunk-level markers, staging and blame. Destructive remote operations are left to the terminal. See `lua/plugins/git.lua`.
+- Markdown export to PDF, EPUB, DOCX and HTML through Pandoc, with profiles and filters. See [pandoc](./pandoc.md).
 
-Markdown and notes
+Themes
 
-- `obsidian.nvim` for wikilinks, completion and vault features; `img-clip.nvim` pastes clipboard images into files. The note creation and search workflow is a config module, NOTES below.
-
-Lisp
-
-- `Conjure`, loaded lazily for Scheme, Common Lisp, Racket and Clojure, configured for MIT Scheme as the REPL.
-
-Small quality-of-life plugins
-
-- `lua/plugins/unnecessary-shit.lua`: `mini.nvim` (surround, pairs, icons and other small modules), `vim-tmux-navigator` (splits and tmux panes share one navigation, the tmux side needs the matching plugin), `nvim-colorizer.lua` (inline color preview), `flash.nvim` (label-based jumps), `vim-sleuth` (indentation detection), `markdown-preview.nvim` (browser rendering, used to read documentation with mermaid diagrams), `lazydev.nvim` (Neovim API types for `lua_ls`).
-
-Colorschemes
-
-- Custom colorschemes live in `colors/`: `hollow` (the default), `brightburn`, `classic`, `artifact`, `enfocadomod` and `insanity`.
-
-## Language servers
-
-The stack is in `lua/language/`. One module per server under `servers/`:
-
-- `clangd` (C/C++), `cssls`, `emmet_language_server`, `eslint`, `html`, `lua_ls` (with `lazydev.nvim`), `marksman` (Markdown), `pyright` (Python), `tailwindcss` and `vtsls` (TypeScript/JavaScript).
-
-`lua/language/init.lua` holds the shared setup: `mason.nvim` installs the servers (scheduled after startup, `automatic_enable` off), the shape of each module is validated (a malformed module becomes a startup error instead of a broken attach), each config is passed to `vim.lsp.config`, and one `LspAttach` autocmd sets the buffer-local LSP behavior. The native LSP mappings are kept as-is.
-
-Server modules follow the UserLspServerModule contract in `lua/language/types.lua`: a `config` table for `vim.lsp.config` and an optional `on_attach(client, bufnr)` hook.
-
-Java is special: `jdtls` is installed through Mason but started per buffer by its own module, `lua/language/servers/jdtls.lua`, never by this stack. The LSP toggle starts and stops it separately, and the client stops when its last Java buffer is closed.
-
-Other stack-wide decisions:
-
-- dynamic workspace file watching is disabled, so servers do not register thousands of watchers in large projects;
-- formatting never goes through the servers, only through `conform`;
-- diagnostics start globally disabled: no underlines or signs until the display is toggled on;
-- the whole stack can be enabled/disabled at once (clients are stopped, not just detached).
-
-Python is also linted by `ruff` through `nvim-lint`, outside the LSP stack and with its own toggle (`lua/language/lint.lua`).
-
-## Compilation
-
-`modules/compile.lua` provides an Emacs-like `:Compile`. It runs a build command asynchronously through `sh -c` and streams its output into a `*compilation*` buffer in a bottom 25-line split; the buffer gets the `qf` filetype and shares the utility-buffer close behavior. When the command exits nonzero, the output is parsed into the quickfix list; `gcc/clang`, `javac` and Python tracebacks are parsed, anything else still shows in the buffer.
-
-State is per working directory: starting a new compile in the same directory kills the previous process, `:Recompile` reruns the last command, `:CompileInterrupt` kills the current one. Without an argument, `:Compile` prompts pre-filled with the filetype default (`make -k`, `python %`, `cc -o %:r.out %`, `go run %`, ...).
-
-## Sessions
-
-`modules/sessions.lua` is a minimal, fully automatic, per-directory session manager built on `:mksession` and `:source`, active only inside tmux. On `VimEnter` with no file arguments it restores the session of the directory; on exit it saves it. Files live in `stdpath("state")/sessions/`, one per cwd (the path is flattened into a single file name).
-
-A save happens only when at least one real file buffer is open, so opening and closing Neovim on the explorer alone never overwrites an existing session. `gitcommit`/`gitrebase` buffers are ignored and Oil buffers are removed before saving. `'sessionoptions'` is set once in `options.lua` and must stay in sync with this module.
-
-## Scratch buffer
-
-`modules/scratch.lua` keeps a single persistent scratch buffer for throwaway notes and pastes. Toggling replaces the buffer of the current window (only when it is a regular file buffer; special buffers like Oil, terminals and Fugitive views get a vertical split instead), and leaving it restores the previous buffer, so the window layout never changes. The buffer is hidden, not wiped, and lasts until the session ends or `:Scratch!` deletes it. Inside the scratch, `q` and `<Esc>` leave it.
-
-## Pandoc
-
-`modules/pandoc.lua` exports the current Markdown buffer to PDF, EPUB, DOCX or HTML by running pandoc asynchronously, so the editor never blocks. The buffer is piped through stdin, so unsaved changes are exported too. Results go to the exports folder (see `lib/exports.lua`) and open in `zathura` (PDF/EPUB) or `xdg-open` (DOCX/HTML).
-
-Preview mode builds and opens the document once, then rebuilds it on every save; `zathura` reloads by itself. Each export loads, in order: the pipeline in `lua/pandoc/defaults.yaml`, an optional `defaults.yaml` in the note's folder or a parent, `lua/pandoc/metadata.yaml` (default layout and language), and a profile from `lua/pandoc/profiles/` when one is named. Filters in `lua/pandoc/filters/` handle wikilinks and the metadata block under the title; `profiles/abnt.yaml` covers ABNT-styled documents. Needs `pandoc-cli` and `zathura`. The feature page, with the whole load order and the filter behavior, is `doc/pandoc.md`.
-
-## Notes
-
-`modules/notes.lua` is a flat vault of Markdown notes managed from Neovim: quick drafts and typed notes from user-maintained templates, template insertion into an existing note, search by name and by content, and reopening the last note. The vault is just a folder: `$ARCANUM_DIR`, or `~/dev/arcanum` when unset, and it must already exist. Notes live in the vault root, templates in `_templates/`, and pasted images in `attachments/`.
-
-File names follow `TYPE-YYYYMMDD-HHmmss[-SLUG].md`, defined by the vault's own README. Placeholders available to templates: `{{title}}`, `{{date}}`, `{{date:FMT}}` (a moment-like pattern, e.g. `{{date:DD/MM/YYYY}}`), `{{id}}`, `{{adr_number}}`. The next ADR number is the highest `ADR-NNN` found in the bodies of the vault's ADRs plus one, so deleting the newest ADR does not make the next one reuse its number. Creation is bound to the vault, but template insertion works on any Markdown file on disk.
-
-The daily note of a day is `daily-YYYYMMDD.md`, one per day: `<leader>oa` (or `:NotesDaily`) opens today's note and creates it from `_templates/daily.md` when missing, open-or-create - an existing day is never overwritten. The CLI companion is `nt daily [OFFSET|DATE]`. See the vault README for the daily contract.
-
-## Misc modules
-
-`statusline` — native `'statusline'`, no plugin. The active window shows editor state, position, search and selection info, git branch, diagnostics and macro recording; inactive windows get a reduced version. Costly pieces are cached: mode in `vim.g.sl_mode`, branch in `vim.b.git_branch` (looked up asynchronously, cached per directory), file size in `vim.b.sl_file_size` (read from disk, so it is stale until save).
-
-`window_zoom` — zooms the focused window by showing it as the only window of a new tab, the original layout staying intact in its own tab. Toggling again closes the zoom tab. The state is the tabpage-local `t:zoomed`, which the statusline reads, and closing the tab by any other means also ends the zoom.
-
-`close_view` — closes Fugitive views (index, status, blame, commit buffers) without ever quitting Neovim; closing a commit buffer discards it and aborts the commit.
-
-`markdown_lists` — native list editing for Markdown buffers: cycling, promoting and demoting list items on the current line or selection, with formatter helpers that keep markers and indentation as written. The bullet of new items is set with `vim.g.markdown_list_bullet` and the delimiter with `vim.g.markdown_list_delimiter` (buffer-local versions take precedence). The marker cycle and the type cycle order are set with `vim.g.markdown_list_bullets` and `vim.g.markdown_list_cycle`.
-
-## Lib
-
-`lua/lib/` holds everything that exists to be required by other modules:
-
-- `buffers` — inspect, save and delete buffers without breaking the window layout; deleting a buffer keeps its windows, which switch to the most recently used buffer
-- `bigfile` — decides whether a buffer is big (1.5 MiB size or 1000-character lines, sampled over 200 lines); the verdict is cached in `vim.b.bigfile`
-- `lazy` — the lazy loader (see PLUGIN MANAGEMENT)
-- `autoformat` — single source of truth of the autoformat state, with global and buffer-local scopes
-- `substitute` — pre-fills `:substitute` or a project-wide substitution on the command line; needs ripgrep
-- `exports` — single source of truth for export paths, used by pandoc: documents go to `<root>/exports/<reldir>/`; `<root>` is found through markers or forced with `vim.g.exports_root`
-- `system` — OS name detection
-
-## Filetype overrides
-
-`after/ftplugin/<ft>.lua` holds buffer-local options for each filetype, applied after the runtime ftplugins: PEP 8 for Python, per-language comment and fold settings, toolchain commands, and so on. Logic shared by two or more filetypes goes in `lib/` instead. `after/queries/` holds Tree-sitter query overrides, such as Markdown text objects.
+- `plain` (default), `hollow`, `artifact`, `brightburn`, `classic`, `elrond`, `enfocadomod`, `insanity` and `solarized`. See [colorschemes](./colorschemes.md).
 
 ## Requirements
 
-Neovim 0.12 or newer. Everything else is per feature and documented in the header of the file that uses it. On Arch Linux:
+Neovim 0.12 or newer. Everything else is per feature; the header of the file that uses a tool names it, and `:checkhealth config` verifies it.
 
-```sh
-sudo pacman -S git tmux fzf ripgrep fd nodejs npm jdk21-openjdk \
-  clang pandoc-cli zathura zathura-pdf-mupdf
-```
+Base tools on Arch Linux are the command in QUICK START. Beyond them:
 
-Language servers, formatters and linters are installed through Mason (`:MasonInstall ...`), and the requests happen automatically at startup for the servers declared in the LSP stack. Notes: LuaSnip needs a C toolchain at install time; `jdtls` needs Python 3; Tree-sitter needs the tree-sitter CLI.
+- language servers, and optionally formatters and linters, through Mason (`:MasonInstall ...`); the servers declared in the LSP stack are requested automatically after startup;
+- LuaSnip: `make` and a C compiler at install time;
+- jdtls: Python 3 for the Mason install, a JDK 21 or newer at run time, Maven or Gradle for the project tasks;
+- Pandoc export: `pandoc-cli`, XeLaTeX with the TeX Live packages in the module header, and `zathura` for preview;
+- images: `wl-clipboard` on Wayland or `xclip` on X11 for img-clip;
+- the explorer viewers: `zathura`, `imv`, `mpv` and `xdg-utils`;
+- Conjure: `racket`, `rlwrap`, `expect` and AUR `mit-scheme` for the Scheme REPL.
+
+A missing formatter disables only its filetype. A missing `rg`, `git` or `node` breaks several features at once; the health check marks those as errors.
+
+## Conventions
+
+- Every file opens with a path comment and a short header; every exported function, table and class carries LuaLS annotations. The standard is [documentation](./documentation.md).
+- A file that exposes commands, autocmds or keymaps is a module; anything else is a lib. State belongs to its owner and is reached only through its API.
+- Keymaps are not listed in the docs. The `desc` field of each mapping is its documentation.
+- A behavior change updates its header and the matching doc page in the same commit. Dead `See:` references are bugs.
+- `nvim-pack-lock.json` is generated; update plugins through `:PackUpdate`.
 
 ## Files
 
-- `doc/reading.md` — how to read the pages
-- `README.md` — the repo overview
-- `doc/kickstart.md` — this page
-- `doc/structure.md` — the folder structure in depth
-- `doc/modules.md` — the lua/modules/ layer
-- `doc/lib.md` — the lua/lib/ layer
-- `doc/philosophy.md` — why the config builds from scratch
-- `doc/documentation.md` — the documentation standard of this config
-- `doc/development.md` — how to extend the config
-- `doc/pandoc.md` — the Pandoc export feature
+- [`README.md`](../README.md) — the repo overview
+- [`init.lua`](../init.lua) — the load order
+- [`lua/`](../lua/) — config, plugins, modules, lib, language, snippets and pandoc
+- [`after/`](../after/) — ftplugins and Tree-sitter query overrides
+- [`colors/`](../colors/) — the colorschemes
+- [`doc/`](./) — these pages
 
 ## See also
 
 - [structure](./structure.md)
+- [config](./config.md)
+- [plugins](./plugins.md)
+- [language](./language.md)
 - [modules](./modules.md)
 - [lib](./lib.md)
-- [philosophy](./philosophy.md)
-- [documentation](./documentation.md)
-- [development](./development.md)
+- [notes](./notes.md)
 - [pandoc](./pandoc.md)
-- Also `:help vim.pack`, `:help lsp`, `:help ftplugin`.
+- [colorschemes](./colorschemes.md)
+- [philosophy](./philosophy.md)
+- [development](./development.md)
+- [troubleshooting](./troubleshooting.md)
+- `:help vim.pack`, `:help lsp`, `:help ftplugin`
 
 ## Authors
 
-`miqu3iasg` and contributors. License: see LICENSE.
+`miqu3iasg` and contributors. License: see [`LICENSE`](../LICENSE).
