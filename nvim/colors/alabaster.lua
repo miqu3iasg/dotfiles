@@ -7,6 +7,8 @@
 --
 -- See: lua/lib/colors.lua
 -- See: https://github.com/mcncl/alabaster.nvim
+--
+-- SPDX-License-Identifier: Vim
 
 vim.cmd("runtime colors/vim.lua")
 vim.g.colors_name = "alabaster"
