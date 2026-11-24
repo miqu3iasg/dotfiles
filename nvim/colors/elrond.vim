@@ -1,11 +1,12 @@
+" colors/elrond.vim
+"
 " vim: tw=0 ts=4 sw=4 et
 " Vim color file
 "
-" Based on Vim's built-in "elflord" color scheme,
-" originally by Ron Aaron <ron@ronware.org>
+" Based on Vim's built-in "elflord" color scheme, originally by Ron Aaron <ron@ronware.org>
 "
-" Maintainer:   Adrian Perez <aperez@igalia.com>
-"
+" Copyright (c) Adrian Perez <aperez@igalia.com>
+" Copyright (c) Miquéias Alves Medeiros <https://github.com/miqu3iasg>
 
 set background=dark
 hi clear
@@ -23,25 +24,25 @@ let g:elrond#use_italics  = get(g:, 'elrond#use_italics',        0)
 let g:elrond#cursorline   = get(g:, 'elrond#cursorline',         0)
 let g:elrond#cursorline16 = get(g:, 'elrond#cursorline16' , 'underline')
 
-hi Normal     guifg=#dadada  guibg=black
+hi Normal     guifg=#bbbbbb  guibg=black
 
 if g:elrond#use_italics
-    hi Comment term=italic ctermfg=173 guifg=#d7875f cterm=italic gui=italic
+    hi Comment term=italic ctermfg=67 guifg=#3f86c0 cterm=italic gui=italic
 else
-    hi Comment ctermfg=173 guifg=#d7875f
+    hi Comment ctermfg=67 guifg=#3f86c0
 endif
 
-hi Constant   term=underline ctermfg=201  guifg=#ff00ff
-hi Special    term=NONE      ctermfg=127  guifg=#af00af  gui=NONE
-hi Identifier term=underline ctermfg=51   guifg=#00ffff  cterm=NONE gui=NONE
-hi Statement  term=NONE      ctermfg=226  guifg=#ffff00  gui=NONE
-hi PreProc    term=underline ctermfg=75   guifg=#5fafff
-hi Type       term=underline ctermfg=83   guifg=#5fff5f  gui=NONE
-hi Function   term=NONE      ctermfg=231  guifg=#ffffff  gui=NONE
-hi Operator                  ctermfg=196  guifg=#ff0000
+hi Constant   term=underline ctermfg=170  guifg=#db3ddb
+hi Special    term=NONE      ctermfg=115   guifg=#78dbc3  gui=NONE
+hi Identifier term=underline ctermfg=80   guifg=#3ddbdb  cterm=NONE gui=NONE
+hi Statement  term=NONE      ctermfg=185  guifg=#dbdb3d  gui=NONE
+hi PreProc    term=underline ctermfg=173  guifg=#db913d
+hi Type       term=underline ctermfg=114   guifg=#78db78  gui=NONE
+hi Function   term=NONE      ctermfg=253  guifg=#dbdbdb  gui=NONE
+hi Operator                  ctermfg=167  guifg=#db3d3d
 hi Ignore                    ctermfg=black guifg=bg
-hi Error      term=reverse   ctermbg=196 ctermfg=231 guibg=#ff0000 guifg=#ffffff
-hi Todo       term=standout  ctermbg=226 ctermfg=black guibg=#ffff00 guifg=#000000 gui=bold cterm=bold
+hi Error      term=reverse   ctermbg=167 ctermfg=253 guibg=#db3d3d guifg=#dbdbdb
+hi Todo       term=standout  ctermbg=185 ctermfg=black guibg=#dbdb3d guifg=#000000 gui=bold cterm=bold
 
 highlight CursorLine NONE
 
@@ -51,59 +52,78 @@ if &t_Co >= 256 || !empty($NVIM_TUI_ENABLE_TRUE_COLOR)
     endif
 endif
 
-highlight CursorLine    ctermbg=234               guibg=#1c1c1c
-highlight CursorLineNr  ctermbg=235 ctermfg=246   guibg=#262626 guifg=#949494
-highlight LineNr        ctermbg=234 ctermfg=238   guibg=#1c1c1c guifg=#444444
-highlight SignColumn    ctermbg=234               guibg=#1c1c1c
-highlight Pmenu         ctermbg=235 ctermfg=253   guibg=#262626 guifg=#dadada
-highlight PmenuSel      ctermbg=238 ctermfg=231   guibg=#444444 guifg=#ffffff
-highlight PmenuSbar     ctermbg=238               guibg=#444444
-highlight PmenuThumb    ctermbg=240               guibg=#585858
-highlight VertSplit     ctermbg=NONE ctermfg=White guibg=NONE guifg=#ffffff cterm=NONE gui=NONE
-highlight WinSeparator  ctermbg=NONE ctermfg=White guibg=NONE guifg=#ffffff cterm=NONE gui=NONE
+highlight CursorLine    ctermbg=234               guibg=#1a1a1a
+highlight CursorLineNr  ctermbg=NONE ctermfg=185  guibg=NONE    guifg=#dbdb3d cterm=bold gui=bold
+highlight LineNr        ctermbg=NONE ctermfg=67   guibg=NONE    guifg=#3f86c0
+highlight SignColumn    ctermbg=NONE              guibg=NONE
+highlight FoldColumn    ctermbg=NONE ctermfg=67   guibg=NONE    guifg=#3f86c0
+highlight Folded        ctermbg=17   ctermfg=73   guibg=#171752 guifg=#34b9b9
+
+highlight Pmenu         ctermbg=239  ctermfg=249  guibg=#4c4c4c guifg=#b3b3b3
+highlight PmenuSel      ctermbg=249  ctermfg=black guibg=#b3b3b3 guifg=#000000
+highlight PmenuSbar     ctermbg=239               guibg=#4c4c4c
+highlight PmenuThumb    ctermbg=249               guibg=#b3b3b3
+
+highlight VertSplit     ctermbg=NONE ctermfg=249  guibg=NONE guifg=#b3b3b3 cterm=NONE gui=NONE
+highlight WinSeparator  ctermbg=NONE ctermfg=249  guibg=NONE guifg=#b3b3b3 cterm=NONE gui=NONE
 set fillchars+=vert:│
-highlight StatusLine    ctermbg=235 ctermfg=230   guibg=#262626 guifg=#ffffd7 cterm=NONE gui=NONE
-highlight StatusLineNC  ctermbg=235 ctermfg=244   guibg=#262626 guifg=#949494 cterm=NONE gui=NONE
-highlight TabLine       ctermbg=235 ctermfg=246   guibg=#262626 guifg=#949494 cterm=NONE gui=NONE
-highlight TabLineSel    ctermbg=246 ctermfg=235   guibg=#949494 guifg=#262626 cterm=NONE gui=NONE
-highlight TabLineFill   ctermbg=235               guibg=#262626               cterm=NONE gui=NONE
+highlight StatusLine    ctermbg=249  ctermfg=black guibg=#b3b3b3 guifg=#000000 cterm=bold gui=bold
+highlight StatusLineNC  ctermbg=239  ctermfg=249   guibg=#4c4c4c guifg=#b3b3b3 cterm=NONE gui=NONE
+highlight TabLine       ctermbg=239  ctermfg=249   guibg=#4c4c4c guifg=#b3b3b3 cterm=NONE gui=NONE
+highlight TabLineSel    ctermbg=249  ctermfg=black guibg=#b3b3b3 guifg=#000000 cterm=bold gui=bold
+highlight TabLineFill   ctermbg=239                guibg=#4c4c4c               cterm=NONE gui=NONE
 
-highlight LiningItem    ctermbg=236 ctermfg=252   guibg=#303030 guifg=#d0d0d0
-highlight LiningVertSep ctermbg=236 ctermfg=240   guibg=#303030 guifg=#585858
-highlight LiningBufName ctermbg=237 ctermfg=252   guibg=#3a3a3a guifg=#d0d0d0 cterm=NONE gui=NONE
-highlight LiningBufPath ctermbg=237 ctermfg=252   guibg=#3a3a3a guifg=#d0d0d0 cterm=NONE gui=NONE
+highlight LiningItem    ctermbg=239  ctermfg=249   guibg=#4c4c4c guifg=#b3b3b3
+highlight LiningVertSep ctermbg=239  ctermfg=247   guibg=#4c4c4c guifg=#a2a2a2
+highlight LiningBufName ctermbg=249  ctermfg=black guibg=#b3b3b3 guifg=#000000 cterm=bold gui=bold
+highlight LiningBufPath ctermbg=247  ctermfg=black guibg=#a2a2a2 guifg=#000000 cterm=NONE gui=NONE
 
-highlight DiffAdd    guibg=#005f00 guifg=#87ff00 gui=NONE
-highlight DiffDelete guibg=#5f0000 guifg=#870000 gui=NONE
-highlight DiffChange guibg=#303030               gui=NONE
-highlight DiffText   guibg=#5f005f guifg=#ff00d7 gui=NONE
-highlight SpellBad   guisp=#ff5f5f gui=undercurl
-highlight SpellCap   guisp=#005f87 gui=undercurl
+highlight Visual        ctermbg=24   ctermfg=253   guibg=#215b74 guifg=#dbdbdb
+highlight Search        ctermbg=185  ctermfg=black guibg=#dbdb3d guifg=#000000
+highlight IncSearch     ctermbg=114   ctermfg=black guibg=#78db78 guifg=#000000
+highlight MatchParen    ctermbg=NONE ctermfg=253   guibg=NONE    guifg=#dbdbdb cterm=bold,underline gui=bold,underline
+highlight NonText       ctermfg=30                 guifg=#217474
+highlight EndOfBuffer   ctermbg=NONE ctermfg=25   guibg=NONE    guifg=#2459a6
+highlight SpecialKey    ctermfg=30                 guifg=#217474
+highlight Directory     ctermfg=80                 guifg=#3ddbdb
+highlight Title         ctermfg=185                guifg=#dbdb3d cterm=bold gui=bold
+highlight ErrorMsg      ctermbg=167  ctermfg=253   guibg=#db3d3d guifg=#dbdbdb
+highlight WarningMsg    ctermfg=185                guifg=#dbdb3d
+highlight MoreMsg       ctermfg=114                 guifg=#78db78
+highlight Question      ctermfg=114                 guifg=#78db78
+
+highlight DiffAdd    guibg=#175217 guifg=#91db3d gui=NONE
+highlight DiffDelete guibg=#521717 guifg=#db7878 gui=NONE
+highlight DiffChange guibg=#0b2328               gui=NONE
+highlight DiffText   guibg=#215b74 guifg=#dbdbdb gui=bold
+highlight SpellBad   guisp=#db7878 gui=undercurl
+highlight SpellCap   guisp=#34b9b9 gui=undercurl
 
 if &t_Co < 256
     "
     " Common definitions for 8 & 16 color terminals
     "
-    highlight Comment       ctermfg=DarkYellow
+    highlight Comment       ctermfg=DarkCyan
     highlight Constant      ctermfg=Magenta
-    highlight Special       ctermfg=DarkMagenta
+    highlight Special       ctermfg=LightCyan
     highlight Identifier    ctermfg=Cyan
     highlight Statement     ctermfg=Yellow
-    highlight PreProc       ctermfg=LightBlue
+    highlight PreProc       ctermfg=DarkYellow
     highlight Type          ctermfg=LightGreen
     highlight Function      ctermfg=White
     highlight Operator      ctermfg=Red
     highlight Error         ctermbg=Red    ctermfg=White
     highlight Todo          ctermbg=Yellow ctermfg=Black
 
-    highlight CursorLineNr  ctermbg=DarkGrey  ctermfg=White     cterm=NONE gui=NONE
-    highlight LineNr        ctermbg=DarkGrey  ctermfg=LightGrey
-    highlight SignColumn    ctermbg=Black                       cterm=NONE gui=NONE
+    highlight CursorLineNr  ctermbg=NONE      ctermfg=Yellow    cterm=bold gui=NONE
+    highlight LineNr        ctermbg=NONE      ctermfg=DarkCyan
+    highlight EndOfBuffer   ctermbg=NONE      ctermfg=Blue
+    highlight SignColumn    ctermbg=NONE                        cterm=NONE gui=NONE
     highlight VertSplit     ctermbg=NONE      ctermfg=White
     highlight WinSeparator  ctermbg=NONE      ctermfg=White
-    highlight StatusLineNC  ctermbg=LightGrey ctermfg=0         cterm=reverse
+    highlight StatusLineNC  ctermbg=DarkGrey  ctermfg=LightGrey cterm=NONE
     highlight TabLine       ctermbg=DarkGrey  ctermfg=LightGrey cterm=NONE
-    highlight TabLineSel    ctermbg=LightGrey ctermfg=White
+    highlight TabLineSel    ctermbg=LightGrey ctermfg=Black     cterm=bold
     highlight TabLineFill   ctermbg=DarkGrey                    cterm=NONE
 
     if &t_Co >= 16
@@ -118,19 +138,17 @@ if &t_Co < 256
             endif
         endif
 
-        highlight Pmenu         ctermbg=DarkGrey  ctermfg=White
-        highlight PmenuSel      ctermbg=LightGrey ctermfg=White cterm=NONE
-        highlight PmenuSbar     ctermbg=DarkGrey  ctermfg=White
-        highlight PmenuThumb    ctermbg=DarkGrey  ctermfg=LightGrey
+        highlight Pmenu         ctermbg=DarkGrey  ctermfg=LightGrey
+        highlight PmenuSel      ctermbg=LightGrey ctermfg=Black cterm=NONE
+        highlight PmenuSbar     ctermbg=DarkGrey  ctermfg=LightGrey
+        highlight PmenuThumb    ctermbg=LightGrey ctermfg=Black
 
-        highlight StatusLine    ctermbg=White     ctermfg=0     cterm=reverse
-        highlight LiningItem    ctermbg=DarkGrey  ctermfg=White cterm=NONE
-        highlight LiningBufName ctermbg=White     ctermfg=Black cterm=NONE
+        highlight StatusLine    ctermbg=LightGrey ctermfg=Black cterm=bold
+        highlight LiningItem    ctermbg=DarkGrey  ctermfg=LightGrey cterm=NONE
+        highlight LiningBufName ctermbg=LightGrey ctermfg=Black cterm=bold
         highlight LiningBufPath ctermbg=LightGrey ctermfg=Black cterm=NONE
     else
         set nocursorline
-
-        highlight Comment       ctermfg=DarkYellow
 
         highlight Pmenu         ctermfg=NONE ctermbg=NONE  cterm=reverse
         highlight PmenuSel      ctermfg=Cyan ctermbg=Black cterm=reverse
@@ -146,18 +164,18 @@ if &t_Co < 256
 
     highlight link LiningVertSep LiningItem
 else
-    " Use more pleasant colors for Diff highlights whenever possible.
-    highlight DiffAdd    cterm=NONE ctermbg=22 ctermfg=118
-    highlight DiffDelete cterm=NONE ctermbg=52 ctermfg=88
-    highlight DiffChange cterm=NONE ctermbg=236
-    highlight DiffText   cterm=NONE ctermbg=53 ctermfg=201
+    " Diff highlights for 256-color terminals (no pink here either)
+    highlight DiffAdd    cterm=NONE ctermbg=22 ctermfg=113
+    highlight DiffDelete cterm=NONE ctermbg=52 ctermfg=174
+    highlight DiffChange cterm=NONE ctermbg=17
+    highlight DiffText   cterm=bold ctermbg=24 ctermfg=253
 
     highlight SpellBad   ctermbg=52
     highlight SpellCap   ctermbg=24
 endif
 
-highlight LiningWarn  ctermbg=94  ctermfg=221 guibg=#875f00 guifg=#ffd75f
-highlight LiningError ctermbg=160 ctermfg=231 guibg=#d70000 guifg=#ffffff
+highlight LiningWarn  ctermbg=185 ctermfg=black guibg=#dbdb3d guifg=#000000
+highlight LiningError ctermbg=131 ctermfg=253   guibg=#b93434 guifg=#dbdbdb
 
 highlight link LiningLnCol   LiningBufName
 highlight link LiningVcsInfo LiningItem
