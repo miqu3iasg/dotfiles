@@ -4,7 +4,7 @@
 -- Mirrored nodes keep related declarations in sync; indentation is four spaces.
 --
 -- See: doc/snippets.md
--- See: https://docs.oracle.com/en/java/javase/21/docs/specs/javadoc/doc-comment-spec.html
+-- See: https://docs.oacle.com/en/java/javase/21/docs/specs/javadoc/doc-comment-spec.html
 -- See: https://www.oracle.com/java/technologies/javase/writing-doc-comments.html#orderoftags
 -- See: https://google.github.io/styleguide/javaguide.html#s7-javadoc
 
