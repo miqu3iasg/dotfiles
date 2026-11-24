@@ -6,7 +6,7 @@
 -- Labels follow the primary language subtag of `lang` and fall back to
 -- `default_lang`; a note opts out with `show-metadata: false` in its YAML.
 --
--- See: doc/pandoc.txt
+-- See: doc/pandoc.md
 -- See: https://pandoc.org/lua-filters.html
 
 ---@class pandoc.Inline

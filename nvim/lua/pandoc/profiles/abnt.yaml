@@ -10,7 +10,7 @@
 # Pandoc options: engine options such as pdf-engine belong in defaults files.
 #
 # See: pandoc/metadata.yaml          the defaults this profile overrides
-# See: doc/pandoc.txt                the export feature page
+# See: doc/pandoc.md                the export feature page
 mainfont: Times New Roman # Requires this font to be installed on the system.
 fontsize: 12pt
 linestretch: 1.5

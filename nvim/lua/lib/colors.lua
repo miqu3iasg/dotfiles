@@ -6,7 +6,7 @@
 -- The only state is the cterm conversion cache. The themes own their highlight
 -- reset, their `colors_name` and their augroups.
 --
--- See: doc/lib.txt
+-- See: doc/lib.md
 
 local M = {}
 

@@ -6,7 +6,7 @@
 -- Closing a `gitcommit` buffer discards it and aborts the commit. vim-fugitive
 -- is declared in `lua/config/pack.lua`.
 --
--- See: doc/modules.txt
+-- See: doc/modules.md
 -- See: lua/plugins/git.lua
 -- See: :help fugitive
 -- See: https://github.com/tpope/vim-fugitive

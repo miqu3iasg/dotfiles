@@ -3,7 +3,7 @@
 -- Lua snippets for LuaLS annotations, function docs, classes and field lines.
 -- LuaLS has no `@usage` tag, so references go in `@see`.
 --
--- See: doc/snippets.txt
+-- See: doc/snippets.md
 -- See: https://luals.github.io/wiki/annotations/
 
 local ls = require("luasnip")

@@ -2,7 +2,7 @@
 
 -- Buffer inspection, saving and deletion that keep the window layout intact.
 --
--- See: doc/lib.txt
+-- See: doc/lib.md
 
 local M = {}
 

@@ -7,7 +7,7 @@
 -- The Lua opener and closer are built by concatenation so this file does not
 -- contain a literal long-bracket delimiter.
 --
--- See: doc/snippets.txt
+-- See: doc/snippets.md
 -- See: lua/snippets/common.lua
 -- See: https://spdx.dev/ids/
 

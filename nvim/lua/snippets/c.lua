@@ -3,7 +3,7 @@
 -- C snippets for small programs, practice problems and kernel-doc comments.
 -- Tabs and four spaces follow the convention of each template.
 --
--- See: doc/snippets.txt
+-- See: doc/snippets.md
 -- See: https://docs.kernel.org/doc-guide/kernel-doc.html
 -- See: https://www.kernel.org/doc/html/v4.10/process/coding-style.html
 

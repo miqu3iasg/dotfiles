@@ -5,7 +5,7 @@
 --
 -- The vault is `$ARCANUM_DIR`, or `~/dev/arcanum` when unset.
 --
--- See: doc/modules.txt
+-- See: doc/modules.md
 -- See: lua/plugins/markdown.lua
 -- See: ~/dev/arcanum/README.md
 -- See: https://github.com/ibhagwan/fzf-lua

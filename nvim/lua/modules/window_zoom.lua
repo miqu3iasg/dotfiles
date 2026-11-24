@@ -6,7 +6,7 @@
 -- The state lives in the tabpage-local `t:zoomed`, which the statusline reads.
 -- Closing the zoom tab by other means also ends the zoom.
 --
--- See: doc/modules.txt
+-- See: doc/modules.md
 -- See: lua/modules/statusline.lua
 
 local M = {}

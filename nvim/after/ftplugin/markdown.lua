@@ -10,7 +10,7 @@
 --
 -- See: pandoc/
 -- See: lua/modules/pandoc.lua
--- See: doc/pandoc.txt
+-- See: doc/pandoc.md
 -- See: lua/modules/markdown_lists.lua
 -- See: https://github.com/HakonHarnes/img-clip.nvim
 
