@@ -163,7 +163,7 @@ Documents
 
 Themes
 
-- `plain` (default), `hollow`, `artifact`, `brightburn`, `classic`, `elrond`, `enfocadomod`, `insanity` and `solarized`. See [colorschemes](./colorschemes.md).
+- `plain` (default), `alabaster`, `brightburn`, `classic`, `dosx`, `elrond`, `hollow`, `insanity`, `kurokai`, `parchment`, `pixel` and `solarized`. See [colorschemes](./colorschemes.md).
 
 ## Requirements
 
