@@ -18,13 +18,16 @@ Most schemes are Lua and build on `lua/lib/colors.lua`; three are Vimscript port
 
 | Scheme        | File                     | Character                                                                                                                                             |
 | ------------- | ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `hollow`      | `colors/hollow.lua`      | A hollowed-out port of the `quiet` scheme: pale gray text on pure black, one blue accent for status signals. Requires `'termguicolors'`.              |
-| `artifact`    | `colors/artifact.lua`    | A relic of the old terminal, built on simplicity and high contrast.                                                                                   |
+| `alabaster`   | `colors/alabaster.lua`   | A port of the Alabaster scheme by mcncl: light background, dark text. Requires `'termguicolors'`.                                                     |
 | `brightburn`  | `colors/brightburn.vim`  | The original Vimscript scheme by Erik Bäckman. It finishes early when the terminal has no 256-color support.                                          |
 | `classic`     | `colors/classic.lua`     | Traditional Vim colors, for those who preserve tradition.                                                                                             |
-| `enfocadomod` | `colors/enfocadomod.lua` | Lua port of the Enfocado scheme: code first, everything else quiet. It uses `nocombine` extensively.                                                  |
+| `dosx`        | `colors/dosx.lua`        | Dosbox inspired: bright ANSI colors on a blue background.                                                                                             |
 | `elrond`      | `colors/elrond.vim`      | A dark Vimscript port based on `elflord`, maintained by Adrian Perez.                                                                                 |
+| `hollow`      | `colors/hollow.lua`      | A hollowed-out port of the `quiet` scheme: pale gray text on pure black, one blue accent for status signals. Requires `'termguicolors'`.              |
 | `insanity`    | `colors/insanity.lua`    | For those who are insane.                                                                                                                             |
+| `kurokai`     | `colors/kurokai.lua`     | Where darkness meets the colors of Unokai: black background, pink keywords, green functions.                                                          |
+| `parchment`   | `colors/parchment.lua`   | A tribute to the classic Vim schemes (desert, zenburn, elflord): warm parchment text on black, khaki statements, salmon strings.                       |
+| `pixel`       | `colors/pixel.lua`       | A dark scheme with cyan, yellow and violet accents on black.                                                                                          |
 | `plain`       | `colors/plain.vim`       | The default. The Vim default scheme, as Vim ships it.                                                                                                 |
 | `solarized`   | `colors/solarized.lua`   | Solarized light for Neovim, based on Ethan Schoonover's palette.                                                                                      |
 
