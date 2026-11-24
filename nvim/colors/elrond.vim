@@ -1,5 +1,5 @@
 " colors/elrond.vim
-"
+
 " vim: tw=0 ts=4 sw=4 et
 " Vim color file
 "

@@ -1,5 +1,5 @@
 -- colors/kurokai.lua
---
+
 -- Where darkness meets the colors of Unokai.
 --
 -- Copyright (c) Miquéias Alves Medeiros <https://github.com/miqu3iasg>
