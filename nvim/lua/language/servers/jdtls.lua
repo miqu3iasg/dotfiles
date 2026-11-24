@@ -1,7 +1,7 @@
 -- lua/language/servers/jdtls.lua
 
--- Java through Eclipse JDT, for navigation and completion. Diagnostics and
--- formatting stay off, and formatting stays with conform.
+-- Java through Eclipse JDT, for navigation, completion and diagnostics.
+-- Formatting stays off, and formatting stays with conform.
 --
 -- nvim-jdtls starts it per buffer, unlike the other modules in `servers/`.
 -- The editor options and keymaps live in `after/ftplugin/java.lua`.
@@ -182,7 +182,7 @@ function M.start(bufnr)
 
 	local cmd = {
 		mason .. "/bin/jdtls",
-		"--jvm-arg=-Xmx1g",
+		"--jvm-arg=-Xmx2g",
 		"--jvm-arg=-XX:+UseSerialGC",
 		"-data",
 		workspace,
@@ -204,11 +204,10 @@ function M.start(bufnr)
 		capabilities = capabilities,
 		on_attach = on_attach,
 		flags = { debounce_text_changes = 800 },
-		-- Diagnostics are ignored since the server is used for navigation only.
-		handlers = { ["textDocument/publishDiagnostics"] = function() end },
 		settings = {
 			java = {
-				autobuild = { enabled = false },
+				-- Required for the server to compile and publish diagnostics.
+				autobuild = { enabled = true },
 				completion = {
 					enabled = true,
 					guessMethodArguments = true,
