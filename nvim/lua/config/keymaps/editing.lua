@@ -142,26 +142,23 @@ km("n", "<BS>", function()
 	return vim.wo.spell and "mz[s1z=`z" or "<BS>"
 end, { expr = true, desc = "Fix previous misspelling with the first suggestion" })
 
-km({ "x", "o" }, "<Tab>", "%", {
-	remap = true,
-	desc = "Jump to matching pair",
-})
-
 km("n", "<leader>U", function()
 	vim.cmd.packadd("nvim.undotree")
 	vim.cmd.Undotree()
 end, { desc = "Open undotree" })
 
 km("i", "<C-a>", "<Home>", { desc = "Beginning of line" })
-km("i", "<C-e>", function()
-	return vim.fn.pumvisible() == 1 and "<C-e>" or "<End>"
-end, { expr = true, desc = "End of line (or cancel completion)" })
 km("i", "<C-f>", "<Right>", { desc = "Forward char" })
 km("i", "<C-b>", "<Left>", { desc = "Backward char" })
 km("i", "<C-c>", "<C-o>zz", { desc = "Recenter" })
 km("i", "<C-d>", "<Del>", { desc = "Delete char forward" })
 km("i", "<C-u>", "<C-g>u<C-u>", { desc = "Delete to start of line (undoable)" })
 km("i", "<C-w>", "<C-g>u<C-w>", { desc = "Delete word backward (undoable)" })
+
+km("i", "<C-e>", function()
+	return vim.fn.pumvisible() == 1 and "<C-e>" or "<End>"
+end, { expr = true, desc = "End of line (or cancel completion)" })
+
 km("i", "<C-k>", function()
 	return vim.fn.col(".") > #vim.fn.getline(".") and "<Del>" or "<C-g>u<C-o>D"
 end, { expr = true, desc = "Kill to end of line" })
