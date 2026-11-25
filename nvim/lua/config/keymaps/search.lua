@@ -40,19 +40,6 @@ km("n", "<Esc>", "<cmd>nohlsearch<cr>", { desc = "Clear search highlights" })
 
 km(
 	"n",
-	"<leader>sg",
-	function() search.grep(vim.fn.expand("<cword>"), "-F -w") end,
-	{ desc = "Grep word under cursor in project" }
-)
-
-km("v", "<leader>sp", function()
-	local text = search.get_selection()
-	vim.cmd("normal! \27")
-	search.grep(text, "-F")
-end, { desc = "Grep selection in project" })
-
-km(
-	"n",
 	"ym",
 	function() search.yank_matches(vim.v.register) end,
 	{ desc = "Yank all matches of last search (accepts a register)" }
