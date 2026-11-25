@@ -28,9 +28,9 @@ The startup sequence is exact and worth knowing when something behaves different
 8. `config.pack` — the eager plugin declarations and the `PackChanged` build hooks.
 9. `plugins` — every plugin adapter, each loaded inside `pcall` so one failure notifies instead of aborting startup.
 
-11. `modules.compile.setup()`.
-12. `modules.sessions.setup()`.
-13. `vim.cmd.colorscheme("plain")` — the default colorscheme, last, so it can override highlights set by plugins.
+10. `modules.compile.setup()`.
+11. `modules.sessions.setup()`.
+12. `vim.cmd.colorscheme("plain")` — the default colorscheme, last, so it can override highlights set by plugins.
 
 Two features are wired outside this list. `modules.notes.setup()` is called by `lua/plugins/markdown.lua`, because the notes workflow lives with the Markdown setup. `modules.pandoc.setup()` is called by `after/ftplugin/markdown.lua`, because its commands are buffer-local. `modules.close_view.setup()` is called by `lua/plugins/git.lua`.
 
