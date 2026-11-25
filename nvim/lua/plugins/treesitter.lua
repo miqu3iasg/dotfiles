@@ -22,7 +22,6 @@ ts.install({
 	"python",
 	"html",
 	"css",
-	"scss",
 	"java",
 	"javadoc",
 	"javascript",
@@ -33,10 +32,7 @@ ts.install({
 	"sql",
 	"markdown",
 	"markdown_inline",
-	"bash",
 	"yaml",
-	"json",
-	"toml",
 	"dockerfile",
 	"luadoc",
 	-- Lisp family (used by lua/plugins/lisp.lua and conjure)
