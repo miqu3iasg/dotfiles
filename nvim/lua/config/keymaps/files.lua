@@ -39,9 +39,7 @@ end
 
 vim.api.nvim_create_autocmd({ "CmdlineEnter", "CmdlineLeave" }, {
 	pattern = "@",
-	callback = function(ev)
-		plain_pum(ev.event == "CmdlineEnter")
-	end,
+	callback = function(ev) plain_pum(ev.event == "CmdlineEnter") end,
 })
 
 ---Sentinel returned by `input()` when the prompt is cancelled
@@ -78,9 +76,7 @@ end
 ---@param desc string
 --- See: :help filename-modifiers
 local function yank_map(lhs, modifier, desc)
-	map("n", lhs, function()
-		yank(vim.fn.expand(modifier))
-	end, desc)
+	map("n", lhs, function() yank(vim.fn.expand(modifier)) end, desc)
 end
 
 ---Resolve a typed path against the directory the prompt started in
@@ -136,9 +132,7 @@ end
 ---Ask a yes/no question on the command line, defaulting to no
 ---@param question string
 ---@return boolean accepted
-local function confirm(question)
-	return vim.fn.confirm(question, "&Yes\n&No", 2) == 1
-end
+local function confirm(question) return vim.fn.confirm(question, "&Yes\n&No", 2) == 1 end
 
 ---Offer to create a missing directory and report whether it is usable
 ---@param dir string
@@ -159,9 +153,7 @@ local function ensure_dir(dir)
 end
 
 ---Show the current working directory
-local function show_cwd()
-	vim.notify("Current directory: " .. vim.fn.getcwd(), vim.log.levels.INFO)
-end
+local function show_cwd() vim.notify("Current directory: " .. vim.fn.getcwd(), vim.log.levels.INFO) end
 
 ---Prompt for a path and open it, offering to create a missing directory
 local function find_or_create_file()
@@ -266,29 +258,6 @@ local function toggle_executable()
 	print((is_exec and "Removed" or "Added") .. " executable permission: " .. file)
 end
 
----Reveal the current file in the system file explorer
-local function reveal_in_explorer()
-	local file = current_file()
-	if not file then
-		return
-	end
-
-	local os_name = require("lib.system").get_os()
-	if os_name == "mac" then
-		vim.fn.system({ "open", "-R", file })
-	elseif os_name == "windows" then
-		-- `explorer.exe` parses the raw command line and needs
-		-- backslashes, so this goes through `cmd.exe` with a plain
-		-- string instead of an argv list.
-		local win_path = file:gsub("/", "\\")
-		os.execute(string.format('start "" explorer.exe /select,"%s"', win_path))
-	else
-		-- `xdg-open` cannot select a file, so it opens the
-		-- containing folder.
-		vim.fn.system({ "xdg-open", vim.fn.fnamemodify(file, ":h") })
-	end
-end
-
 ---Yank the path and the cursor line of the current file as a reference
 local function yank_file_line()
 	local path = vim.fn.expand("%:.")
@@ -305,7 +274,6 @@ map("n", "<leader>nf", find_or_create_file, "Find or create new file")
 map("n", "<leader>nr", rename_file, "Rename current file")
 map("n", "<leader>nd", delete_file, "Delete current file")
 map("n", "<leader>nx", toggle_executable, "Toggle executable permission on current file")
-map("n", "<leader>ne", reveal_in_explorer, "Reveal current file in file explorer")
 
 yank_map("<leader>yp", "%:p", "Yank absolute file path")
 yank_map("<leader>yr", "%:.", "Yank relative file path")
@@ -313,5 +281,3 @@ yank_map("<leader>yn", "%:t", "Yank file name")
 yank_map("<leader>yd", "%:p:h", "Yank containing directory path")
 
 map("n", "<leader>yl", yank_file_line, "Yank file and line reference")
-
-map("n", "gf", "gF", "Go to file under cursor, at the line after the colon")
