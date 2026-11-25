@@ -22,15 +22,11 @@ local M = {}
 
 ---Today's date in ISO format, used in the Created header field.
 ---@return string
-local function get_date()
-	return os.date("%Y-%m-%d")
-end
+local function get_date() return os.date("%Y-%m-%d") end
 
 ---Current year, used in copyright notices.
 ---@return string
-local function get_year()
-	return os.date("%Y")
-end
+local function get_year() return os.date("%Y") end
 
 -- The helpers below fall back to "untitled" for unnamed buffers.
 ---Name of the current buffer file, including its extension.
@@ -149,9 +145,7 @@ local DEFAULT_LINE_COMMENT = "#"
 ---the default for unknown filetypes.
 ---@param ft string Filetype name, for example "lua".
 ---@return string
-local function line_comment_sym(ft)
-	return line_comment_by_ft[ft] or DEFAULT_LINE_COMMENT
-end
+local function line_comment_sym(ft) return line_comment_by_ft[ft] or DEFAULT_LINE_COMMENT end
 
 -- Filetypes whose multi-line inline snippets (refs, drefs) use a block
 -- comment. All others use consecutive line comments.
@@ -182,9 +176,7 @@ local FIELD_WIDTH = 15
 -- Pads a field name so header values line up in a column.
 ---@param text string
 ---@return string
-local function label(text)
-	return text .. string.rep(" ", math.max(1, FIELD_WIDTH - #text))
-end
+local function label(text) return text .. string.rep(" ", math.max(1, FIELD_WIDTH - #text)) end
 
 ---Applies a comment style to one line of header content. An empty line
 ---becomes a bare comment prefix with no trailing whitespace.
@@ -229,9 +221,7 @@ local USAGE_NOTE_INDENT = "    "
 -- Pads a usage label so the commands line up in a column.
 ---@param text string
 ---@return string
-local function usage_label(text)
-	return USAGE_INDENT .. text .. string.rep(" ", 10 - #text)
-end
+local function usage_label(text) return USAGE_INDENT .. text .. string.rep(" ", 10 - #text) end
 
 -- Compile/run instructions per filetype, which follow the usage title, with one
 -- line per label and commands prefixed by `$ `.
@@ -516,9 +506,7 @@ end
 
 ---@return HeaderField
 function H.usage()
-	return function(ctx)
-		ctx.idx = add_usage(ctx.add, ctx.style, ctx.ft, ctx.idx)
-	end
+	return function(ctx) ctx.idx = add_usage(ctx.add, ctx.style, ctx.ft, ctx.idx) end
 end
 
 -- Exercise problem statement: a title line and an indented placeholder.
