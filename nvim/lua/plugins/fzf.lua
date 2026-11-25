@@ -53,9 +53,6 @@ local function make_opts()
 
 	return {
 		winopts = {
-			-- A one-cell bar above the candidates, painted like the mode line
-			-- (see `set_fzf_hl`).
-			border = { "", " ", "", "", "", "", "", "" },
 			backdrop = false,
 			title = false,
 			title_flags = false,
@@ -75,7 +72,6 @@ local function make_opts()
 			},
 		},
 
-		-- No icons anywhere: plain text, like the minibuffer.
 		defaults = {
 			file_icons = false,
 			git_icons = false,
@@ -90,7 +86,7 @@ local function make_opts()
 			["--no-scrollbar"] = true,
 			["--no-separator"] = true,
 			["--history"] = vim.fn.stdpath("data") .. "/fzf_history",
-			-- ["--header"] = "C-g cancel  C-n/C-p move  M-n/M-p history  C-q select all  C-x split  C-t tab",
+			-- ["--header"] = ":: C-g cancel  C-n/C-p move  M-n/M-p history  C-q select all  C-x split  C-t tab",
 			-- ["--header-border"] = "none",
 		},
 
@@ -198,7 +194,6 @@ function M.after()
 	local fzf_lua = require("fzf-lua")
 	fzf_lua.setup(opts)
 
-	-- vim.ui.select becomes an fzf picker, like completing-read.
 	fzf_lua.register_ui_select()
 end
 
@@ -212,77 +207,31 @@ end
 
 local km = vim.keymap.set
 
-km("n", "<leader>ff", function()
-	fzf().files()
-end, { desc = "Fzf: find files in cwd (respects .gitignore)" })
-
-km("n", "<leader>fd", function()
-	fzf().files({ cwd = vim.fn.expand("%:p:h") })
-end, { desc = "Fzf: find files in the current buffer's directory" })
-
-km("n", "<leader>fz", function()
-	fzf().zoxide()
-end, { desc = "Fzf: jump to a frequent directory (zoxide)" })
-
-km("n", "<leader>fr", function()
-	fzf().files({ cwd = vim.fn.expand("~/dev/repos") })
-end, { desc = "Fzf: find files in ~/dev/repos" })
-
-km("n", "<leader>fn", function()
-	fzf().files({ cwd = vim.fn.expand("~/dotfiles/nvim") })
-end, { desc = "Fzf: find files in ~/dotfiles/nvim" })
-
-km("n", "<leader>fo", function()
-	fzf().oldfiles()
-end, { desc = "Fzf: reopen recently edited files (recentf)" })
-
-km("n", "<leader>fg", function()
-	fzf().live_grep({ rg_glob = true })
-end, { desc = "Fzf: live grep in cwd (consult-ripgrep)" })
-
-km("n", "<leader>fw", function()
-	fzf().grep_cword()
-end, { desc = "Fzf: grep the word under the cursor in cwd" })
-
-km("v", "<leader>fw", function()
-	fzf().grep_visual()
-end, { desc = "Fzf: grep the visual selection" })
-
-km("n", "<leader>fl", function()
-	fzf().blines()
-end, { desc = "Fzf: search lines in the current buffer (consult-line)" })
-
-km("n", "<leader>fx", function()
-	fzf().diagnostics_document()
-end, { desc = "Fzf: list LSP diagnostics in current buffer" })
-
-km("n", "<leader>fX", function()
-	fzf().diagnostics_workspace()
-end, { desc = "Fzf: list LSP diagnostics in workspace" })
-
-km("n", "<leader>fc", function()
-	fzf().resume()
-end, { desc = "Fzf: resume the last picker (vertico-repeat)" })
-
-km("n", "<leader>fb", function()
-	fzf().buffers()
-end, { desc = "Fzf: switch buffer (consult-buffer)" })
-
-km("n", "<leader>fi", function()
-	fzf().lsp_document_symbols()
-end, { desc = "Fzf: document symbols (consult-imenu)" })
-
-km("n", "<leader>f:", function()
-	fzf().commands()
-end, { desc = "Fzf: commands (M-x)" })
-
-km("n", "<leader>fk", function()
-	fzf().keymaps()
-end, { desc = "Fzf: keymaps (describe-bindings)" })
-
-km("n", "<leader>fh", function()
-	fzf().helptags()
-end, { desc = "Fzf: help tags (describe-*)" })
+km(
+	"n",
+	"<leader>fr",
+	function() fzf().files({ cwd = vim.fn.expand("~/dev/repos/studies") }) end,
+	{ desc = "Fzf: find files in ~/dev/repos/studies/" }
+)
+km(
+	"n",
+	"<leader>fn",
+	function() fzf().files({ cwd = vim.fn.expand("~/dotfiles/nvim") }) end,
+	{ desc = "Fzf: find files in ~/dotfiles/nvim" }
+)
+km(
+	"n",
+	"<leader>fd",
+	function() fzf().files({ cwd = vim.fn.expand("%:p:h") }) end,
+	{ desc = "Fzf: find files in the current buffer's directory" }
+)
+km("n", "<leader>fg", function() fzf().live_grep({ rg_glob = true }) end, { desc = "Fzf: live grep in cwd" })
+km("n", "<leader>ff", function() fzf().files() end, { desc = "Fzf: find files in cwd" })
+km("n", "<leader>fo", function() fzf().oldfiles() end, { desc = "Fzf: reopen recently edited files" })
+km("n", "<leader>fw", function() fzf().grep_cword() end, { desc = "Fzf: grep the word under the cursor in cwd" })
+km("v", "<leader>fw", function() fzf().grep_visual() end, { desc = "Fzf: grep the visual selection" })
+km("n", "<leader>fc", function() fzf().resume() end, { desc = "Fzf: resume the last picker" })
+km("n", "<leader>fb", function() fzf().buffers() end, { desc = "Fzf: switch buffer" })
 
 -- Notes buffers also trigger the load, so the obsidian picker resolves before
 -- any picker was opened.
