@@ -5,6 +5,7 @@
 --
 -- See: lua/config/keymaps/search.lua
 -- See: :help quickfix
+-- See: lua/config/autocmds.lua
 
 local km = vim.keymap.set
 
@@ -27,11 +28,6 @@ local function delete_entry()
 	end
 end
 
-km("n", "]q", "<cmd>cnext<cr>zz", { desc = "Next quickfix item" })
-km("n", "[q", "<cmd>cprev<cr>zz", { desc = "Previous quickfix item" })
-km("n", "]Q", "<cmd>clast<cr>", { desc = "Last quickfix item" })
-km("n", "[Q", "<cmd>cfirst<cr>", { desc = "First quickfix item" })
-
 km("n", "<leader>q", function()
 	local qf_win = vim.fn.getqflist({ winid = 0 }).winid
 	if qf_win ~= 0 then
@@ -40,6 +36,11 @@ km("n", "<leader>q", function()
 		vim.cmd("copen")
 	end
 end, { desc = "Toggle quickfix list" })
+
+km("n", "]q", "<cmd>cnext<cr>zz", { desc = "Next quickfix item" })
+km("n", "[q", "<cmd>cprev<cr>zz", { desc = "Previous quickfix item" })
+km("n", "]Q", "<cmd>clast<cr>", { desc = "Last quickfix item" })
+km("n", "[Q", "<cmd>cfirst<cr>", { desc = "First quickfix item" })
 
 km("n", "<leader>s[", "<cmd>colder<cr>", { desc = "Older quickfix list" })
 km("n", "<leader>s]", "<cmd>cnewer<cr>", { desc = "Newer quickfix list" })
@@ -50,8 +51,7 @@ km("n", "]L", "<cmd>llast<cr>", { desc = "Last location item" })
 km("n", "[L", "<cmd>lfirst<cr>", { desc = "First location item" })
 
 -- Keys inside the list window are buffer-local, so they are set when the
--- window opens. `q` and `<Esc>` close it through the utility-buffer autocmd.
--- See: lua/config/autocmds.lua
+-- window opens.
 vim.api.nvim_create_autocmd("FileType", {
 	group = vim.api.nvim_create_augroup("cg/quickfix_keys", { clear = true }),
 	desc = "Set the keys of the quickfix window",
