@@ -49,7 +49,7 @@ Colorschemes load by name through `vim.cmd.colorscheme`, so they live in the con
 
 `after/` is loaded last on the runtimepath, which is exactly what filetype overrides need. `after/ftplugin/<ft>.lua` runs after Neovim's own ftplugin, so its options win. `after/queries/` overrides Tree-sitter queries the same way.
 
-Current overrides: `asm`, `bash`, `c`, `csv`, `fugitive`, `git`, `gitcommit`, `java`, `javascript`, `json`, `lua`, `markdown`, `python`, `scheme`, `sh`, `sql`, `toml`, `tsv`, `typescript`. The Markdown query overrides add text objects and highlights.
+Current overrides: `asm`, `c`, `csv`, `fugitive`, `git`, `gitcommit`, `java`, `javascript`, `lua`, `markdown`, `python`, `scheme`, `sql`, `tsv`, `typescript`. The Markdown query overrides add text objects and highlights.
 
 ### `lua/config/`
 
@@ -73,7 +73,7 @@ One adapter per plugin suite, never more. The adapter owns the plugin's setup, t
 
 ### `lua/modules/`
 
-Whole features written for this config, each with its own state and, when it registers anything, a `setup()`. The current modules are statusline, sessions, scratch, compile, pandoc, notes, window zoom, Fugitive view closing and Markdown lists. See [modules](./modules.md).
+Whole features written for this config, each with its own state and, when it registers anything, a `setup()`. The current modules are statusline, sessions, compile, pandoc, notes, window zoom, Fugitive view closing and Markdown lists. See [modules](./modules.md).
 
 ### `lua/lib/`
 
