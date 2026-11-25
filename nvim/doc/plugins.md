@@ -96,7 +96,7 @@ Inspect loaded lazy plugins with `:autocmd LazyPack`, not with `:scriptnames`, w
 
 ### Tree-sitter
 
-Parsers are requested for automatic installation at startup, with at most 4 concurrent jobs. The list covers the languages the config uses: vimdoc, C, Lua, Python, HTML, CSS, SCSS, Java, Javadoc, JavaScript, TypeScript, TSX, JSDoc, regex, SQL, Markdown, Markdown inline, Bash, YAML, JSON, TOML, Dockerfile, LuaDoc, Scheme, Common Lisp and Racket.
+Parsers are requested for automatic installation at startup, with at most 4 concurrent jobs. The list covers the languages the config uses: vimdoc, C, Lua, Python, HTML, CSS, Java, Javadoc, JavaScript, TypeScript, TSX, JSDoc, regex, SQL, Markdown, Markdown inline, YAML, Dockerfile, LuaDoc, Scheme, Common Lisp and Racket.
 
 Highlighting is enabled per buffer when the filetype is detected, if the parser exists. Tree-sitter indentation is enabled only for Lua, Python, JavaScript and TypeScript, where it was verified; other languages keep their native indent. The tree-sitter CLI must be on `PATH`, and `PYTHONIOENCODING` is set to `utf-8` for the install jobs.
 
