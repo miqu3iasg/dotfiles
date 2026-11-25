@@ -308,9 +308,7 @@ function M.setup()
 	-- buffers, so the cached labels are dropped in both cases.
 	vim.api.nvim_create_autocmd({ "BufWritePost", "DirChanged" }, {
 		group = group,
-		callback = function()
-			branch_cache = {}
-		end,
+		callback = function() branch_cache = {} end,
 	})
 
 	vim.api.nvim_create_autocmd({ "BufEnter", "BufWritePost", "FocusGained", "DirChanged" }, {
@@ -323,9 +321,7 @@ function M.setup()
 
 	vim.api.nvim_create_autocmd("FileChangedShellPost", {
 		group = group,
-		callback = function(args)
-			update_file_size(args.buf)
-		end,
+		callback = function(args) update_file_size(args.buf) end,
 	})
 
 	vim.api.nvim_create_autocmd("ModeChanged", {
@@ -338,9 +334,7 @@ function M.setup()
 
 	vim.api.nvim_create_autocmd({ "DiagnosticChanged", "RecordingEnter", "RecordingLeave" }, {
 		group = group,
-		callback = function()
-			vim.cmd.redrawstatus()
-		end,
+		callback = function() vim.cmd.redrawstatus() end,
 	})
 
 	-- CmdlineLeave fires before the command runs, so the redraw is scheduled to
@@ -349,17 +343,13 @@ function M.setup()
 		group = group,
 		pattern = { "/", "?", ":" },
 		callback = function()
-			vim.schedule(function()
-				vim.cmd.redrawstatus()
-			end)
+			vim.schedule(function() vim.cmd.redrawstatus() end)
 		end,
 	})
 
 	vim.api.nvim_create_autocmd("WinLeave", {
 		group = group,
-		callback = function()
-			vim.wo.statusline = INACTIVE
-		end,
+		callback = function() vim.wo.statusline = INACTIVE end,
 	})
 
 	vim.api.nvim_create_autocmd({ "WinEnter", "BufWinEnter" }, {
