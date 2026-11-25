@@ -11,9 +11,7 @@ local substitute = require("lib.substitute")
 ---Clamp a destination line to the buffer range.
 ---@param dest integer
 ---@return integer
-local function clamp_dest(dest)
-	return math.max(0, math.min(dest, vim.fn.line("$")))
-end
+local function clamp_dest(dest) return math.max(0, math.min(dest, vim.fn.line("$"))) end
 
 ---Move the current line by `[count]` lines, which is 1 by default.
 ---@param down boolean
@@ -37,31 +35,15 @@ local function move_selection(down)
 	vim.cmd("normal! gv=gv")
 end
 
-km("n", "ZK", function()
-	move_line(false)
-end, { desc = "Move line up" })
-km("n", "ZJ", function()
-	move_line(true)
-end, { desc = "Move line down" })
-km("x", "K", function()
-	move_selection(false)
-end, { desc = "Move selection up" })
-km("x", "J", function()
-	move_selection(true)
-end, { desc = "Move selection down" })
+km("n", "ZK", function() move_line(false) end, { desc = "Move line up" })
+km("n", "ZJ", function() move_line(true) end, { desc = "Move line down" })
+km("x", "K", function() move_selection(false) end, { desc = "Move selection up" })
+km("x", "J", function() move_selection(true) end, { desc = "Move selection down" })
 
-km("n", "zk", ":t .-1<CR>", { desc = "Duplicate line above" })
-km("n", "zj", ":t .<CR>", { desc = "Duplicate line below" })
-km("x", "zk", ":t '<-1<CR>gv", { desc = "Duplicate selection above" })
-km("x", "zj", ":t '>+0<CR>gv", { desc = "Duplicate selection below" })
-
-km("n", "ZH", function()
-	vim.cmd("put!=repeat(nr2char(10), " .. vim.v.count1 .. ")")
-end, { desc = "Insert blank line(s) above" })
-
-km("n", "ZN", function()
-	vim.cmd("put =repeat(nr2char(10), " .. vim.v.count1 .. ")")
-end, { desc = "Insert blank line(s) below" })
+km("n", "zk", "<cmd>t .-1<CR>", { desc = "Duplicate line above" })
+km("n", "zj", "<cmd>t .<CR>", { desc = "Duplicate line below" })
+km("x", "zk", "<cmd>t '<-1<CR>gv", { desc = "Duplicate selection above" })
+km("x", "zj", "<cmd>t '>+0<CR>gv", { desc = "Duplicate selection below" })
 
 km("x", "<", "<gv", { desc = "Indent selection left" })
 km("x", ">", ">gv", { desc = "Indent selection right" })
@@ -98,37 +80,58 @@ km("x", "<leader>p", "p", { desc = "Paste over selection (yanks replaced text)" 
 
 km("n", "U", "<C-r>", { desc = "Redo" })
 
-km("n", "cu", function()
-	substitute.prompt("%", vim.fn.expand("<cword>"), true)
-end, { desc = "Substitute word in buffer" })
+km(
+	"n",
+	"cu",
+	function() substitute.prompt("%", vim.fn.expand("<cword>"), true) end,
+	{ desc = "Substitute word in buffer" }
+)
 
-km("n", "cU", function()
-	substitute.prompt("%", vim.fn.expand("<cWORD>"), false)
-end, { desc = "Substitute WORD in buffer" })
+km(
+	"n",
+	"cU",
+	function() substitute.prompt("%", vim.fn.expand("<cWORD>"), false) end,
+	{ desc = "Substitute WORD in buffer" }
+)
 
-km("n", "cd", function()
-	substitute.prompt("s", vim.fn.expand("<cword>"), true)
-end, { desc = "Substitute word in line" })
+km(
+	"n",
+	"cd",
+	function() substitute.prompt("s", vim.fn.expand("<cword>"), true) end,
+	{ desc = "Substitute word in line" }
+)
 
-km("n", "cD", function()
-	substitute.prompt("s", vim.fn.expand("<cWORD>"), false)
-end, { desc = "Substitute WORD in line" })
+km(
+	"n",
+	"cD",
+	function() substitute.prompt("s", vim.fn.expand("<cWORD>"), false) end,
+	{ desc = "Substitute WORD in line" }
+)
 
 km("n", "<leader>cw", [[:%s/\<<C-r><C-w>\>/<C-r><C-w>/gI<Left><Left><Left>]], {
 	desc = "Substitute word under cursor at once",
 })
 
-km("x", "<leader>cw", function()
-	substitute.selection(substitute.get_visual())
-end, { desc = "Substitute selection at once" })
+km(
+	"x",
+	"<leader>cw",
+	function() substitute.selection(substitute.get_visual()) end,
+	{ desc = "Substitute selection at once" }
+)
 
-km("n", "<leader>cp", function()
-	substitute.project(vim.fn.expand("<cword>"), true)
-end, { desc = "Substitute word in project" })
+km(
+	"n",
+	"<leader>cp",
+	function() substitute.project(vim.fn.expand("<cword>"), true) end,
+	{ desc = "Substitute word in project" }
+)
 
-km("x", "<leader>cp", function()
-	substitute.project(substitute.get_visual(), false)
-end, { desc = "Substitute selection in project" })
+km(
+	"x",
+	"<leader>cp",
+	function() substitute.project(substitute.get_visual(), false) end,
+	{ desc = "Substitute selection in project" }
+)
 
 km("n", "<leader>cn", [[*``"_cgn]], {
 	desc = "Change next occurrence of word under cursor (repeat with .)",
@@ -138,9 +141,12 @@ km("x", "<leader>cn", [[y/\V<C-r>=escape(@", '/\')<CR><CR>N"_cgn]], {
 	desc = "Change next occurrence of selection (repeat with .)",
 })
 
-km("n", "<BS>", function()
-	return vim.wo.spell and "mz[s1z=`z" or "<BS>"
-end, { expr = true, desc = "Fix previous misspelling with the first suggestion" })
+km(
+	"n",
+	"<BS>",
+	function() return vim.wo.spell and "mz[s1z=`z" or "<BS>" end,
+	{ expr = true, desc = "Fix previous misspelling with the first suggestion" }
+)
 
 km("n", "<leader>U", function()
 	vim.cmd.packadd("nvim.undotree")
@@ -155,10 +161,16 @@ km("i", "<C-d>", "<Del>", { desc = "Delete char forward" })
 km("i", "<C-u>", "<C-g>u<C-u>", { desc = "Delete to start of line (undoable)" })
 km("i", "<C-w>", "<C-g>u<C-w>", { desc = "Delete word backward (undoable)" })
 
-km("i", "<C-e>", function()
-	return vim.fn.pumvisible() == 1 and "<C-e>" or "<End>"
-end, { expr = true, desc = "End of line (or cancel completion)" })
+km(
+	"i",
+	"<C-e>",
+	function() return vim.fn.pumvisible() == 1 and "<C-e>" or "<End>" end,
+	{ expr = true, desc = "End of line (or cancel completion)" }
+)
 
-km("i", "<C-k>", function()
-	return vim.fn.col(".") > #vim.fn.getline(".") and "<Del>" or "<C-g>u<C-o>D"
-end, { expr = true, desc = "Kill to end of line" })
+km(
+	"i",
+	"<C-k>",
+	function() return vim.fn.col(".") > #vim.fn.getline(".") and "<Del>" or "<C-g>u<C-o>D" end,
+	{ expr = true, desc = "Kill to end of line" }
+)
