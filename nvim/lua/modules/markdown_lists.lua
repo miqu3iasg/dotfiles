@@ -39,24 +39,16 @@ local M = {}
 ---Bullet markers, in the order of the marker cycle.
 ---See: vim.g.markdown_list_bullets
 ---@return string[]
-local function bullets()
-	return vim.g.markdown_list_bullets or { "-", "*", "+" }
-end
+local function bullets() return vim.g.markdown_list_bullets or { "-", "*", "+" } end
 
 ---Order of the type cycle.
 ---See: vim.g.markdown_list_cycle
 ---@return MarkdownLists.Type[]
-local function cycle_order()
-	return vim.g.markdown_list_cycle or { "bullet", "check", "number", "none" }
-end
+local function cycle_order() return vim.g.markdown_list_cycle or { "bullet", "check", "number", "none" } end
 
-local function default_bullet()
-	return vim.b.markdown_list_bullet or vim.g.markdown_list_bullet or bullets()[1]
-end
+local function default_bullet() return vim.b.markdown_list_bullet or vim.g.markdown_list_bullet or bullets()[1] end
 
-local function default_delimiter()
-	return vim.b.markdown_list_delimiter or vim.g.markdown_list_delimiter or "."
-end
+local function default_delimiter() return vim.b.markdown_list_delimiter or vim.g.markdown_list_delimiter or "." end
 
 ---Whether a line is a thematic break such as `---`, `***`, `* * *` or `___`.
 ---@param line string
@@ -165,20 +157,14 @@ end
 
 ---@param indent string
 ---@return integer
-local function width(indent)
-	return vim.fn.strdisplaywidth(indent)
-end
+local function width(indent) return vim.fn.strdisplaywidth(indent) end
 
 ---@return string[]
-local function buffer_lines()
-	return vim.api.nvim_buf_get_lines(0, 0, -1, false)
-end
+local function buffer_lines() return vim.api.nvim_buf_get_lines(0, 0, -1, false) end
 
 ---@param n integer
 ---@param text string
-local function set_line(n, text)
-	vim.api.nvim_buf_set_lines(0, n - 1, n, false, { text })
-end
+local function set_line(n, text) vim.api.nvim_buf_set_lines(0, n - 1, n, false, { text }) end
 
 ---Lines of a range that an operation can change, skipping blank lines and
 ---thematic breaks.
@@ -311,9 +297,7 @@ function M.toggle(l1, l2, _, target)
 	end
 
 	local final = all and "none" or target
-	write(entries, function(p)
-		return convert(p, final)
-	end)
+	write(entries, function(p) return convert(p, final) end)
 	renumber(l1, l2)
 end
 
@@ -367,18 +351,14 @@ function M.cycle(l1, l2, _, dir)
 	idx = idx or (dir > 0 and 0 or #order + 1)
 
 	local target = order[(idx - 1 + dir) % #order + 1]
-	write(entries, function(p)
-		return convert(p, target)
-	end)
+	write(entries, function(p) return convert(p, target) end)
 	renumber(l1, l2)
 end
 
 ---Turn the lines back into plain text.
 ---@type MarkdownLists.Operation
 function M.clear(l1, l2)
-	write(collect(l1, l2), function(p)
-		return convert(p, "none")
-	end)
+	write(collect(l1, l2), function(p) return convert(p, "none") end)
 end
 
 ---Cycle the marker, with the whole list in normal mode without a count,
@@ -438,9 +418,7 @@ end
 ---@type MarkdownLists.Operation
 ---@param l1 integer
 ---@param l2 integer
-function M.renumber(l1, l2)
-	renumber(l1, l2)
-end
+function M.renumber(l1, l2) renumber(l1, l2) end
 
 ---Wrap an operation as a keymap callback. In normal mode the range is the
 ---current line plus the count, and the cursor keeps its place in the text.
@@ -492,9 +470,7 @@ end
 ---Opening fence of a fenced code block, if the line is one.
 ---@param line string
 ---@return string?
-local function fence_open(line)
-	return line:match("^%s*(```+)") or line:match("^%s*(~~~+)")
-end
+local function fence_open(line) return line:match("^%s*(```+)") or line:match("^%s*(~~~+)") end
 
 ---Whether `line` closes the code block opened by `fence`.
 ---
@@ -537,9 +513,7 @@ end
 ---@return string[]
 function M.bullet_markers(lines)
 	local out = {}
-	walk_bullets(lines, function(_, p)
-		out[#out + 1] = p.marker
-	end)
+	walk_bullets(lines, function(_, p) out[#out + 1] = p.marker end)
 	return out
 end
 
@@ -554,9 +528,7 @@ function M.restore_bullets(lines, markers)
 	end
 
 	local count = 0
-	walk_bullets(lines, function()
-		count = count + 1
-	end)
+	walk_bullets(lines, function() count = count + 1 end)
 	if count ~= #markers then
 		return lines
 	end
