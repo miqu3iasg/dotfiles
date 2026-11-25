@@ -52,6 +52,7 @@ local common_filetypes = {
 	plsql = true,
 	html = true,
 	css = true,
+	vim = true,
 }
 
 ---@type table<string, boolean>
