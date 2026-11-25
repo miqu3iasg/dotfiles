@@ -192,9 +192,7 @@ local function expand(cmd)
 	if ctx == vim.api.nvim_get_current_buf() then
 		return pcall(vim.fn.expandcmd, cmd)
 	end
-	return pcall(vim.api.nvim_buf_call, ctx, function()
-		return vim.fn.expandcmd(cmd)
-	end)
+	return pcall(vim.api.nvim_buf_call, ctx, function() return vim.fn.expandcmd(cmd) end)
 end
 
 ---Return the default command template for the current filetype. It is not
@@ -226,9 +224,7 @@ local function set_buf_lines(buf, first, last, lines)
 end
 
 ---@return boolean
-local function buf_alive()
-	return compilation_buf ~= nil and vim.api.nvim_buf_is_valid(compilation_buf)
-end
+local function buf_alive() return compilation_buf ~= nil and vim.api.nvim_buf_is_valid(compilation_buf) end
 
 ---Return the compilation buffer, creating it when needed. A new buffer is
 ---filled from the log of the current run, so nothing is lost if the old
@@ -453,9 +449,7 @@ function M.command(cmd, cwd, opts)
 		text = true,
 		stdout = function(_, data)
 			if data then
-				vim.schedule(function()
-					feed(run, data)
-				end)
+				vim.schedule(function() feed(run, data) end)
 			end
 		end,
 	}, function(res)
@@ -554,9 +548,7 @@ function M.setup(opts)
 	vim.api.nvim_create_autocmd("BufEnter", {
 		group = vim.api.nvim_create_augroup("compile_module", { clear = true }),
 		desc = "Compile: remember the last file buffer to expand % from",
-		callback = function(args)
-			remember(args.buf)
-		end,
+		callback = function(args) remember(args.buf) end,
 	})
 
 	vim.api.nvim_create_user_command("Compile", function(cmd)
@@ -572,42 +564,33 @@ function M.setup(opts)
 		desc = "Compile: run a build command asynchronously (! also opens the output)",
 	})
 
-	vim.api.nvim_create_user_command("Recompile", function(cmd)
-		M.recompile({ open = cmd.bang })
-	end, {
+	vim.api.nvim_create_user_command("Recompile", function(cmd) M.recompile({ open = cmd.bang }) end, {
 		bang = true,
 		desc = "Compile: rerun the last command of this directory (! also opens the output)",
 	})
 
-	vim.api.nvim_create_user_command("CompileCustom", function(cmd)
-		M.custom({ open = cmd.bang })
-	end, {
+	vim.api.nvim_create_user_command("CompileCustom", function(cmd) M.custom({ open = cmd.bang }) end, {
 		bang = true,
 		desc = "Compile: run a custom command from an empty prompt (! also opens the output)",
 	})
 
-	vim.api.nvim_create_user_command("CompileInterrupt", function()
-		M.interrupt()
-	end, { desc = "Compile: interrupt the running command" })
+	vim.api.nvim_create_user_command(
+		"CompileInterrupt",
+		function() M.interrupt() end,
+		{ desc = "Compile: interrupt the running command" }
+	)
 
-	vim.api.nvim_create_user_command("CompileOutput", function()
-		M.show_output()
-	end, { desc = "Compile: open the output of the last run" })
+	vim.api.nvim_create_user_command(
+		"CompileOutput",
+		function() M.show_output() end,
+		{ desc = "Compile: open the output of the last run" }
+	)
 
 	local km = vim.keymap.set
 
-	km("n", "<leader>cc", function()
-		M.prompt()
-	end, { desc = "Compile (prompt with default)" })
-
-	km("n", "<leader>cr", function()
-		M.recompile()
-	end, { desc = "Recompile (last command)" })
-
-	km("n", "<leader>cl", function()
-		M.custom()
-	end, { desc = "Compile (custom command)" })
-
+	km("n", "<leader>cc", function() M.prompt() end, { desc = "Compile (prompt with default)" })
+	km("n", "<leader>cr", function() M.recompile() end, { desc = "Recompile (last command)" })
+	km("n", "<leader>cl", function() M.custom() end, { desc = "Compile (custom command)" })
 	km("n", "<leader>ck", M.interrupt, { desc = "Compile: interrupt" })
 	km("n", "<leader>co", M.show_output, { desc = "Compile: open output" })
 end
