@@ -1,12 +1,13 @@
 -- lua/plugins/fzf.lua
 
 -- Fuzzy finder for files, buffers, text, diagnostics and help, built on
--- fzf-lua.
+-- fzf-lua, styled after the Emacs minibuffer (Vertico/Consult): bottom panel,
+-- a mode-line-like bar on top, plain-text prompts, no icons and no preview.
 --
 -- The plugin lazy-loads on the first picker, and the keymaps are stubs that
 -- load it on demand.
 --
--- $ sudo pacman -S fzf grep ripgrep fd
+-- $ sudo pacman -S fzf grep ripgrep fd bat
 --
 -- See: lua/lib/lazy.lua
 -- See: https://github.com/ibhagwan/fzf-lua
@@ -44,60 +45,65 @@ end
 rg_globs = table.concat(rg_globs, " ")
 fd_excludes = table.concat(fd_excludes, " ")
 
----Build the options table passed to `fzf.setup()`.
+---Build the options table passed to `fzf.setup()`. A built-in base profile is
+---added by `M.after`; everything here overrides it.
 ---@return table<string, any>
 local function make_opts()
 	local actions = require("fzf-lua").actions
 
 	return {
 		winopts = {
+			-- A one-cell bar above the candidates, painted like the mode line
+			-- (see `set_fzf_hl`).
+			border = { "", " ", "", "", "", "", "", "" },
+			backdrop = false,
+			title = false,
+			title_flags = false,
+
 			on_create = function(e)
 				if e.winid and vim.api.nvim_win_is_valid(e.winid) then
 					vim.api.nvim_win_set_config(e.winid, { title = "" })
 				end
 			end,
 
-			height = 0.30,
-			width = 1.0,
-			row = 1.0,
-			col = 0.0,
-			border = { "", "─", "", "", "", "", "", "" },
-			backdrop = false,
-
-			title = false,
-			title_flags = false,
 			preview = {
 				default = "bat",
 				hidden = true,
-				layout = "horizontal",
 				title = false,
-				horizontal = "right:50%",
 				wrap = true,
 				scrollbar = false,
 			},
 		},
 
+		-- No icons anywhere: plain text, like the minibuffer.
+		defaults = {
+			file_icons = false,
+			git_icons = false,
+		},
+
 		fzf_opts = {
+			["--info"] = "hidden",
 			["--ansi"] = true,
-			["--layout"] = "reverse",
+			["--layout"] = "default",
 			["--highlight-line"] = true,
-			["--info"] = "inline-right",
 			["--pointer"] = " ",
 			["--no-scrollbar"] = true,
 			["--no-separator"] = true,
+			["--history"] = vim.fn.stdpath("data") .. "/fzf_history",
+			-- ["--header"] = "C-g cancel  C-n/C-p move  M-n/M-p history  C-q select all  C-x split  C-t tab",
+			-- ["--header-border"] = "none",
 		},
 
 		fzf_colors = {
 			["bg+"] = { "bg", "CursorLine" },
 			["fg+"] = { "fg", "Normal" },
-			["prompt"] = { "fg", "Normal" },
+			["prompt"] = { "fg", "Normal", "bold" },
+			["info"] = { "fg", "Comment" },
 			["gutter"] = { "bg", "Normal" },
-			-- The pointer and the multi-select marker use the selected line
-			-- background, which makes their column invisible.
 			["pointer"] = { "bg", "CursorLine" },
 			["marker"] = { "bg", "CursorLine" },
-			["hl"] = { "fg", "Special" },
-			["hl+"] = { "fg", "Special" },
+			["hl"] = { "fg", "Special", "bold", "underline" },
+			["hl+"] = { "fg", "Special", "bold", "underline" },
 		},
 
 		previewers = {
@@ -121,21 +127,41 @@ local function make_opts()
 				["<C-b>"] = "preview-page-up",
 			},
 			fzf = {
-				["ctrl-g"] = "execute(less -c -i --incsearch --search-options=W -g {})",
+				["ctrl-g"] = "abort",
+				["ctrl-n"] = "down",
+				["ctrl-p"] = "up",
+				["alt-n"] = "next-history",
+				["alt-p"] = "previous-history",
+				["ctrl-k"] = "kill-line",
 				["ctrl-z"] = "abort",
 				["ctrl-u"] = "unix-line-discard",
 				["ctrl-q"] = "select-all+accept",
 			},
 		},
 
-		-- The fzf-lua defaults plus the extra ignores.
+		-- The fzf-lua defaults plus the extra ignores. Paths are shown whole,
+		-- as in `find-file` and `consult-buffer`.
 		files = {
+			prompt = "Find file: ",
 			rg_opts = "--color=never --files --hidden --follow " .. rg_globs,
 			fd_opts = "--color=never --hidden --type f --type l " .. fd_excludes,
 		},
 
+		oldfiles = { prompt = "Recent file: " },
+		buffers = { prompt = "Switch to buffer: " },
+		blines = { prompt = "Line: " },
+		commands = { prompt = "M-x " },
+		helptags = { prompt = "Describe: " },
+		keymaps = { prompt = "Describe key: " },
+		diagnostics = { prompt = "Diagnostic: ", diag_icons = false },
+		lsp = {
+			prompt_postfix = ": ",
+			symbols = { symbol_style = 3 }, -- kind as text, no icon
+		},
+
 		-- The line and column fields are hidden from the results.
 		grep = {
+			prompt = "Ripgrep: ",
 			rg_opts = "--column --line-number --no-heading --color=always --smart-case --max-columns=4096 "
 				.. rg_globs
 				.. " -e",
@@ -147,12 +173,12 @@ local function make_opts()
 	}
 end
 
----Set the border highlights of the fzf-lua window and its preview. It also runs
----on every colorscheme change, because a colorscheme resets the highlight
----groups.
+---Set the border highlights of the fzf-lua window and its preview.
 local function set_fzf_hl()
-	vim.api.nvim_set_hl(0, "FzfLuaBorder", { fg = "#2a2a2a" })
-	vim.api.nvim_set_hl(0, "FzfLuaPreviewBorder", { fg = "#2a2a2a" })
+	local sl = vim.api.nvim_get_hl(0, { name = "StatusLine", link = false })
+	local bar = sl.bg or sl.fg or 0x2a2a2a
+	vim.api.nvim_set_hl(0, "FzfLuaBorder", { fg = bar, bg = bar })
+	vim.api.nvim_set_hl(0, "FzfLuaPreviewBorder", { fg = bar })
 end
 
 set_fzf_hl()
@@ -164,7 +190,16 @@ vim.api.nvim_create_autocmd("ColorScheme", {
 ---Set up fzf-lua. Called once per session by `lib.lazy`, after fzf-lua is
 ---loaded; the setup needs the module, so it cannot run as a `configure`.
 function M.after()
-	require("fzf-lua").setup(make_opts())
+	local opts = make_opts()
+
+	-- The profile goes first, so every key in `opts` overrides it.
+	table.insert(opts, 1, { "ivy", "hide" })
+
+	local fzf_lua = require("fzf-lua")
+	fzf_lua.setup(opts)
+
+	-- vim.ui.select becomes an fzf picker, like completing-read.
+	fzf_lua.register_ui_select()
 end
 
 ---Load fzf-lua on first use and return it. The loader is guarded, so after the
@@ -199,11 +234,11 @@ end, { desc = "Fzf: find files in ~/dotfiles/nvim" })
 
 km("n", "<leader>fo", function()
 	fzf().oldfiles()
-end, { desc = "Fzf: reopen recently edited files" })
+end, { desc = "Fzf: reopen recently edited files (recentf)" })
 
 km("n", "<leader>fg", function()
 	fzf().live_grep({ rg_glob = true })
-end, { desc = "Fzf: live grep in cwd" })
+end, { desc = "Fzf: live grep in cwd (consult-ripgrep)" })
 
 km("n", "<leader>fw", function()
 	fzf().grep_cword()
@@ -215,7 +250,7 @@ end, { desc = "Fzf: grep the visual selection" })
 
 km("n", "<leader>fl", function()
 	fzf().blines()
-end, { desc = "Fzf: search lines in the current buffer" })
+end, { desc = "Fzf: search lines in the current buffer (consult-line)" })
 
 km("n", "<leader>fx", function()
 	fzf().diagnostics_document()
@@ -227,7 +262,27 @@ end, { desc = "Fzf: list LSP diagnostics in workspace" })
 
 km("n", "<leader>fc", function()
 	fzf().resume()
-end, { desc = "Fzf: resume the last picker with its previous query" })
+end, { desc = "Fzf: resume the last picker (vertico-repeat)" })
+
+km("n", "<leader>fb", function()
+	fzf().buffers()
+end, { desc = "Fzf: switch buffer (consult-buffer)" })
+
+km("n", "<leader>fi", function()
+	fzf().lsp_document_symbols()
+end, { desc = "Fzf: document symbols (consult-imenu)" })
+
+km("n", "<leader>f:", function()
+	fzf().commands()
+end, { desc = "Fzf: commands (M-x)" })
+
+km("n", "<leader>fk", function()
+	fzf().keymaps()
+end, { desc = "Fzf: keymaps (describe-bindings)" })
+
+km("n", "<leader>fh", function()
+	fzf().helptags()
+end, { desc = "Fzf: help tags (describe-*)" })
 
 -- Notes buffers also trigger the load, so the obsidian picker resolves before
 -- any picker was opened.
