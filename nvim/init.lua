@@ -16,7 +16,6 @@ require("config.commands")
 require("modules.statusline").setup()
 require("config.pack")
 require("plugins")
-require("modules.scratch").setup()
 require("modules.compile").setup()
 require("modules.sessions").setup()
 
