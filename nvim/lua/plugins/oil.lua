@@ -12,6 +12,8 @@
 
 local oil = require("oil")
 
+-- TODO: simplfies this configuration
+
 ---Entry of the oil buffer under the cursor.
 ---@class oil.Entry
 ---@field name string
@@ -158,19 +160,13 @@ end
 local function goto_dir(path_fn, desc)
 	return {
 		desc = desc,
-		callback = function()
-			oil.open(path_fn())
-		end,
+		callback = function() oil.open(path_fn()) end,
 	}
 end
 
 -- Shared between the in-buffer oil keymaps and the global `g~`/`g.` maps.
-local goto_home = goto_dir(function()
-	return vim.fn.expand("~")
-end, "Open home directory")
-local goto_cwd = goto_dir(function()
-	return vim.fn.getcwd()
-end, "Open cwd")
+local goto_home = goto_dir(function() return vim.fn.expand("~") end, "Open home directory")
+local goto_cwd = goto_dir(function() return vim.fn.getcwd() end, "Open cwd")
 
 local select_desc = "Select (opens in origin window if from split)"
 
@@ -251,9 +247,7 @@ oil.setup({
 vim.api.nvim_create_autocmd("FileType", {
 	group = vim.api.nvim_create_augroup("oil_explorer_flag", { clear = true }),
 	pattern = "oil",
-	callback = function(args)
-		vim.b[args.buf].explorer = true
-	end,
+	callback = function(args) vim.b[args.buf].explorer = true end,
 })
 
 vim.keymap.set("n", "go", "<CMD>Oil<CR>", {
