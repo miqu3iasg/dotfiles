@@ -46,11 +46,13 @@ local HAS_PROGRESS = vim.fn.has("nvim-0.12") == 1
 ---@type table<string, string>
 local DEFAULT_COMMAND = {
 	["*"] = "make -k ",
-	python = "python %",
+	python = "python -u -X dev %",
 	lua = "lua %",
-	c = "cc -o %:r.out % && ./%:r.out",
-	cpp = "c++ -std=c++23 -o %:r.out % && ./%:r.out",
-	java = "javac -d out % && java -cp out %:t:r",
+	c = "cc -Wall -Wextra -g -o %:r.out % && ./%:r.out",
+	cpp = "c++ -std = c++23 -Wall -Wextra -g -o %:r.out % && ./%:r.out",
+	java = "javac -Xlint:all -d out % && java -ea -cp out %:t:r",
+	javascript = "node --enable-source-maps --trace-warnings %",
+	typescript = "npx tsc --noEmit --pretty false % && npx tsx %",
 }
 
 -- The severity (`%t`) is filled when the compiler prints it, so the summary
@@ -63,6 +65,8 @@ local ERRORFORMAT = table.concat({
 	"%f:%l:%c: %tote: %m",
 	"%f:%l: %trror: %m",
 	"%f:%l: %tarning: %m",
+	"%f(%l\\,%c): %trror %m",
+	"%f(%l\\,%c): %tarning %m",
 	"%f:%l:%c: %m",
 	"%f:%l: %m",
 	'%A  File "%f"\\, line %l\\, in %.%#',
@@ -491,6 +495,21 @@ function M.prompt(opts)
 	end)
 end
 
+---Prompt for a custom command with an empty input and run it. Unlike
+---`M.prompt`, nothing is pre-filled. `%` and friends are still expanded.
+---@param opts? { open?: boolean }
+function M.custom(opts)
+	local cwd = vim.uv.cwd() or "."
+	vim.ui.input({
+		prompt = "Compile command: ",
+		completion = "shellcmd",
+	}, function(input)
+		if input and vim.trim(input) ~= "" then
+			M.command(input, cwd, opts)
+		end
+	end)
+end
+
 ---Rerun the last command of the current directory, or prompt when there is none.
 ---@param opts? { open?: boolean }
 function M.recompile(opts)
@@ -560,6 +579,13 @@ function M.setup(opts)
 		desc = "Compile: rerun the last command of this directory (! also opens the output)",
 	})
 
+	vim.api.nvim_create_user_command("CompileCustom", function(cmd)
+		M.custom({ open = cmd.bang })
+	end, {
+		bang = true,
+		desc = "Compile: run a custom command from an empty prompt (! also opens the output)",
+	})
+
 	vim.api.nvim_create_user_command("CompileInterrupt", function()
 		M.interrupt()
 	end, { desc = "Compile: interrupt the running command" })
@@ -577,6 +603,10 @@ function M.setup(opts)
 	km("n", "<leader>cr", function()
 		M.recompile()
 	end, { desc = "Recompile (last command)" })
+
+	km("n", "<leader>cl", function()
+		M.custom()
+	end, { desc = "Compile (custom command)" })
 
 	km("n", "<leader>ck", M.interrupt, { desc = "Compile: interrupt" })
 	km("n", "<leader>co", M.show_output, { desc = "Compile: open output" })
