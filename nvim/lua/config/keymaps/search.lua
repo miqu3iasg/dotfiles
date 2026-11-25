@@ -38,30 +38,15 @@ end, { desc = "Search word under cursor" })
 
 km("n", "<Esc>", "<cmd>nohlsearch<cr>", { desc = "Clear search highlights" })
 
-km("n", "<leader>eg", function()
-	search.grep(vim.fn.input("Grep> "))
-end, { desc = "Grep in project (regex)" })
-
 km("n", "<leader>ew", function()
 	search.grep(vim.fn.expand("<cword>"), "-F -w")
 end, { desc = "Grep word under cursor in project" })
 
 km("v", "<leader>eg", function()
 	local text = search.get_selection()
-	vim.cmd("normal! \27") -- leave visual mode
+	vim.cmd("normal! \27")
 	search.grep(text, "-F")
 end, { desc = "Grep selection in project" })
-
-km("n", "<leader>el", function()
-	search.buffer_grep(vim.fn.input("Buffer grep> "))
-end, { desc = "Grep in current buffer (loclist)" })
-
-km("n", "<leader>ef", ":find ", { desc = "Find file by name" })
-km("n", "<leader>eb", ":ls<cr>:b<space>", { desc = "Pick buffer" })
-km("n", "<leader>eo", "<cmd>oldfiles<cr>:edit #<", { desc = "Pick recent file" })
-km("n", "<leader>em", "<cmd>marks<cr>:normal! `", { desc = "Pick mark" })
-km("n", "<leader>eh", ":help ", { desc = "Search help" })
-km("n", "<leader>eH", ":helpgrep ", { desc = "Grep in all help files" })
 
 km("n", "ym", function()
 	search.yank_matches(vim.v.register)
@@ -70,11 +55,3 @@ end, { desc = "Yank all matches of last search (accepts a register)" })
 km("n", "cm", ":%s///g<Left><Left>", {
 	desc = "Substitute all matches of last search (type the replacement)",
 })
-
-km("n", "<leader>er", function()
-	local root = vim.fs.root(0, { ".git" }) or vim.fn.getcwd()
-	return ":edit " .. vim.fn.fnameescape(root) .. "/**/*"
-end, { expr = true, desc = "Edit file from project root" })
-
-km("n", "<leader>en", ":find ~/dotfiles/nvim/", { desc = "Find file in ~/dotfiles/nvim" })
-km("n", "<leader>es", ":find ~/dev/repos/studies/", { desc = "Find file in ~/dev/repos/studies" })
