@@ -62,13 +62,10 @@ km("x", "<leader>=", function()
 end, { desc = "Indent selection" })
 
 km("n", "J", "mzJ`z", { desc = "Join lines, keep cursor position" })
-
 km("n", "S", '"_cc', { desc = "Replace line without yanking" })
 km("n", "C", '"_C', { desc = "Replace to end of line without yanking" })
-
 km("n", "c", '"_c', { desc = "Change without overwriting yank register" })
 km("x", "c", '"_c', { desc = "Change selection without yanking" })
-
 km("n", "x", '"_x', { desc = "Delete char without yanking" })
 km("n", "X", '"_X', { desc = "Delete char before cursor without yanking" })
 km("x", "x", '"_x', { desc = "Delete selection without yanking" })
