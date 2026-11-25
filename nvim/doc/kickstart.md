@@ -67,9 +67,9 @@ LuaSnip needs `make` and a C compiler to build `jsregexp`; jdtls needs Python 3;
 8. `config.pack`, which declares and installs the eager plugins.
 9. `plugins`, which loads each adapter inside `pcall`.
 
-11. `modules.compile.setup()`.
-12. `modules.sessions.setup()`.
-13. `vim.cmd.colorscheme("plain")`.
+10. `modules.compile.setup()`.
+11. `modules.sessions.setup()`.
+12. `vim.cmd.colorscheme("plain")`.
 
 Nothing else runs at startup. Lazy plugins attach later, when the first buffer of a declared filetype appears. The notes module is set up by the Markdown adapter, and the Pandoc commands by the Markdown ftplugin, because both are context-bound.
 
