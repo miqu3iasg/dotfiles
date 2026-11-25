@@ -18,7 +18,7 @@ Fit. A plugin solves its author's problem for many users; a hand-written module 
 
 - A statusline as a string in the `'statusline'` option: encoding and buffer state, position, selection, search count, filetype, git branch, recording, zoom and file size, with no plugin, no redraw overhead and no update churn.
 - Per-directory sessions with `:mksession`: automatic, tmux-only, one file per working directory, restored on entry and saved on exit. A session plugin would offer scopes, loaders and trees; the workflow needs "reopen this folder where I left it".
-- A scratch buffer that replaces the current window's buffer and restores it on leave, because the layout must never move. Prescribed plugins float windows; this one does not.
+
 - A compile runner that streams output into a bottom split and fills the quickfix on failure. It is `:make` with the parts of `:make` we use and none of the parts we do not.
 - A lazy loader of about 150 lines in `lib/lazy.lua` instead of a plugin-loading framework: filetype triggers, configure and after hooks, one autocmd.
 - A notes module that enforces the vault's own naming (`TYPE-YYYYMMDD-HHmmss-SLUG.md` and `daily-YYYYMMDD.md`) instead of hoping a plugin grows it.
@@ -41,7 +41,7 @@ Not everything is rebuilt. The line is between editor glue and engineering the c
 - no snippet engine: LuaSnip owns expansion, the config only writes snippets;
 - no session plugin, note plugin, statusline plugin or completion plugin: the shape of those is the workflow itself.
 
-The rule of thumb: use a plugin when the work is peripheral or industrial (parsers, finders, formatters, servers); write a module when the work is the shape of the workflow (sessions, scratch, compile, notes, export paths). Building something by hand is justified by fit and understanding, never by novelty, and a plugin is chosen over a module whenever the workflow genuinely benefits from a maintained tool.
+The rule of thumb: use a plugin when the work is peripheral or industrial (parsers, finders, formatters, servers); write a module when the work is the shape of the workflow (sessions, compile, notes, export paths). Building something by hand is justified by fit and understanding, never by novelty, and a plugin is chosen over a module whenever the workflow genuinely benefits from a maintained tool.
 
 The same thinking decides within a feature: conform formats, so language servers keep their formatters off; the LSP feeds diagnostics, so ruff runs beside it through nvim-lint rather than as a second server; export paths live once in `lib/exports.lua`, so every exporter writes to the same layout.
 
