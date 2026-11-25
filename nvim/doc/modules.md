@@ -10,7 +10,7 @@ The `lua/modules/` layer: whole features built for this config
 
 ## Description
 
-`lua/modules/` holds the features this config writes for itself instead of delegating to a plugin: the statusline, per-directory sessions, the scratch buffer, the compile runner, the Pandoc export, the notes workflow and a handful of editor conveniences. They are the most opinionated part of the config and the part most adapted to the author's workflow.
+`lua/modules/` holds the features this config writes for itself instead of delegating to a plugin: the statusline, per-directory sessions, the compile runner, the Pandoc export, the notes workflow and a handful of editor conveniences. They are the most opinionated part of the config and the part most adapted to the author's workflow.
 
 A module is a whole feature, not a utility. The contract:
 
@@ -27,7 +27,7 @@ The binary criterion still applies: a file that registers a command, an autocmd 
 | Module           | `setup()` called by           | Reason                                                                                     |
 | ---------------- | ----------------------------- | ------------------------------------------------------------------------------------------ |
 | `statusline`     | `init.lua`                    | It must exist before the plugins and the colorscheme.                                      |
-| `scratch`        | `init.lua`                    | Its commands and keymaps are global.                                                       |
+
 | `compile`        | `init.lua`                    | Its commands and keymaps are global.                                                       |
 | `sessions`       | `init.lua`                    | Its manual commands are global; the automatic save/load is wired by `config/autocmds.lua`. |
 | `notes`          | `lua/plugins/markdown.lua`    | The note workflow belongs with the Markdown stack.                                         |
@@ -64,15 +64,6 @@ API: `M.enabled`, `M.path`, `M.load`, `M.save`, `M.force_load`, `M.force_save`, 
 Commands: `:SessionSave` and `:SessionLoad` force the operation regardless of tmux.
 
 `'sessionoptions'` in `config/options.lua` must match what the module saves and restores.
-
-### `scratch.lua`
-
-A single persistent scratch buffer for throwaway notes and pastes. Toggling replaces the buffer of the current window when it is a regular file buffer, and opens a vertical split when the current buffer is special (Oil, a terminal, a Fugitive view). Leaving it restores the previous buffer, so the layout never changes. The buffer is hidden, not wiped, and survives until the session ends or `:Scratch!` deletes it.
-
-Inside the scratch, `q` and `<Esc>` leave it. Leaving a split opened by `M.split` closes the split; leaving a replaced buffer returns to the alternate buffer or a fresh one.
-
-API: `M.toggle`, `M.open`, `M.split`, `M.leave`, `M.wipe`, `M.setup`.
-Commands: `:Scratch`, `:ScratchSplit`, `:Scratch!`.
 
 ### `compile.lua`
 
