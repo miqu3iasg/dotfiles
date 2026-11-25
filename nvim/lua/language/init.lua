@@ -46,12 +46,14 @@ local servers = {}
 require("mason").setup()
 
 -- Only used to install servers, so it can wait until startup is done.
-vim.schedule(function()
-	require("mason-lspconfig").setup({
-		automatic_enable = false,
-		ensure_installed = vim.list_extend(vim.deepcopy(modules), install_only),
-	})
-end)
+vim.schedule(
+	function()
+		require("mason-lspconfig").setup({
+			automatic_enable = false,
+			ensure_installed = vim.list_extend(vim.deepcopy(modules), install_only),
+		})
+	end
+)
 
 -- Dynamic file watching would register thousands of watchers in large projects.
 vim.lsp.config("*", {
@@ -78,9 +80,7 @@ vim.api.nvim_create_autocmd("LspAttach", {
 		---@param lhs string
 		---@param rhs string|fun()
 		---@param desc string
-		local function km(mode, lhs, rhs, desc)
-			vim.keymap.set(mode, lhs, rhs, { buffer = ev.buf, desc = desc })
-		end
+		local function km(mode, lhs, rhs, desc) vim.keymap.set(mode, lhs, rhs, { buffer = ev.buf, desc = desc }) end
 
 		km("i", "<C-j>", vim.lsp.buf.signature_help, "Signature help")
 
@@ -97,21 +97,18 @@ vim.api.nvim_create_autocmd("LspAttach", {
 			vim.lsp.buf.implementation()
 		end, "Go to implementation in split")
 
-		km("n", "gro", function()
-			vim.lsp.buf.code_action({ context = { only = { "source.organizeImports" } }, apply = true })
-		end, "Organize imports")
+		km(
+			"n",
+			"gro",
+			function() vim.lsp.buf.code_action({ context = { only = { "source.organizeImports" } }, apply = true }) end,
+			"Organize imports"
+		)
 
-		km("n", "gre", function()
-			vim.diagnostic.open_float({ scope = "cursor" })
-		end, "Show diagnostic under cursor")
+		km("n", "gre", function() vim.diagnostic.open_float({ scope = "cursor" }) end, "Show diagnostic under cursor")
 
-		km("n", "[e", function()
-			vim.diagnostic.jump({ count = -1, float = true })
-		end, "Go to previous diagnostic")
+		km("n", "[e", function() vim.diagnostic.jump({ count = -1, float = true }) end, "Go to previous diagnostic")
 
-		km("n", "]e", function()
-			vim.diagnostic.jump({ count = 1, float = true })
-		end, "Go to next diagnostic")
+		km("n", "]e", function() vim.diagnostic.jump({ count = 1, float = true }) end, "Go to next diagnostic")
 
 		local client = vim.lsp.get_client_by_id(ev.data.client_id)
 		local mod = client and servers[client.name] or nil
@@ -167,9 +164,7 @@ end
 -- The diagnostics display starts off and follows the keymaps and server toggles.
 vim.diagnostic.enable(diagnostics_enabled)
 
-vim.keymap.set("n", "<leader>ud", function()
-	toggle_diagnostics()
-end, { desc = "Toggle diagnostics" })
+vim.keymap.set("n", "<leader>ud", function() toggle_diagnostics() end, { desc = "Toggle diagnostics" })
 
 vim.lsp.enable(modules)
 
@@ -177,9 +172,7 @@ local lsp_enabled = true
 
 ---Whether the language servers are enabled.
 ---@return boolean
-function M.enabled()
-	return lsp_enabled
-end
+function M.enabled() return lsp_enabled end
 
 ---Enable or disable every language server in `modules` at once.
 ---@param enable? boolean Force a state; omit to toggle.
@@ -216,9 +209,14 @@ local function toggle_lsp(enable)
 	return lsp_enabled
 end
 
-vim.keymap.set("n", "<leader>ul", function()
-	toggle_lsp()
-end, { desc = "Toggle LSP" })
+vim.keymap.set("n", "<leader>ul", function() toggle_lsp() end, { desc = "Toggle LSP" })
+
+vim.keymap.set(
+	"n",
+	"<leader>uh",
+	function() vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled({ bufnr = 0 }), { bufnr = 0 }) end,
+	{ desc = "Toggle inlay hints (buffer)" }
+)
 
 -- Linters load with the stack, so their toggle exists from the start.
 -- See: lua/language/lint.lua
