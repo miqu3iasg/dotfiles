@@ -17,9 +17,7 @@ local M = {}
 ---side of a diff, as opposed to the working copy.
 ---@param buf integer
 ---@return boolean
-local function is_fugitive_buf(buf)
-	return vim.api.nvim_buf_get_name(buf):find("^fugitive://") ~= nil
-end
+local function is_fugitive_buf(buf) return vim.api.nvim_buf_get_name(buf):find("^fugitive://") ~= nil end
 
 ---Close a diff, keeping the working copy and closing the other diff windows.
 ---Does nothing outside diff mode.
@@ -27,9 +25,7 @@ function M.close_diff()
 	if not vim.wo.diff then
 		return
 	end
-	local wins = vim.tbl_filter(function(w)
-		return vim.wo[w].diff
-	end, vim.api.nvim_tabpage_list_wins(0))
+	local wins = vim.tbl_filter(function(w) return vim.wo[w].diff end, vim.api.nvim_tabpage_list_wins(0))
 
 	local keep
 	for _, w in ipairs(wins) do
@@ -107,9 +103,7 @@ function M.setup()
 		group = group,
 		pattern = { "fugitive", "fugitiveblame", "git", "gitcommit", "fugitive://*" },
 		callback = function(e)
-			vim.schedule(function()
-				M.map_close(e.buf)
-			end)
+			vim.schedule(function() M.map_close(e.buf) end)
 		end,
 	})
 
