@@ -66,7 +66,7 @@ LuaSnip needs `make` and a C compiler to build `jsregexp`; jdtls needs Python 3;
 7. `modules.statusline.setup()`.
 8. `config.pack`, which declares and installs the eager plugins.
 9. `plugins`, which loads each adapter inside `pcall`.
-10. `modules.scratch.setup()`.
+
 11. `modules.compile.setup()`.
 12. `modules.sessions.setup()`.
 13. `vim.cmd.colorscheme("plain")`.
@@ -128,7 +128,7 @@ Global commands from `lua/config/commands.lua`:
 Feature commands are documented with their feature:
 
 - `:Compile`, `:Recompile`, `:CompileInterrupt` — [modules](./modules.md);
-- `:Scratch`, `:ScratchSplit`, `:Scratch!` — [modules](./modules.md);
+
 - `:SessionSave`, `:SessionLoad` — [modules](./modules.md);
 - `:Pandoc`, `:PandocPreview` — [pandoc](./pandoc.md);
 - `:Notes*` — [notes](./notes.md).
@@ -155,7 +155,7 @@ Language servers
 
 Features written for this config
 
-- a native statusline, per-directory sessions, a persistent scratch buffer, an Emacs-like compile runner, a Pandoc exporter, the notes vault, window zoom, Fugitive view closing and Markdown list editing. See [modules](./modules.md).
+- a native statusline, per-directory sessions, an Emacs-like compile runner, a Pandoc exporter, the notes vault, window zoom, Fugitive view closing and Markdown list editing. See [modules](./modules.md).
 
 Documents
 
@@ -163,7 +163,7 @@ Documents
 
 Themes
 
-- `plain` (default), `alabaster`, `brightburn`, `classic`, `dosx`, `elrond`, `hollow`, `insanity`, `kurokai`, `parchment`, `pixel` and `solarized`. See [colorschemes](./colorschemes.md).
+- `plain`, `alabaster`, `brightburn`, `dosx`, `elrond`, `hollow`, `insanity`, `parchment` and `solarized`. See [colorschemes](./colorschemes.md).
 
 ## Requirements
 
