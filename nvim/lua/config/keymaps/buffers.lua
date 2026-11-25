@@ -3,7 +3,6 @@
 -- Buffer management keymaps.
 --
 -- See: lua/lib/buffers.lua
--- See: lua/modules/scratch.lua
 -- See: :help map.txt
 
 local buffers = require("lib.buffers")
@@ -35,9 +34,7 @@ map("n", "<leader>bo", function()
 		end
 	end
 
-	buffers.delete_where(function(info)
-		return info.bufnr ~= current_buf
-	end)
+	buffers.delete_where(function(info) return info.bufnr ~= current_buf end)
 end, "Close other windows and buffers")
 
 map("n", "]b", "<cmd>bnext<CR>", "Next buffer")
