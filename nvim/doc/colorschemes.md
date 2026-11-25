@@ -16,17 +16,17 @@ Most schemes are Lua and build on `lua/lib/colors.lua`; three are Vimscript port
 
 ## Available schemes
 
-| Scheme        | File                     | Character                                                                                                                                             |
-| ------------- | ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `alabaster`   | `colors/alabaster.lua`   | A port of the Alabaster scheme by mcncl: light background, dark text. Requires `'termguicolors'`.                                                     |
-| `brightburn`  | `colors/brightburn.vim`  | The original Vimscript scheme by Erik Bäckman. It finishes early when the terminal has no 256-color support.                                          |
-| `dosx`        | `colors/dosx.lua`        | Dosbox inspired: bright ANSI colors on a blue background.                                                                                             |
-| `elrond`      | `colors/elrond.vim`      | A dark Vimscript port based on `elflord`, maintained by Adrian Perez.                                                                                 |
-| `hollow`      | `colors/hollow.lua`      | A hollowed-out port of the `quiet` scheme: pale gray text on pure black, one blue accent for status signals. Requires `'termguicolors'`.              |
-| `insanity`    | `colors/insanity.lua`    | For those who are insane.                                                                                                                             |
-| `parchment`   | `colors/parchment.lua`   | A tribute to the classic Vim schemes (desert, zenburn, elflord): warm parchment text on black, khaki statements, salmon strings.                       |
-| `plain`       | `colors/plain.vim`       | The default. The Vim default scheme, as Vim ships it.                                                                                                 |
-| `solarized`   | `colors/solarized.lua`   | Solarized light for Neovim, based on Ethan Schoonover's palette.                                                                                      |
+| Scheme       | File                    | Character                                                                                                                                |
+| ------------ | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `alabaster`  | `colors/alabaster.lua`  | A port of the Alabaster scheme by mcncl: light background, dark text. Requires `'termguicolors'`.                                        |
+| `brightburn` | `colors/brightburn.vim` | The original Vimscript scheme by Erik Bäckman. It finishes early when the terminal has no 256-color support.                             |
+| `dosx`       | `colors/dosx.lua`       | Dosbox inspired: bright ANSI colors on a blue background.                                                                                |
+| `elrond`     | `colors/elrond.vim`     | A dark Vimscript port based on `elflord`, maintained by Adrian Perez.                                                                    |
+| `hollow`     | `colors/hollow.lua`     | A hollowed-out port of the `quiet` scheme: pale gray text on pure black, one blue accent for status signals. Requires `'termguicolors'`. |
+| `insanity`   | `colors/insanity.lua`   | For those who are insane.                                                                                                                |
+| `parchment`  | `colors/parchment.lua`  | A tribute to the classic Vim schemes (desert, zenburn, elflord): warm parchment text on black, khaki statements, salmon strings.         |
+| `plain`      | `colors/plain.vim`      | The default. The Vim default scheme, as Vim ships it.                                                                                    |
+| `solarized`  | `colors/solarized.lua`  | Solarized light for Neovim, based on Ethan Schoonover's palette.                                                                         |
 
 Activate one for the session with `:colorscheme <name>`. To make it the default, change the final `vim.cmd.colorscheme("plain")` in `init.lua`; that is the only place the default is named.
 
