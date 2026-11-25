@@ -27,7 +27,7 @@ The startup sequence is exact and worth knowing when something behaves different
 7. `modules.statusline.setup()` — the statusline, because later layers read it.
 8. `config.pack` — the eager plugin declarations and the `PackChanged` build hooks.
 9. `plugins` — every plugin adapter, each loaded inside `pcall` so one failure notifies instead of aborting startup.
-10. `modules.scratch.setup()`.
+
 11. `modules.compile.setup()`.
 12. `modules.sessions.setup()`.
 13. `vim.cmd.colorscheme("plain")` — the default colorscheme, last, so it can override highlights set by plugins.
@@ -114,7 +114,7 @@ The utility filetype list is a single local table in the file. Adding a new util
 | `:PackDel`            | `+`       | Deletes plugins by name.                                                                   |
 | `:PackUpdate`         | `*`       | Updates every plugin, or the named ones.                                                   |
 
-Commands owned by features are documented with the feature: `:Compile` and the session, scratch, pandoc and notes commands are in `doc/modules.md`, `doc/pandoc.md` and `doc/notes.md`.
+Commands owned by features are documented with the feature: `:Compile` and the session, pandoc and notes commands are in `doc/modules.md`, `doc/pandoc.md` and `doc/notes.md`.
 
 ## Health check
 
