@@ -1,34 +1,35 @@
 -- lua/modules/notes.lua
 
--- Flat Markdown note vault for drafts, typed notes from templates, daily
--- notes, task capture, search and history.
+-- Flat Markdown note vault behind the `:Notes*` commands: drafts, typed
+-- notes from templates, daily notes, task capture and search.
 --
--- The vault is `$ARCANUM_DIR`, or `~/dev/arcanum` when unset.
+-- The vault is `$ARCANUM_DIR`, or `~/dev/arcanum` when unset. Only `.md`
+-- files directly in its root are notes.
+--
+-- The pickers and the search run on fzf-lua, which needs fzf and ripgrep.
+--
+-- $ sudo pacman -S fzf ripgrep
 --
 -- See: doc/modules.md
 -- See: lua/plugins/markdown.lua
 -- See: ~/dev/arcanum/README.md
--- See: https://github.com/ibhagwan/fzf-lua
 
 local M = {}
 
 local uv = vim.uv or vim.loop
+local unpack = table.unpack or unpack
+local WARN, ERROR = vim.log.levels.WARN, vim.log.levels.ERROR
 
----@type string
 local DEFAULT_VAULT = "~/dev/arcanum"
+local SLUG_MAX = 80
+-- One UTF-8 character: a lead byte followed by its continuation bytes.
+local UTF8_CHAR = "[%z\1-\127\194-\244][\128-\191]*"
 
----Valid note types, in display order. `draft` is a provisional state and is
----deliberately not part of this list.
+---Valid note types; `draft` is provisional and deliberately not part of them
 ---@type string[]
 local TYPES = { "script", "snippet", "doc", "bug", "adr", "idea", "content" }
 
----@type table<string, boolean>
-local TYPE_SET = {}
-for _, t in ipairs(TYPES) do
-	TYPE_SET[t] = true
-end
-
----Short description of each note type, shown in the picker header.
+---Short description of each note type, shown in the picker header
 ---@type table<string, string>
 local TYPE_HELP = {
 	script = "automation script",
@@ -40,10 +41,10 @@ local TYPE_HELP = {
 	content = "content draft",
 }
 
----Header for the template pickers: `<enter> accept`, then every given type
----that has a description. Generic templates are left out.
+---Build the picker header from the given names that have a description
+---Names without one, such as generic templates, are left out
 ---@param types string[]
----@return string
+---@return string header `<enter> accept | type (description) | ...`
 local function types_header(types)
 	local parts = { "<enter> accept" }
 	for _, t in ipairs(types) do
@@ -54,97 +55,81 @@ local function types_header(types)
 	return table.concat(parts, " | ")
 end
 
----@type integer
-local SLUG_MAX = 80
-
----@type integer
-local MAX_COLLISIONS = 99
-
----Accent folding for slugs. Single characters map one to one, and the
----ligatures are handled apart.
+---Accented characters mapped to their ASCII fold, built from `base = "chars"` groups
 ---@type table<string, string>
-local ACCENTS = {
-	["á"] = "a",
-	["à"] = "a",
-	["â"] = "a",
-	["ã"] = "a",
-	["ä"] = "a",
-	["å"] = "a",
-	["é"] = "e",
-	["è"] = "e",
-	["ê"] = "e",
-	["ë"] = "e",
-	["í"] = "i",
-	["ì"] = "i",
-	["î"] = "i",
-	["ï"] = "i",
-	["ó"] = "o",
-	["ò"] = "o",
-	["ô"] = "o",
-	["õ"] = "o",
-	["ö"] = "o",
-	["ú"] = "u",
-	["ù"] = "u",
-	["û"] = "u",
-	["ü"] = "u",
-	["ç"] = "c",
-	["ñ"] = "n",
-	["ý"] = "y",
-	["ÿ"] = "y",
-	["æ"] = "ae",
-	["œ"] = "oe",
-	["ß"] = "ss",
-}
-
----Where the history of opened notes is kept. It holds two lines: the note
----that was current and the one before it.
----@type string
-local HISTORY_FILE = vim.fn.stdpath("state") .. "/notes-last"
-
----@type { current: string?, previous: string? }
-local history = { current = nil, previous = nil }
-
----@type boolean
-local history_loaded = false
-
----@param msg string
----@param level? integer
-local function notify(msg, level)
-	vim.notify(msg, level or vim.log.levels.INFO, { title = "Notes" })
+local ACCENTS = {}
+for base, chars in pairs({
+	a = "áàâãäå",
+	e = "éèêë",
+	i = "íìîï",
+	o = "óòôõö",
+	u = "úùûü",
+	c = "ç",
+	n = "ñ",
+	y = "ýÿ",
+	ae = "æ",
+	oe = "œ",
+	ss = "ß",
+}) do
+	for ch in chars:gmatch(UTF8_CHAR) do
+		ACCENTS[ch] = base
+	end
 end
 
----Resolve the vault directory, without checking that it exists.
----@return string
+---Show a message titled "Notes"
+---@param msg string
+---@param level? integer `vim.log.levels` value, INFO by default
+local function notify(msg, level) vim.notify(msg, level or vim.log.levels.INFO, { title = "Notes" }) end
+
+---Format a time with `os.date`, typed as a string
+---@param fmt string `strftime` format
+---@param t? integer time, now by default
+---@return string formatted
+local function date(fmt, t)
+	return os.date(fmt, t) --[[@as string]]
+end
+
+---Return the current time as a file name stamp and as an ISO timestamp
+---@return string ts `YYYYMMDD-HHmmss`
+---@return string iso `YYYY-MM-DDTHH:MM:SS`, local time
+local function now()
+	local t = os.time()
+	return date("%Y%m%d-%H%M%S", t), date("%Y-%m-%dT%H:%M:%S", t)
+end
+
+-- Vault
+
+---Resolve the vault directory without checking that it exists
+---@return string dir
 local function vault_dir()
 	local dir = vim.env.ARCANUM_DIR
-	if dir == nil or dir == "" then
+	if not dir or dir == "" then
 		dir = DEFAULT_VAULT
 	end
 	dir = vim.fs.normalize(dir)
 	return uv.fs_realpath(dir) or dir
 end
 
----Return the vault directory, or notify and return nil when it is missing.
----@return string?
+---Return the vault directory, or notify and return nil when it is missing
+---@return string? dir
 local function require_vault()
 	local dir = vault_dir()
 	local stat = uv.fs_stat(dir)
 	if not (stat and stat.type == "directory") then
-		notify("Vault not found: " .. dir, vim.log.levels.ERROR)
+		notify("Vault not found: " .. dir, ERROR)
 		return nil
 	end
 	return dir
 end
 
----@return string
-function M.vault()
-	return vault_dir()
-end
+---Return the vault directory
+---@return string dir
+function M.vault() return vault_dir() end
 
----True for a Markdown file placed directly in the vault root. `README.md` and
----everything under `_templates/` or `attachments/` are not notes.
+---Check whether a path is a note of the vault
+---`README.md` and everything under `_templates/` or `attachments/` are not notes
 ---@param path? string
----@return boolean
+---@return boolean is_note
 function M.is_note_path(path)
 	if not path or path == "" or not path:match("%.md$") then
 		return false
@@ -156,30 +141,13 @@ function M.is_note_path(path)
 	return dir ~= nil and dir == vault_dir()
 end
 
----@return string ts `YYYYMMDD-HHmmss`
----@return string iso `YYYY-MM-DDTHH:MM:SS`, local time
-local function now()
-	local t = os.time()
-	return os.date("%Y%m%d-%H%M%S", t), --[[@as string]]
-		os.date("%Y-%m-%dT%H:%M:%S", t) --[[@as string]]
-end
+-- Names
 
----Collapse control characters and trim.
----@param title? string
----@return string
-local function clean_title(title)
-	title = (title or ""):gsub("%c", " ")
-	return vim.trim(title)
-end
-
----Normalize a title into a lowercase ASCII slug.
+---Normalize a title into a lowercase ASCII slug
 ---@param title string
----@return string
+---@return string slug
 function M.slugify(title)
-	local s = vim.fn.tolower(title)
-	s = s:gsub("[%z\1-\127\194-\244][\128-\191]*", function(ch)
-		return ACCENTS[ch]
-	end)
+	local s = vim.fn.tolower(title):gsub(UTF8_CHAR, ACCENTS)
 	s = s:gsub("%s+", "-"):gsub("[^a-z0-9%-]", ""):gsub("%-+", "-"):gsub("^%-", ""):gsub("%-$", "")
 	if #s > SLUG_MAX then
 		s = s:sub(1, SLUG_MAX):gsub("%-+$", "")
@@ -187,223 +155,152 @@ function M.slugify(title)
 	return s
 end
 
----True for a valid calendar date, leap years included.
----@param y integer
----@param m integer
----@param d integer
----@return boolean
-local function valid_date(y, m, d)
-	local dm = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 }
-	if y % 4 == 0 and (y % 100 ~= 0 or y % 400 == 0) then
-		dm[2] = 29
-	end
-	return m >= 1 and m <= 12 and d >= 1 and d <= dm[m]
-end
+---@class notes.NameInfo
+---@field type string note type, or `daily` and `draft`
+---@field ts string timestamp `YYYYMMDD-HHmmss` taken from the file name
 
----Parse a note file name. Returns nil when it does not follow the convention.
----@param name string
----@return { type: string, ts: string, slug: string }?
+---Parse a note file name into its type and timestamp
+---Return nil when the name breaks the convention
+---@param name string file name, without directory
+---@return notes.NameInfo? info
 function M.parse_name(name)
-	local compact = name:match("^daily%-(%d%d%d%d%d%d%d%d)%.md$")
-	if compact then
-		local y, m, d = compact:sub(1, 4) + 0, compact:sub(5, 6) + 0, compact:sub(7, 8) + 0
-		if not valid_date(y, m, d) then
-			return nil
-		end
+	local daily = name:match("^daily%-(%d%d%d%d%d%d%d%d)%.md$")
+	if daily then
 		-- Midnight places the daily after the typed notes of its own day.
-		return { type = "daily", ts = compact .. "-000000", slug = "" }
+		return { type = "daily", ts = daily .. "-000000" }
 	end
-	local type_, date, time, rest = name:match("^(%a+)%-(%d%d%d%d%d%d%d%d)%-(%d%d%d%d%d%d)(.*)%.md$")
-	if not type_ or (type_ ~= "draft" and not TYPE_SET[type_]) then
-		return nil
+	local type_, ts = name:match("^(%a+)%-(%d%d%d%d%d%d%d%d%-%d%d%d%d%d%d)")
+	if type_ and (type_ == "draft" or vim.list_contains(TYPES, type_)) then
+		return { type = type_, ts = ts }
 	end
-	local slug = ""
-	if rest ~= "" then
-		slug = rest:match("^%-([a-z0-9%-]+)$")
-		if not slug or slug:find("^%-") or slug:find("%-$") or slug:find("%-%-") then
-			return nil
-		end
-	end
-	return { type = type_, ts = date .. "-" .. time, slug = slug }
 end
 
----File name for the n-th attempt, with the collision counter in the slug.
----@param type_ string
----@param ts string
----@param slug string
----@param n integer
----@return string
-function M.build_name(type_, ts, slug, n)
-	if n > 1 then
-		slug = slug ~= "" and (slug .. "-" .. n) or tostring(n)
-	end
-	return type_ .. "-" .. ts .. (slug ~= "" and ("-" .. slug) or "") .. ".md"
-end
+-- Files
 
+---Read a whole file, nil when it cannot be opened
 ---@param path string
----@return string?
----@return string? err
+---@return string? content
 local function read_file(path)
-	local fh, err = io.open(path, "rb")
+	local fh = io.open(path, "rb")
 	if not fh then
-		return nil, err
+		return nil
 	end
 	local data = fh:read("*a")
 	fh:close()
 	return data
 end
 
----Create a file that must not exist yet. A partial file is removed on failure,
----and an existing file is never touched.
+---Create a file that must not exist yet, never touching an existing one
 ---@param path string
 ---@param content string
 ---@return boolean? ok
 ---@return string? err
-local function write_exclusive(path, content)
+local function write_new(path, content)
 	local fd, err = uv.fs_open(path, "wx", 438)
 	if not fd then
 		return nil, err
 	end
-	local written, werr = uv.fs_write(fd, content, 0)
+	uv.fs_write(fd, content, 0)
 	uv.fs_close(fd)
-	if written ~= #content then
-		uv.fs_unlink(path)
-		return nil, werr or "short write"
-	end
 	return true
 end
 
----Names of the `.md` files of a directory, without sorting.
+---List the `.md` files of a directory, unsorted
 ---@param dir string
----@return string[]
+---@return string[] names
 local function list_md(dir)
 	local names = {}
-	local handle = uv.fs_scandir(dir)
-	while handle do
-		local name, kind = uv.fs_scandir_next(handle)
-		if not name then
-			break
-		end
-		if kind == "file" and name:match("%.md$") and not name:find("\n", 1, true) then
-			table.insert(names, name)
+	for name, kind in vim.fs.dir(dir) do
+		if kind == "file" and name:match("%.md$") then
+			names[#names + 1] = name
 		end
 	end
 	return names
 end
 
----Notes of the vault, newest first by the timestamp in the name. Names that
----break the convention go last. Ties are broken by name, ascending.
----@return string[]
+---List the notes of the vault, newest first by the timestamp in the name
+---Names that break the convention go last, and ties are broken by name
+---@return string[] names
 function M.notes()
-	local names = {}
-	for _, name in ipairs(list_md(vault_dir())) do
-		if name ~= "README.md" then
-			table.insert(names, name)
-		end
-	end
-	local function key(name)
+	local names = vim.tbl_filter(function(n) return n ~= "README.md" end, list_md(vault_dir()))
+	local key = {}
+	for _, name in ipairs(names) do
 		local info = M.parse_name(name)
-		return info and info.ts or ""
+		key[name] = info and info.ts or ""
 	end
 	table.sort(names, function(a, b)
-		local ka, kb = key(a), key(b)
-		if ka ~= kb then
-			return ka > kb
+		if key[a] ~= key[b] then
+			return key[a] > key[b]
 		end
 		return a < b
 	end)
 	return names
 end
 
--- Only the initial block delimited by `---` is handled, by prefix, not by a
--- YAML parser.
+-- Frontmatter: only the initial `---` block, handled line by line, no YAML parser.
 
----Split content into the frontmatter text (the lines between the delimiters,
----ending with a newline) and the body. The frontmatter is nil when the
----content has none, or when the block is never closed.
----@param content string
----@return string? fm
----@return string body
-local function fm_split(content)
-	if content:sub(1, 4) ~= "---\n" then
-		return nil, content
+---Find the closing `---` of the frontmatter, 0 when there is none
+---@param lines string[] lines of the note
+---@return integer index
+local function fm_end(lines)
+	if lines[1] ~= "---" then
+		return 0
 	end
-	local rest = content:sub(5)
-	if rest:sub(1, 4) == "---\n" then
-		return "", rest:sub(5)
+	for i = 2, #lines do
+		if lines[i] == "---" then
+			return i
+		end
 	end
-	if rest == "---" then
-		return "", ""
-	end
-	local s, e = rest:find("\n---\n", 1, true)
-	if s then
-		return rest:sub(1, s), rest:sub(e + 1)
-	end
-	if rest:sub(-4) == "\n---" then
-		return rest:sub(1, -4), ""
-	end
-	return nil, content
+	return 0
 end
 
----@param fm? string
----@param key string
----@return string? value unquoted
-local function fm_get(fm, key)
-	for _, line in ipairs(vim.split(fm or "", "\n", { plain = true })) do
-		if line:sub(1, #key + 1) == key .. ":" then
-			local value = vim.trim(line:sub(#key + 2))
-			local first, last = value:sub(1, 1), value:sub(-1)
-			if #value >= 2 and first == last then
-				if first == '"' then
-					value = value:sub(2, -2):gsub('\\(["\\])', "%1")
-				elseif first == "'" then
-					value = value:sub(2, -2):gsub("''", "'")
-				end
+---Read a frontmatter value, unquoted
+---Return nil when the key is missing or empty
+---@param lines string[] lines of the note
+---@param key string plain key name, not a pattern
+---@return string? value
+local function fm_get(lines, key)
+	for i = 2, fm_end(lines) - 1 do
+		local v = lines[i]:match("^" .. key .. ":%s*(.-)%s*$")
+		if v then
+			local quoted = v:match('^"(.*)"$')
+			if quoted then
+				v = quoted:gsub('\\(["\\])', "%1")
 			end
-			return value
+			return v ~= "" and v or nil
 		end
 	end
 end
 
 -- Templates
 
----@return string
-local function template_dir()
-	return vault_dir() .. "/_templates"
-end
+---Return the template directory of the vault
+---@return string dir
+local function template_dir() return vault_dir() .. "/_templates" end
 
----Template types that exist on disk. The templates are discovered, never
----listed, and a file only counts when its name is a valid type. Used for
----creating notes: insertion is not limited to valid types.
----@return string[]
-function M.templates()
-	local found = {}
-	for _, name in ipairs(list_md(template_dir())) do
-		found[name:gsub("%.md$", "")] = true
-	end
-	local types = {}
-	for _, t in ipairs(TYPES) do
-		if found[t] then
-			table.insert(types, t)
-		end
-	end
-	return types
-end
-
----Every template on disk, name without extension, sorted. Unlike `templates`,
----the name does not have to be a valid type, so generic templates such as
----`meeting` are included.
----@return string[]
-function M.all_templates()
+---List the template names on disk, sorted
+---With `typed_only`, keep the names of valid note types, which leaves out generic templates such as `meeting`
+---@param typed_only? boolean
+---@return string[] names
+function M.template_names(typed_only)
 	local names = {}
-	for _, name in ipairs(list_md(template_dir())) do
-		table.insert(names, (name:gsub("%.md$", "")))
+	for _, file in ipairs(list_md(template_dir())) do
+		local name = file:gsub("%.md$", "")
+		if not typed_only or vim.list_contains(TYPES, name) then
+			names[#names + 1] = name
+		end
 	end
 	table.sort(names)
 	return names
 end
 
----@param name string template name, with or without a valid type
+---List the templates that fit the current buffer
+---Notes of the vault take typed templates only, any other Markdown file takes all of them
+---@return string[] names
+local function template_choices() return M.template_names(M.is_note_path(vim.api.nvim_buf_get_name(0))) end
+
+---Read the content of a template
+---@param name string template name, without extension
 ---@return string? content
 ---@return string? err
 local function read_template(name)
@@ -415,268 +312,87 @@ local function read_template(name)
 	return content
 end
 
----Zero-padded sequence number for the next note of a type. ADR reuses the
----highest `ADR-NNN` in the bodies, and the other types count their notes.
+---Return the zero-padded number for the next note of a type
+---It counts the existing notes, so deleting one makes its number be reused
 ---@param type_ string
----@return string
+---@return string number
 local function next_number(type_)
 	local count = 0
-	local max
 	for _, name in ipairs(M.notes()) do
 		local info = M.parse_name(name)
 		if info and info.type == type_ then
 			count = count + 1
-			if type_ == "adr" then
-				local content = read_file(vault_dir() .. "/" .. name)
-				local n = content and content:match("ADR%-(%d+)")
-				n = n and tonumber(n)
-				if n and (not max or n > max) then
-					max = n
-				end
-			end
 		end
-	end
-	if max then
-		return ("%03d"):format(max + 1)
 	end
 	return ("%03d"):format(count + 1)
 end
 
----Plain YAML scalars that would be read back as another type.
----@type table<string, boolean>
-local YAML_RESERVED = {
-	["true"] = true,
-	["false"] = true,
-	["yes"] = true,
-	["no"] = true,
-	["on"] = true,
-	["off"] = true,
-	["null"] = true,
-	["~"] = true,
-}
-
----Placeholders whose value is always written plain when their quotes go away.
----@type table<string, boolean>
-local RAW_VARS = { date = true }
-
----Format a value for a frontmatter line, quoted only when YAML needs it.
----@param value string
----@return string
-local function yaml_scalar(value)
-	local needs_quotes = value:find("^[%[%]{},#&*!|>'\"%%@`]")
-		or value:find("^[-?:]%s")
-		or value:find("^[-?:]$")
-		or value:find(":%s")
-		or value:find(":$")
-		or value:find("%s#")
-		or value:find("^%s")
-		or value:find("%s$")
-		or value:find("%c")
-		or YAML_RESERVED[value:lower()]
-		or tonumber(value) ~= nil
-		or value:find("^%d%d%d%d%-%d%d%-%d%d[%dT:%.%sZ+%-]*$")
-	if value == "" or not needs_quotes then
-		return value
-	end
-	return '"' .. value:gsub('[\\"]', "\\%0") .. '"'
-end
-
-local unpack = table.unpack or unpack
-
----Formatting tokens of `{{date:FMT}}`, longest first so that `YY` never eats
----part of a `YYYY`. The values are digits, so they can never match a token:
----one sequential pass per token is enough.
----@type string[]
-local DATE_TOKENS = { "YYYY", "YY", "MM", "DD", "HH", "mm", "ss" }
-
----Format a date with a moment-like pattern. Only the tokens above are
----replaced; every other character is copied as it is.
----@param fmt string
----@param parts { year: integer, month: integer, day: integer, hour: integer, min: integer, sec: integer }
----@return string
-local function format_date(fmt, parts)
-	local values = {
-		YYYY = ("%04d"):format(parts.year),
-		YY = ("%02d"):format(parts.year % 100),
-		MM = ("%02d"):format(parts.month),
-		DD = ("%02d"):format(parts.day),
-		HH = ("%02d"):format(parts.hour),
-		mm = ("%02d"):format(parts.min),
-		ss = ("%02d"):format(parts.sec),
-	}
-	for _, token in ipairs(DATE_TOKENS) do
-		fmt = fmt:gsub(token, values[token])
-	end
-	return fmt
-end
-
----Random (version 4) UUID, e.g. `3f2b8c1e-5d4a-4b7e-9c1d-2a6f0e8b7d35`.
----@return string
+---Generate a random (version 4) UUID
+---@return string uuid
 local function uuid()
-	local b = {}
-	local ok, bytes = pcall(uv.random, 16)
-	if ok and type(bytes) == "string" and #bytes == 16 then
-		for i = 1, 16 do
-			b[i] = bytes:byte(i)
-		end
-	else
-		for i = 1, 16 do
-			b[i] = vim.fn.rand() % 256
-		end
-	end
+	local b = { uv.random(16):byte(1, 16) }
 	b[7] = b[7] % 16 + 64 -- version 4
 	b[9] = b[9] % 64 + 128 -- variant 10xx
 	return ("%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x"):format(unpack(b))
 end
 
----Substitute the template variables literally, leaving other double braces
----alone. Every value is computed at most once.
----@param content string
----@param ctx { title: string, date: string, id: string?, vars: table<string, string>? } `id` keeps an existing id; one is generated when nil
----@return string
+---Placeholders written bare when a template quotes them
+---Every other placeholder is quoted as a YAML string
+---@type table<string, boolean>
+local RAW = { date = true, id = true }
+
+---Quote a value as a YAML double-quoted string
+---@param v string
+---@return string quoted
+local function quote(v) return '"' .. v:gsub('[\\"]', "\\%0") .. '"' end
+
+---@class notes.RenderCtx
+---@field title? string note title, empty when omitted
+---@field date string ISO timestamp for `{{date}}`
+---@field id? string existing id to keep, a new UUID when omitted
+---@field vars? table<string, string> extra placeholders
+
+---Substitute the `{{name}}` placeholders of a template
+---Unknown names are left as they are
+---@param content string template text
+---@param ctx notes.RenderCtx
+---@return string rendered
 local function render(content, ctx)
-	local vars = {
-		title = ctx.title,
-		date = ctx.date,
-		id = function()
-			return ctx.id or uuid()
-		end,
-		adr_number = function()
-			return next_number("adr")
-		end,
-	}
-	for name, extra in pairs(ctx.vars or {}) do
-		vars[name] = extra
+	local vars = { title = ctx.title or "", date = ctx.date, id = ctx.id or uuid() }
+	if content:find("{{adr_number}}", 1, true) then
+		vars.adr_number = next_number("adr")
+	end
+	for name, value in pairs(ctx.vars or {}) do
+		vars[name] = value
 	end
 
-	---The `date` of the context as a date table, for `{{date:FMT}}`.
-	---@return { year: integer, month: integer, day: integer, hour: integer, min: integer, sec: integer }?
-	local function date_parts()
-		local y, mo, d, h, mi, s = ctx.date:match("^(%d%d%d%d)%-(%d%d)%-(%d%d)T(%d%d):(%d%d):(%d%d)$")
-		if not y then
+	-- A `key: "{{var}}"` line gets an escaped YAML string, so a title with
+	-- quotes or colons cannot break the frontmatter. The values of RAW names
+	-- are safe, so they go in without quotes.
+	content = content:gsub('(\n[%w_%-]+:[ \t]*)"{{([%w_]+)}}"', function(key, name)
+		local v = vars[name]
+		if v == nil then
 			return nil
 		end
-		return {
-			year = y + 0,
-			month = mo + 0,
-			day = d + 0,
-			hour = h + 0,
-			min = mi + 0,
-			sec = s + 0,
-		}
-	end
-
-	local cache = {}
-	---@param name string
-	---@return string?
-	local function value(name)
-		if cache[name] == nil then
-			local v = vars[name]
-			if type(v) == "function" then
-				v = v()
-			end
-			cache[name] = v
-		end
-		return cache[name]
-	end
-
-	-- Frontmatter only: `key: "{{var}}"` becomes `key: value`.
-	local fm = fm_split(content)
-	if fm then
-		local cut = 4 + #fm
-		local head = content
-			:sub(1, cut)
-			:gsub("(\n[%w_%-]+:)[ \t]*([\"'])%{%{([%w_]+)([^}]*)%}%}%2", function(key, _, name, fmt)
-				local v
-				if fmt ~= "" then
-					-- A format only makes sense on `{{date:FMT}}`.
-					if name ~= "date" or fmt:sub(1, 1) ~= ":" then
-						return nil
-					end
-					local parts = date_parts()
-					v = parts and format_date(fmt:sub(2), parts)
-				else
-					v = value(name)
-				end
-				if v == nil then
-					return nil
-				end
-				local text = RAW_VARS[name] and v or yaml_scalar(v)
-				return key .. (text ~= "" and (" " .. text) or "")
-			end)
-		content = head .. content:sub(cut + 1)
-	end
-
-	-- Everything else, in a single pass. Unknown names are kept as they are.
-	return (
-		content:gsub("%{%{([%w_]+)([^}]*)%}%}", function(name, fmt)
-			local v = value(name)
-			if v == nil then
-				return nil
-			end
-			if fmt ~= "" then
-				-- A format only makes sense on `{{date:FMT}}`.
-				if name ~= "date" or fmt:sub(1, 1) ~= ":" then
-					return nil
-				end
-				local parts = date_parts()
-				return parts and format_date(fmt:sub(2), parts)
-			end
-			return v
-		end)
-	)
-end
-
----Guarantee that the frontmatter of `content` has a `date` field, adding the
----frontmatter block when the note has none.
----@param content string
----@param date string
----@return string
-local function ensure_date(content, date)
-	local fm, body = fm_split(content)
-	local fresh = fm == nil
-	fm = fm or ""
-	if fm_get(fm, "date") == nil then
-		fm = fm .. "date: " .. date .. "\n"
-	end
-	return "---\n" .. fm .. "---\n" .. (fresh and "\n" or "") .. body
+		return key .. (RAW[name] and v or quote(v))
+	end)
+	return (content:gsub("{{([%w_]+)}}", function(name) return vars[name] end))
 end
 
 -- Creation
 
----Write a new note under the first free name of the series. An existing note
----is never overwritten.
----@param dir string
----@param type_ string
----@param ts string
----@param slug string
----@param content string
----@return string? path
----@return string? err
-local function create_file(dir, type_, ts, slug, content)
-	for n = 1, MAX_COLLISIONS do
-		local name = M.build_name(type_, ts, slug, n)
-		local path = dir .. "/" .. name
-		local ok, err = write_exclusive(path, content)
-		if ok then
-			return path
-		end
-		if not (err and err:find("EEXIST", 1, true)) then
-			return nil, "Could not create " .. path .. ": " .. tostring(err)
-		end
-	end
-	return nil, "Too many notes with the same timestamp: " .. ts
-end
+---Open a file in the current window
+---@param path string
+local function open(path) vim.cmd.edit(vim.fn.fnameescape(path)) end
 
----Create a classified note from its template. Returns the new path, or nil and
----a message when the type is invalid or the template is missing, in which case
----nothing is written.
----@param type_ string
+---Create a classified note from its template
+---Return nil and a message when the type is invalid, the template is missing or the file exists, writing nothing
+---@param type_ string note type, one of `TYPES`
 ---@param title? string
 ---@return string? path
 ---@return string? err
 function M.create(type_, title)
-	if not TYPE_SET[type_] then
+	if not vim.list_contains(TYPES, type_) then
 		return nil, "Invalid type: " .. tostring(type_)
 	end
 	local template, err = read_template(type_)
@@ -684,134 +400,179 @@ function M.create(type_, title)
 		return nil, err
 	end
 	local ts, iso = now()
-	title = clean_title(title)
-	local content = ensure_date(render(template, { title = title, date = iso }), iso)
-	return create_file(vault_dir(), type_, ts, M.slugify(title), content)
+	title = vim.trim(title or "")
+	local slug = M.slugify(title)
+	local name = type_ .. "-" .. ts .. (slug ~= "" and "-" .. slug or "") .. ".md"
+	local path = vault_dir() .. "/" .. name
+	local ok, werr = write_new(path, render(template, { title = title, date = iso }))
+	if not ok then
+		return nil, "Could not create " .. path .. ": " .. tostring(werr)
+	end
+	return path
 end
 
----@param path string
-local function open(path)
-	vim.cmd.edit(vim.fn.fnameescape(path))
+---Create and open a draft in insert mode, with no prompts
+function M.new_draft()
+	local dir = require_vault()
+	if not dir then
+		return
+	end
+	local ts, iso = now()
+	local path = ("%s/draft-%s.md"):format(dir, ts)
+	local fm = ("---\nid: %s\ndescription:\naliases: []\ndate: %s\n---\n\n"):format(uuid(), iso)
+	local ok, err = write_new(path, fm)
+	if not ok then
+		return notify("Could not create " .. path .. ": " .. tostring(err), ERROR)
+	end
+	open(path)
+	vim.cmd("normal! G")
+	vim.cmd.startinsert()
 end
 
----File name and compact date of the daily note of `offset` days from today.
----The arithmetic goes through noon so that DST shifts cannot move the day.
----@param offset? integer
----@return string name `daily-YYYYMMDD.md`
+---Return the compact date of the day `offset` days from today
+---@param offset integer days from today, negative for the past
 ---@return string compact `YYYYMMDD`
-local function daily_name(offset)
-	local off = offset or 0
-	local today = os.date("*t")
-	---@cast today table
-	local t = os.time({
-		year = today.year,
-		month = today.month,
-		day = today.day,
-		hour = 12,
-		min = 0,
-		sec = 0,
-	})
-	local d = os.date("*t", t + off * 86400)
-	---@cast d table
-	local compact = ("%04d%02d%02d"):format(d.year, d.month, d.day)
-	return "daily-" .. compact .. ".md", compact
+local function daily_date(offset)
+	-- `os.time` normalizes the day overflow, and noon keeps DST shifts from
+	-- moving the day.
+	local t = os.date("*t") --[[@as osdate]]
+	return date("%Y%m%d", os.time({ year = t.year, month = t.month, day = t.day + offset, hour = 12 }))
 end
 
----Open the daily note of `offset` days from today, creating it from the
----`daily` template when it does not exist.
----@param offset? integer
+---Open the daily note of `offset` days from today
+---Create it from the `daily` template when it does not exist
+---@param offset? integer days from today, 0 by default
 ---@return string? path
----@return string? err
 function M.daily(offset)
 	local dir = require_vault()
 	if not dir then
-		return nil, "vault not found"
+		return
 	end
-	local name = daily_name(offset)
-	local path = dir .. "/" .. name
-	if uv.fs_stat(path) then
-		open(path)
-		return path
-	end
-	local template, err = read_template("daily")
-	if not template then
-		notify(err --[[@as string]], vim.log.levels.ERROR)
-		return nil, err
-	end
-	local _, iso = now()
-	local prev = select(2, daily_name((offset or 0) - 1))
-	local next_ = select(2, daily_name((offset or 0) + 1))
-	local content = ensure_date(
-		render(template, {
-			date = iso,
-			vars = {
-				previous_note = "[[daily-" .. prev .. "]]",
-				next_note = "[[daily-" .. next_ .. "]]",
-			},
-		}),
-		iso
-	)
-	local ok, werr = write_exclusive(path, content)
-	if not ok then
-		if werr and werr:find("EEXIST", 1, true) then
-			-- Another session created it first; open theirs.
-			open(path)
-			return path
+	offset = offset or 0
+	local path = ("%s/daily-%s.md"):format(dir, daily_date(offset))
+	if not uv.fs_stat(path) then
+		local template, err = read_template("daily")
+		if not template then
+			return notify(err --[[@as string]], ERROR)
 		end
-		notify("Could not create " .. path .. ": " .. tostring(werr), vim.log.levels.ERROR)
-		return nil, werr
+		local content = render(template, {
+			date = date("%Y-%m-%dT%H:%M:%S"),
+			vars = {
+				previous_note = "[[daily-" .. daily_date(offset - 1) .. "]]",
+				next_note = "[[daily-" .. daily_date(offset + 1) .. "]]",
+			},
+		})
+		local ok, werr = write_new(path, content)
+		-- EEXIST: another session created it first, open theirs.
+		if not ok and not tostring(werr):find("EEXIST", 1, true) then
+			return notify("Could not create " .. path .. ": " .. tostring(werr), ERROR)
+		end
 	end
 	open(path)
 	return path
 end
 
----Append a Markdown task to `TODO.md` in the vault root, creating the file
----when missing.
+---Append a Markdown task to `TODO.md` in the vault root
+---Create the file when missing, and ask for the text when `title` is omitted
 ---@param title? string
 function M.capture(title)
 	local dir = require_vault()
 	if not dir then
 		return
 	end
-	if not title then
-		vim.ui.input({ prompt = "Capture task: " }, function(t)
+	if not title or title == "" then
+		return vim.ui.input({ prompt = "Capture task: " }, function(t)
 			if t and t ~= "" then
 				M.capture(t)
 			end
 		end)
-		return
 	end
-
 	local path = dir .. "/TODO.md"
-	local bufnr = vim.fn.bufadd(path)
-	if vim.api.nvim_buf_is_loaded(bufnr) then
-		vim.api.nvim_buf_set_lines(bufnr, -1, -1, false, { "- [ ] " .. title })
-		vim.api.nvim_buf_call(bufnr, function()
-			vim.cmd("silent write")
-		end)
-	else
-		local exists = uv.fs_stat(path) ~= nil
-		local fh = io.open(path, "a")
-		if not fh then
-			notify("Could not append to " .. path, vim.log.levels.ERROR)
-			return
-		end
-		if exists then
-			fh:write("\n")
-		end
-		fh:write("- [ ] " .. title .. "\n")
-		fh:close()
+	local fh, err = io.open(path, "a")
+	if not fh then
+		return notify("Could not append to " .. path .. ": " .. tostring(err), ERROR)
 	end
-	notify("Captured: " .. title, vim.log.levels.INFO)
+	fh:write("- [ ] ", title, "\n")
+	fh:close()
+	vim.cmd.checktime() -- reload TODO.md if it is open
+	notify("Captured: " .. title)
 end
 
----Run `on_choice` with the item chosen in fzf-lua, or in `vim.ui.select` when
----fzf-lua is missing. Cancelling calls nothing.
+-- Templates in an existing note
+
+---Check for a Markdown buffer backed by a file on disk
+---@param buf integer
+---@return boolean is_markdown
+local function is_markdown_buf(buf)
+	if vim.bo[buf].buftype ~= "" or vim.bo[buf].filetype ~= "markdown" then
+		return false
+	end
+	local path = vim.api.nvim_buf_get_name(buf)
+	return path ~= "" and uv.fs_stat(path) ~= nil
+end
+
+---Derive a title from a note file name
+---Use the slug when the name has one, and the whole name otherwise
+---@param name string file name, without directory
+---@return string title
+local function title_from_name(name)
+	local slug = name:match("^%a+%-%d+%-%d+%-(.+)%.md$")
+	return slug and (slug:gsub("%-", " ")) or (name:gsub("%.md$", ""))
+end
+
+---Apply a template to a note
+---Replace the frontmatter by the template one and insert the template body below the cursor
+---@param buf integer
+---@param name string template name, without extension
+local function insert_template(buf, name)
+	local template, err = read_template(name)
+	if not template then
+		return notify(err --[[@as string]], ERROR)
+	end
+
+	local old = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+	local old_end = fm_end(old) -- 0 when the note has no frontmatter
+
+	-- The note keeps its own id, date and title, so applying a template never
+	-- changes its identity.
+	local rendered = render(template, {
+		title = fm_get(old, "title") or title_from_name(vim.fs.basename(vim.api.nvim_buf_get_name(buf))),
+		date = fm_get(old, "date") or select(2, now()),
+		id = fm_get(old, "id"),
+	})
+	local new = vim.split(rendered, "\n", { plain = true })
+	local new_end = fm_end(new)
+
+	-- A template without frontmatter leaves the note's own untouched.
+	local fm = new_end > 0 and vim.list_slice(new, 1, new_end) or vim.list_slice(old, 1, old_end)
+	if old_end == 0 and #fm > 0 then
+		fm[#fm + 1] = ""
+	end
+	local body = vim.list_slice(new, new_end + 1)
+	if body[#body] == "" then
+		body[#body] = nil
+	end
+
+	-- Body first, so that the frontmatter replacement does not shift its row.
+	-- It goes below the cursor, never inside the old frontmatter.
+	if vim.trim(table.concat(body, "\n")) ~= "" then
+		local row = math.max(vim.api.nvim_win_get_cursor(0)[1], old_end)
+		vim.api.nvim_buf_set_lines(buf, row, row, false, body)
+	end
+	vim.api.nvim_buf_set_lines(buf, 0, old_end, false, fm)
+end
+
+-- Pickers
+
+---Pick an item in fzf-lua, or in `vim.ui.select` when fzf-lua is missing
+---Cancelling calls nothing
 ---@param items string[]
 ---@param prompt string
 ---@param on_choice fun(item: string)
----@param header? string
+---@param header? string text above the list
 local function pick(items, prompt, on_choice, header)
+	-- The same forced load as `require_fzf`, kept apart so that a missing
+	-- fzf-lua falls back to `vim.ui.select` instead of failing.
 	local ok, fzf = pcall(function()
 		require("lib.lazy").load("fzf-lua")
 		return require("fzf-lua")
@@ -825,18 +586,18 @@ local function pick(items, prompt, on_choice, header)
 		return
 	end
 	fzf.fzf_exec(items, {
-		prompt = prompt .. "> ",
+		prompt = prompt .. ": ",
 		header = header,
 		fzf_opts = {
-			["--layout"] = "reverse", -- prompt at the top
+			["--layout"] = "default",
 			["--info"] = "inline-right", -- match counter on the prompt line
 			["--cycle"] = true, -- wrap around at the ends of the list
 			["--no-scrollbar"] = true,
-			["--tiebreak"] = "index", -- ties follow the order of TYPES
+			["--tiebreak"] = "index", -- ties follow the order of the list
 		},
 		fzf_colors = { ["header"] = { "fg", "Comment" } },
 		winopts = {
-			height = 0.18,
+			height = 0.20,
 			width = 1.0,
 			row = 1.0,
 			col = 0.0,
@@ -853,36 +614,18 @@ local function pick(items, prompt, on_choice, header)
 	})
 end
 
----Create and open a draft ready to type, with no prompts.
-function M.new_draft()
-	local dir = require_vault()
-	if not dir then
-		return
-	end
-	local ts, iso = now()
-	local frontmatter = ("---\nid: %s\ndescription:\naliases: []\ndate: %s\n---\n\n"):format(uuid(), iso)
-	local path, err = create_file(dir, "draft", ts, "", frontmatter)
-	if not path then
-		notify(err --[[@as string]], vim.log.levels.ERROR)
-		return
-	end
-	open(path)
-	vim.cmd("normal! G")
-	vim.cmd("startinsert")
-end
-
----Create a classified note: pick the type, ask for an optional title and open
----the result. Cancelling at any step creates nothing.
+---Create a classified note, picking its type and asking for an optional title
+---Cancelling at any step creates nothing
 function M.new_note()
 	if not require_vault() then
 		return
 	end
-	local types = M.templates()
+	local types = M.template_names(true)
 	if #types == 0 then
-		notify("No templates found in " .. template_dir(), vim.log.levels.WARN)
-		return
+		return notify("No templates found in " .. template_dir(), WARN)
 	end
 	pick(types, "Type", function(type_)
+		-- Let the picker close before the title prompt opens.
 		vim.schedule(function()
 			vim.ui.input({ prompt = "Title (optional): " }, function(title)
 				if title == nil then
@@ -890,8 +633,7 @@ function M.new_note()
 				end
 				local path, err = M.create(type_, title)
 				if not path then
-					notify(err --[[@as string]], vim.log.levels.ERROR)
-					return
+					return notify(err --[[@as string]], ERROR)
 				end
 				open(path)
 			end)
@@ -899,81 +641,15 @@ function M.new_note()
 	end, types_header(types))
 end
 
----True for a real Markdown buffer backed by a file on disk.
----@param buf integer
----@return boolean
-local function is_markdown_buf(buf)
-	if vim.bo[buf].buftype ~= "" or vim.bo[buf].filetype ~= "markdown" then
-		return false
-	end
-	local path = vim.api.nvim_buf_get_name(buf)
-	return path ~= "" and uv.fs_stat(path) ~= nil
-end
-
----Apply a template to the current note. The frontmatter is replaced by the
----template one, and its body goes below the cursor.
----@param buf integer
----@param name string template name, with or without a valid type
-local function insert_template(buf, name)
-	local template, err = read_template(name)
-	if not template then
-		notify(err --[[@as string]], vim.log.levels.ERROR)
-		return
-	end
-
-	-- Existing frontmatter: values for the placeholders and the lines to replace.
-	local text = table.concat(vim.api.nvim_buf_get_lines(buf, 0, -1, false), "\n") .. "\n"
-	local old_fm = fm_split(text)
-	local old_len = 0
-	if old_fm then
-		local _, newlines = old_fm:gsub("\n", "")
-		old_len = newlines + 2 -- the two `---` delimiters
-	end
-
-	local _, iso = now()
-	local date = fm_get(old_fm, "date") or iso
-	local id = fm_get(old_fm, "id")
-	local title = fm_get(old_fm, "title")
-	if not title or title == "" then
-		title = vim.fs.basename(vim.api.nvim_buf_get_name(buf)):gsub("%.md$", "")
-	end
-	local rendered = ensure_date(render(template, { title = title, date = date, id = id ~= "" and id or nil }), date)
-	local new_fm, tbody = fm_split(rendered)
-
-	-- Frontmatter lines to write, with a blank line after it when the note had none.
-	local fm_lines = { "---" }
-	if new_fm and new_fm ~= "" then
-		vim.list_extend(fm_lines, vim.split((new_fm:gsub("\n$", "")), "\n", { plain = true }))
-	end
-	table.insert(fm_lines, "---")
-	if not old_fm then
-		table.insert(fm_lines, "")
-	end
-
-	-- Body below the cursor (never inside the old frontmatter).
-	if not tbody:match("^%s*$") then
-		local row = math.max(vim.api.nvim_win_get_cursor(0)[1], old_len)
-		local body_lines = vim.split((tbody:gsub("\n$", "")), "\n", { plain = true })
-		vim.api.nvim_buf_set_lines(buf, row, row, false, body_lines)
-	end
-
-	-- Frontmatter: replace the old block (or insert at the top if none).
-	vim.api.nvim_buf_set_lines(buf, 0, old_len, false, fm_lines)
-end
-
----Pick a template and insert its body into the current note, on any Markdown
----file on disk.
+---Pick a template and insert it into the current Markdown file
 function M.template()
 	local buf = vim.api.nvim_get_current_buf()
 	if not is_markdown_buf(buf) then
-		notify("Not a Markdown file", vim.log.levels.WARN)
-		return
+		return notify("Not a Markdown file", WARN)
 	end
-	local path = vim.api.nvim_buf_get_name(buf)
-	local names = M.is_note_path(path) and M.templates() or M.all_templates()
+	local names = template_choices()
 	if #names == 0 then
-		notify("No templates found in " .. template_dir(), vim.log.levels.WARN)
-		return
+		return notify("No templates found in " .. template_dir(), WARN)
 	end
 	pick(names, "Insert template", function(name)
 		vim.schedule(function()
@@ -984,23 +660,25 @@ function M.template()
 	end, types_header(names))
 end
 
+-- Search
+
+---Load fzf-lua and return it, notifying when it is missing
 ---@return table? fzf
 local function require_fzf()
-	local ok, fzf = pcall(function()
-		-- fzf-lua is lazy-loaded on Markdown buffers; force the load so the
-		-- search commands work from any buffer.
-		require("lib.lazy").load("fzf-lua")
-		return require("fzf-lua")
-	end)
+	-- fzf-lua is lazy-loaded on Markdown buffers; force the load so the
+	-- search commands work from any buffer.
+	-- See: lua/plugins/markdown.lua
+	pcall(function() require("lib.lazy").load("fzf-lua") end)
+	local ok, fzf = pcall(require, "fzf-lua")
 	if not ok then
-		notify("fzf-lua is required for searching", vim.log.levels.ERROR)
+		notify("fzf-lua is required for searching", ERROR)
 		return nil
 	end
 	return fzf
 end
 
----Fuzzy search by file name, with preview. Templates and
----attachments are not listed.
+---Search notes by file name with a preview
+---Templates and attachments are not listed
 function M.find_files()
 	local dir = require_vault()
 	local fzf = dir and require_fzf()
@@ -1009,19 +687,19 @@ function M.find_files()
 	end
 	local names = M.notes()
 	if #names == 0 then
-		notify("No notes found", vim.log.levels.WARN)
-		return
+		return notify("No notes found", WARN)
 	end
 	fzf.fzf_exec(names, {
 		cwd = dir,
-		prompt = "Notes> ",
+		prompt = "Find notes: ",
 		previewer = "builtin",
 		actions = fzf.defaults.actions.files,
-		fzf_opts = { ["--tiebreak"] = "index" },
+		fzf_opts = { ["--tiebreak"] = "index" }, -- keep newest first on ties
 	})
 end
 
----Live ripgrep over the content of the notes, in the vault root only.
+---Search the content of the notes with live ripgrep
+---Only the `.md` files in the vault root are searched, `README.md` excluded
 function M.grep()
 	local dir = require_vault()
 	local fzf = dir and require_fzf()
@@ -1030,66 +708,35 @@ function M.grep()
 	end
 	fzf.live_grep({
 		cwd = dir,
-		prompt = "Grep> ",
+		prompt = "Grep notes: ",
+		-- `--max-depth=1` keeps `_templates/` and `attachments/` out of the results.
 		rg_opts = "--column --line-number --no-heading --color=always --smart-case"
 			.. " --max-columns=4096 --max-depth=1 -g '*.md' -g '!README.md' -e",
 	})
 end
 
-local function load_history()
-	if history_loaded then
-		return
-	end
-	history_loaded = true
-	local ok, lines = pcall(vim.fn.readfile, HISTORY_FILE)
-	if ok then
-		history.current = lines[1] ~= "" and lines[1] or nil
-		history.previous = lines[2] ~= "" and lines[2] or nil
-	end
-end
+-- Navigation
 
-local function save_history()
-	pcall(vim.fn.mkdir, vim.fs.dirname(HISTORY_FILE), "p", "0700")
-	pcall(vim.fn.writefile, { history.current or "", history.previous or "" }, HISTORY_FILE)
-end
-
----Remember a note as the one currently open. The note before it is kept, so
----that `last()` can go back even while the last note is still open.
----@param path string
-local function record_note(path)
-	load_history()
-	if history.current == path then
-		return
-	end
-	history.previous = history.current
-	history.current = path
-	save_history()
-end
-
----Reopen the last note. When that note is the one already open,
----go back to the one before it.
+---Reopen the most recently used note other than the current one
+---Look at the listed buffers first, then at `v:oldfiles`
 function M.last()
 	if not require_vault() then
 		return
 	end
-	load_history()
 	local here = vim.api.nvim_buf_get_name(0)
-	local target = history.current
-	if target == here then
-		target = history.previous
+	local bufs = vim.fn.getbufinfo({ buflisted = 1 })
+	table.sort(bufs, function(a, b) return a.lastused > b.lastused end)
+	local candidates = vim.tbl_map(function(b) return b.name end, bufs)
+	vim.list_extend(candidates, vim.v.oldfiles)
+	for _, path in ipairs(candidates) do
+		if path ~= here and M.is_note_path(path) and uv.fs_stat(path) then
+			return open(path)
+		end
 	end
-	if not target then
-		notify("No note history yet", vim.log.levels.WARN)
-		return
-	end
-	if not (M.is_note_path(target) and uv.fs_stat(target)) then
-		notify("The last note is no longer available: " .. target, vim.log.levels.WARN)
-		return
-	end
-	open(target)
+	notify("No note history yet", WARN)
 end
 
----Open the vault folder in Neovim.
+---Open the vault folder in Neovim
 function M.open_vault()
 	local dir = require_vault()
 	if dir then
@@ -1097,34 +744,27 @@ function M.open_vault()
 	end
 end
 
----Install the commands and autocmds of the notes workflow.
+-- Commands
+
+---Install the `:Notes*` commands
 function M.setup()
 	local cmd = vim.api.nvim_create_user_command
-	cmd("NotesDraft", M.new_draft, { desc = "Notes: quick draft" })
-	cmd("NotesCapture", M.capture, { desc = "Notes: quick task capture into TODO.md" })
-	cmd("NotesNew", M.new_note, { desc = "Notes: new note (pick type and title)" })
 
-	-- The command callback receives the command table, which M.daily would
-	-- take as the offset; discard it and open today's note.
-	cmd("NotesDaily", function()
-		M.daily()
-	end, { desc = "Notes: open today's daily note" })
-
-	cmd("NotesTemplate", M.template, { desc = "Notes: insert template into the current note" })
+	-- TODO: refactor this to use command line, like in lua/config/keymaps/files.lua.
+	cmd("NotesNew", function() M.new_note() end, { desc = "Notes: new note, picks the type and asks for a title" })
+	cmd("NotesTemplate", function() M.template() end, { desc = "Notes: insert a picked template into the note" })
+	cmd("NotesDraft", function() M.new_draft() end, { desc = "Notes: quick draft" })
 	cmd("NotesFiles", M.find_files, { desc = "Notes: find notes by name" })
 	cmd("NotesGrep", M.grep, { desc = "Notes: search note contents" })
 	cmd("NotesLast", M.last, { desc = "Notes: reopen the last note" })
 	cmd("NotesOpen", M.open_vault, { desc = "Notes: open the vault folder" })
-
-	vim.api.nvim_create_autocmd("BufEnter", {
-		group = vim.api.nvim_create_augroup("notes_module", { clear = true }),
-		pattern = "*.md",
-		callback = function(args)
-			local path = vim.api.nvim_buf_get_name(args.buf)
-			if M.is_note_path(path) then
-				record_note(path)
-			end
-		end,
+	cmd("NotesCapture", function(o) M.capture(o.args) end, {
+		nargs = "*",
+		desc = "Notes: capture a task into TODO.md, asks for the text without one",
+	})
+	cmd("NotesDaily", function(o) M.daily(tonumber(o.args)) end, {
+		nargs = "?",
+		desc = "Notes: open a daily note, optional day offset (`:NotesDaily -1`)",
 	})
 end
 
