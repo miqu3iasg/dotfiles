@@ -20,12 +20,12 @@ local p = {
 	-- Neutrals
 	black = "#000000",
 	white = "#ffffff",
-	fg = "#d6d6d6", -- default text
-	fg_alt = "#d6d6d6", -- statements, types, preproc
-	string = "#d6d6d6",
+	fg = "#D0D0D0", -- default text
+	fg_alt = "#D0D0D0", -- statements, types, preproc
+	string = "#D0D0D0",
 	dim = "#707070",
-	comment = "#787470",
-	doc = "#7a7a7a",
+	comment = "#767676",
+	doc = "#767676", -- same as comment
 	line_nr = "#585858",
 	listchars = "#262626",
 	-- Surfaces
@@ -38,8 +38,9 @@ local p = {
 	border = "#444444",
 
 	-- Statusline
-	statusline_fg = "#c2c0c0",
-	statusline_nc_fg = "#636262",
+	statusline_fg = "#000000",
+	statusline_bg = "#D0D0D0",
+	statusline_nc_fg = "#878769",
 
 	-- Accent and status
 	accent = "#6382eb",
@@ -93,12 +94,12 @@ local p = {
 	-- Micro-palette for tiny luminance steps so structure, operations and
 	-- values separate without ever reading as "color"
 	t = {
-		op = "#ebebeb", -- + - = == => && ||
-		special = "#f6f6f6", -- ${}, escapes, special regex chars
-		const = "#e3e3e3", -- numbers, booleans, nil
-		prop = "#c9c9c9", -- fields and properties (obj.field)
-		bracket = "#bcbcbc", -- ( ) [ ] { }
-		delim = "#989898", -- , ; . :
+		op = "#D0D0D0", -- + - = == => && ||
+		special = "#D0D0D0", -- ${}, escapes, special regex chars
+		const = "#D0D0D0", -- numbers, booleans, nil
+		prop = "#D0D0D0", -- fields and properties (obj.field)
+		bracket = "#D0D0D0", -- ( ) [ ] { }
+		delim = "#D0D0D0", -- , ; . :
 	},
 }
 
@@ -138,6 +139,7 @@ local editor = {
 	CurSearch = { fg = p.search_bg, bg = p.search_fg, bold = true },
 
 	-- Messages
+	-- TODO: add more colors here
 	ModeMsg = { fg = p.fg, bg = p.black, bold = true },
 	MoreMsg = { fg = p.fg, bg = p.black },
 	MsgArea = { fg = p.fg, bg = p.black },
@@ -149,8 +151,8 @@ local editor = {
 	Todo = { fg = p.warn, bold = true },
 
 	-- Statusline, tabline, titlebar, toolbar
-	StatusLine = { fg = p.statusline_fg, bg = p.line },
-	StatusLineNC = { fg = p.statusline_nc_fg, bg = p.popup_bg },
+	StatusLine = { fg = p.statusline_fg, bg = p.statusline_bg, bold = true },
+	StatusLineNC = { fg = p.statusline_nc_fg, bg = p.popup_bg, bold = true, nocombine = true },
 	TabLine = { fg = p.dim, bg = p.black },
 	TabLineFill = { fg = p.fg, bg = p.black },
 	TabLineSel = { fg = p.fg, bg = p.black, bold = true },
@@ -215,7 +217,7 @@ local treesitter = {
 
 	-- Structure
 	["@module"] = { fg = p.fg_alt },
-	["@attribute"] = { fg = p.doc, italic = true },
+	["@attribute"] = { fg = p.fg_alt, italic = true },
 
 	-- Functions (never bold)
 	["@function"] = { fg = p.fg },
