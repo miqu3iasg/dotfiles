@@ -19,4 +19,4 @@ require("plugins")
 require("modules.compile").setup()
 require("modules.sessions").setup()
 
-vim.cmd.colorscheme("alabaster")
+vim.cmd.colorscheme("darcula")
