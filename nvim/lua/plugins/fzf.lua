@@ -171,7 +171,7 @@ end
 
 ---Set the border highlights of the fzf-lua window and its preview.
 local function set_fzf_hl()
-	local sl = vim.api.nvim_get_hl(0, { name = "StatusLine", link = false })
+	local sl = vim.api.nvim_get_hl(0, { name = "CursorLine", link = false })
 	local bar = sl.bg or sl.fg or 0x2a2a2a
 	vim.api.nvim_set_hl(0, "FzfLuaBorder", { fg = bar, bg = bar })
 	vim.api.nvim_set_hl(0, "FzfLuaPreviewBorder", { fg = bar })
